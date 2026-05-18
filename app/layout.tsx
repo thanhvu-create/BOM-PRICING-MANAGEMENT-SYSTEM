@@ -19,6 +19,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
           rel="stylesheet"
         />
+        {/* Google Identity Services — for Drive image auth */}
+        <script src="https://accounts.google.com/gsi/client" async />
       </head>
       <body>{children}</body>
     </html>
