@@ -105,7 +105,6 @@ export default function DriveImageInput({ label, value, onChange, inputStyle, la
           key={`${fileId}-${imgKey}`}
           src={thumbUrl(fileId)}
           alt="preview"
-          crossOrigin="use-credentials"
           onLoad={() => setStatus('ok')}
           onError={() => setStatus('error')}
           onClick={() => status === 'ok' && setLightbox(true)}
@@ -149,7 +148,6 @@ export default function DriveImageInput({ label, value, onChange, inputStyle, la
           <img
             src={fullUrl(fileId)}
             alt="full preview"
-            crossOrigin="use-credentials"
             style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }}
             onClick={e => e.stopPropagation()}
           />
