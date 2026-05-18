@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 const OZ = 31.103
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+    const { data: profile } = await createServiceClient().from('users').select('role').eq('id', user.id).single()
     if (!['Admin', 'Manager'].includes(profile?.role || ''))
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -69,7 +69,7 @@ export async function DELETE(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+    const { data: profile } = await createServiceClient().from('users').select('role').eq('id', user.id).single()
     if (!['Admin', 'Manager'].includes(profile?.role || ''))
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

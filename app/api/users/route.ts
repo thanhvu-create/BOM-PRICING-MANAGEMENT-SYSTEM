@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 // GET — danh sách users (Admin only)
@@ -8,7 +8,7 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+    const { data: profile } = await createServiceClient().from('users').select('role').eq('id', user.id).single()
     if (profile?.role !== 'Admin')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+    const { data: profile } = await createServiceClient().from('users').select('role').eq('id', user.id).single()
     if (profile?.role !== 'Admin')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -72,7 +72,7 @@ export async function PUT(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+    const { data: profile } = await createServiceClient().from('users').select('role').eq('id', user.id).single()
     if (profile?.role !== 'Admin')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -101,7 +101,7 @@ export async function DELETE(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+    const { data: profile } = await createServiceClient().from('users').select('role').eq('id', user.id).single()
     if (profile?.role !== 'Admin')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
