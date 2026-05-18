@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useUser } from '@/components/shared/UserContext'
 import { useLang } from '@/components/shared/I18nContext'
+import { useToast } from '@/components/shared/ToastContext'
 
 /* ── TYPES ─────────────────────────────────────────────────── */
 interface Dropdowns {
@@ -66,6 +67,7 @@ const card: React.CSSProperties = { background: 'var(--bg-surface)', border: '1p
 export default function TinhGiaPage() {
   const { role, store: userStore } = useUser()
   const { t } = useLang()
+  const { toast, update } = useToast()
   const isAdmin    = role === 'Admin'
   const isManager  = role === 'Manager'
   const canSeeAll  = isAdmin || isManager
@@ -314,33 +316,50 @@ export default function TinhGiaPage() {
   /* ── Calculate ── */
   async function calculate() {
     setCalcError(''); setCalculating(true)
+    const tid = toast('Calculating BOM cost...', 'loading')
     try {
       const payload = buildPayload()
-      if (payload.golds.length === 0) { setCalcError('Cần ít nhất 1 dòng vàng hợp lệ'); setCalculating(false); return }
+      if (payload.golds.length === 0) {
+        setCalcError('Cần ít nhất 1 dòng vàng hợp lệ')
+        update(tid, 'Cần ít nhất 1 dòng vàng hợp lệ', 'warning')
+        setCalculating(false); return
+      }
       const r = await fetch('/api/bom/calculate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       const d = await r.json()
-      if (!r.ok || !d.data) { setCalcError(d.error || d.message || 'Calculation failed'); return }
+      if (!r.ok || !d.data) {
+        setCalcError(d.error || d.message || 'Calculation failed')
+        update(tid, d.error || 'Calculation failed', 'danger'); return
+      }
       setPricing(d.data)
-    } catch (e: any) { setCalcError(e.message) } finally { setCalculating(false) }
+      update(tid, 'BOM cost calculated', 'success')
+    } catch (e: any) { setCalcError(e.message); update(tid, e.message, 'danger') }
+    finally { setCalculating(false) }
   }
 
   /* ── Save BOM ── */
   async function saveBOM() {
     if (!pricing) return
     setSaveError(''); setSaving(true)
+    const isUpdate = editBomId && !saveAsNew
+    const tid = toast(isUpdate ? 'Updating BOM...' : 'Saving BOM...', 'loading')
     try {
       const pct = parseFloat(discountPct) || 0
       const payload = { ...buildPayload(), discountPct: pct }
-      const isUpdate = editBomId && !saveAsNew
       const r = await fetch(isUpdate ? `/api/bom/${editBomId}` : '/api/bom', {
         method: isUpdate ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
       const d = await r.json()
-      if (!r.ok) { setSaveError(d.error || d.message || 'Save failed'); return }
-      setSavedBomId(isUpdate ? editBomId! : (d.data?.bom_id || d.bomId || 'Saved'))
-    } catch (e: any) { setSaveError(e.message) } finally { setSaving(false) }
+      if (!r.ok) {
+        setSaveError(d.error || d.message || 'Save failed')
+        update(tid, d.error || 'Save failed', 'danger'); return
+      }
+      const savedId = isUpdate ? editBomId! : (d.data?.bom_id || d.bomId || 'Saved')
+      setSavedBomId(savedId)
+      update(tid, `BOM ${savedId} ${isUpdate ? 'updated' : 'saved'}`, 'success')
+    } catch (e: any) { setSaveError(e.message); update(tid, e.message, 'danger') }
+    finally { setSaving(false) }
   }
 
   /* ── Reset ── */

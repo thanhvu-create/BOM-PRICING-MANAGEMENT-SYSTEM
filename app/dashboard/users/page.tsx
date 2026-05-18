@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useToast } from '@/components/shared/ToastContext'
 
 interface AppUser {
   id: string
@@ -43,6 +44,7 @@ const labelStyle: React.CSSProperties = {
 }
 
 export default function UsersPage() {
+  const { toast, update } = useToast()
   const [users, setUsers] = useState<AppUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -50,7 +52,6 @@ export default function UsersPage() {
   const [editUser, setEditUser] = useState<AppUser | null>(null)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
 
   // Form fields
   const [fUsername, setFUsername] = useState('')
@@ -60,18 +61,16 @@ export default function UsersPage() {
   const [fNewPassword, setFNewPassword] = useState('')
 
   async function load() {
-    setLoading(true)
-    setError('')
+    setLoading(true); setError('')
+    const tid = toast('Loading users...', 'loading')
     try {
       const r = await fetch('/api/users')
-      if (!r.ok) { setError('Access denied'); return }
+      if (!r.ok) { setError('Access denied'); update(tid, 'Access denied', 'danger'); return }
       const d = await r.json()
       setUsers(d.data || [])
-    } catch {
-      setError('Failed to load users')
-    } finally {
-      setLoading(false)
-    }
+      update(tid, 'Users loaded', 'success')
+    } catch { setError('Failed to load users'); update(tid, 'Failed to load users', 'danger') }
+    finally { setLoading(false) }
   }
 
   useEffect(() => { load() }, [])
@@ -94,51 +93,44 @@ export default function UsersPage() {
     if (modal === 'add') {
       if (!fUsername.trim() || !fPassword.trim()) { setFormError('Username và password là bắt buộc'); return }
       setSaving(true)
+      const tid = toast(`Creating user "${fUsername}"...`, 'loading')
       try {
         const r = await fetch('/api/users', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: fUsername, password: fPassword, role: fRole, store: fStore }),
         })
         const d = await r.json()
-        if (!r.ok) { setFormError(d.error || 'Failed'); return }
-        closeModal()
-        showSuccess('User created successfully')
-        load()
-      } finally { setSaving(false) }
+        if (!r.ok) { setFormError(d.error || 'Failed'); update(tid, d.error || 'Create failed', 'danger'); return }
+        closeModal(); update(tid, `User "${fUsername}" created`, 'success'); load()
+      } catch (e: any) { update(tid, e.message, 'danger') }
+      finally { setSaving(false) }
     } else if (modal === 'edit' && editUser) {
       setSaving(true)
+      const tid = toast(`Updating user "${editUser.username}"...`, 'loading')
       try {
         const body: any = { id: editUser.id, role: fRole, store: fStore }
         if (fNewPassword.trim()) body.newPassword = fNewPassword.trim()
         const r = await fetch('/api/users', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         })
         const d = await r.json()
-        if (!r.ok) { setFormError(d.error || 'Failed'); return }
-        closeModal()
-        showSuccess('User updated successfully')
-        load()
-      } finally { setSaving(false) }
+        if (!r.ok) { setFormError(d.error || 'Failed'); update(tid, d.error || 'Update failed', 'danger'); return }
+        closeModal(); update(tid, `User "${editUser.username}" updated`, 'success'); load()
+      } catch (e: any) { update(tid, e.message, 'danger') }
+      finally { setSaving(false) }
     }
   }
 
   async function handleDelete(u: AppUser) {
     if (!window.confirm(`Xóa user "${u.username}"?`)) return
+    const tid = toast(`Deleting "${u.username}"...`, 'loading')
     try {
       const r = await fetch(`/api/users?id=${u.id}`, { method: 'DELETE' })
       const d = await r.json()
-      if (!r.ok) { alert(d.error || 'Failed to delete'); return }
-      showSuccess('User deleted')
-      load()
-    } catch { alert('Failed to delete') }
-  }
-
-  function showSuccess(msg: string) {
-    setSuccessMsg(msg)
-    setTimeout(() => setSuccessMsg(''), 3000)
+      if (!r.ok) { update(tid, d.error || 'Failed to delete', 'danger'); return }
+      update(tid, `User "${u.username}" deleted`, 'success'); load()
+    } catch { update(tid, 'Failed to delete', 'danger') }
   }
 
   function roleBadgeStyle(role: string): React.CSSProperties {
@@ -183,11 +175,6 @@ export default function UsersPage() {
         </button>
       </div>
 
-      {successMsg && (
-        <div style={{ borderLeft: '2px solid var(--color-success)', padding: '10px 14px', marginBottom: '1rem', background: '#F2F7F4', color: 'var(--color-success)', fontSize: 'var(--text-sm)' }}>
-          <i className="fa-solid fa-check" style={{ marginRight: 8 }} />{successMsg}
-        </div>
-      )}
 
       {error && (
         <div style={{ borderLeft: '2px solid var(--color-danger)', padding: '10px 14px', marginBottom: '1rem', background: '#FAF2F2', color: 'var(--color-danger)', fontSize: 'var(--text-sm)' }}>

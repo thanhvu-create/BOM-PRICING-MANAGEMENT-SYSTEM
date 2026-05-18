@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useUser } from '@/components/shared/UserContext'
 import { useLang } from '@/components/shared/I18nContext'
+import { useToast } from '@/components/shared/ToastContext'
 
 /* ── TYPES ─────────────────────────────────────────────────── */
 interface BomRow {
@@ -55,6 +56,7 @@ const PAGE_SIZE = 20
 export default function ReviewPage() {
   const { role, store: myStore } = useUser()
   const { t } = useLang()
+  const { toast, update, dismiss } = useToast()
 
   const showCost   = role === 'Admin' || role === 'Manager'
   const showStones = role !== 'Sales' && role !== 'Sales Supervisor'
@@ -97,11 +99,14 @@ export default function ReviewPage() {
 
   async function loadBoms() {
     setLoading(true)
+    const tid = toast('Loading BOM history...', 'loading')
     try {
       const r = await fetch('/api/bom')
       const d = await r.json()
       setBoms(d.data || [])
-    } catch { } finally { setLoading(false) }
+      update(tid, 'BOM history loaded', 'success')
+    } catch { update(tid, 'Failed to load BOM history', 'danger') }
+    finally { setLoading(false) }
   }
 
   /* ── Filtered list ─── */
@@ -126,20 +131,26 @@ export default function ReviewPage() {
   /* ── Detail modal ─── */
   async function openDetail(bomId: string) {
     setDetailBomId(bomId); setDetailData(null); setDetailLoading(true)
+    const tid = toast(`Loading BOM data ${bomId}...`, 'loading')
     try {
       const d = await fetch(`/api/bom/${bomId}`).then(r => r.json())
       setDetailData(d)
-    } catch { } finally { setDetailLoading(false) }
+      dismiss(tid)
+    } catch { update(tid, 'Failed to load BOM detail', 'danger') }
+    finally { setDetailLoading(false) }
   }
   function closeDetail() { setDetailBomId(null); setDetailData(null) }
 
   /* ── Quotation modal ─── */
   async function openQuotation(bomId: string) {
     setQuotBomId(bomId); setQuotData(null); setQuotLoading(true)
+    const tid = toast(`Loading quotation ${bomId}...`, 'loading')
     try {
       const d = await fetch(`/api/bom/${bomId}`).then(r => r.json())
       setQuotData(d)
-    } catch { } finally { setQuotLoading(false) }
+      dismiss(tid)
+    } catch { update(tid, 'Failed to load quotation', 'danger') }
+    finally { setQuotLoading(false) }
   }
   function closeQuotation() { setQuotBomId(null); setQuotData(null) }
 
@@ -165,27 +176,32 @@ export default function ReviewPage() {
     if (isNaN(pct) || pct < 0 || pct > 100) { setDiscountError('Discount must be 0–100%'); return }
     if (pct > maxPct) { setDiscountError(`Max discount is ${maxPct}% for your role`); return }
     setDiscountSaving(true); setDiscountError('')
+    const tid = toast(`Applying ${pct}% discount to ${discountBom.bom_id}...`, 'loading')
     try {
       const r = await fetch(`/api/bom/${discountBom.bom_id}/discount`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ discountPct: pct }),
       })
       const d = await r.json()
-      if (!r.ok) { setDiscountError(d.error || 'Failed'); return }
+      if (!r.ok) { setDiscountError(d.error || 'Failed'); update(tid, d.error || 'Discount failed', 'danger'); return }
       setDiscountSuccess(`Applied. Price after discount: ${fmt$(d.discountPrice)}`)
+      update(tid, `Discount applied — ${fmt$(d.discountPrice)} after ${pct}%`, 'success')
       loadBoms()
-    } catch (e: any) { setDiscountError(e.message) } finally { setDiscountSaving(false) }
+    } catch (e: any) { setDiscountError(e.message); update(tid, e.message, 'danger') }
+    finally { setDiscountSaving(false) }
   }
 
   /* ── Delete BOM ─── */
   async function deleteBom(bomId: string) {
     if (!confirm(`Xóa BOM ${bomId}? Không thể hoàn tác.`)) return
+    const tid = toast(`Deleting BOM ${bomId}...`, 'loading')
     try {
       const r = await fetch(`/api/bom/${bomId}`, { method: 'DELETE' })
       const d = await r.json()
-      if (!r.ok) { alert(d.error || 'Delete failed'); return }
+      if (!r.ok) { update(tid, d.error || 'Delete failed', 'danger'); return }
+      update(tid, `BOM ${bomId} deleted`, 'success')
       loadBoms()
-    } catch { alert('Delete failed') }
+    } catch { update(tid, 'Delete failed', 'danger') }
   }
 
   /* ── Image proxy helpers for print ─── */

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useToast } from '@/components/shared/ToastContext'
 
 interface GoldRow {
   id: string
@@ -36,6 +37,7 @@ const labelStyle: React.CSSProperties = {
 const DEFAULT_KARATS = ['10K', '14K', '18K', '20K', '22K', '24K', 'PT', 'AG']
 
 export default function GoldPage() {
+  const { toast, update } = useToast()
   const [rows, setRows] = useState<GoldRow[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<'add' | 'edit' | null>(null)
@@ -44,7 +46,6 @@ export default function GoldPage() {
   const [fetching, setFetching] = useState(false)
   const [error, setError] = useState('')
   const [formError, setFormError] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
 
   // Karat Cols management
   const [showKaratPanel, setShowKaratPanel] = useState(false)
@@ -59,13 +60,15 @@ export default function GoldPage() {
   const [fLF, setFLF] = useState('1.06')
 
   async function load() {
-    setLoading(true)
-    setError('')
+    setLoading(true); setError('')
+    const tid = toast('Loading gold prices...', 'loading')
     try {
       const r = await fetch('/api/gold')
       const d = await r.json()
       setRows(d.data || [])
-    } catch { setError('Failed to load') } finally { setLoading(false) }
+      update(tid, 'Gold prices loaded', 'success')
+    } catch { update(tid, 'Failed to load gold prices', 'danger') }
+    finally { setLoading(false) }
   }
 
   useEffect(() => { load() }, [])
@@ -91,6 +94,7 @@ export default function GoldPage() {
   async function handleSave() {
     if (!fDate) { setFormError('Date is required'); return }
     setFormError(''); setSaving(true)
+    const tid = toast(`Saving gold price for ${fDate}...`, 'loading')
     try {
       const r = await fetch('/api/gold', {
         method: 'POST',
@@ -98,24 +102,25 @@ export default function GoldPage() {
         body: JSON.stringify({ date: fDate, goldOz: fGoldOz, ptOz: fPtOz, agOz: fAgOz, lossFactor: fLF }),
       })
       const d = await r.json()
-      if (!r.ok) { setFormError(d.error || 'Failed'); return }
+      if (!r.ok) { setFormError(d.error || 'Failed'); update(tid, d.error || 'Save failed', 'danger'); return }
       closeModal()
-      showSuccess('Saved successfully')
+      update(tid, `Gold price ${fDate} saved`, 'success')
       load()
-    } finally { setSaving(false) }
+    } catch (e: any) { update(tid, e.message, 'danger') }
+    finally { setSaving(false) }
   }
 
   async function handleDelete(row: GoldRow) {
     if (!window.confirm(`Xóa dòng giá ${row.price_date}?`)) return
+    const tid = toast(`Deleting ${row.price_date}...`, 'loading')
     try {
       const r = await fetch(`/api/gold?date=${row.price_date}`, { method: 'DELETE' })
       const d = await r.json()
-      if (!r.ok) { alert(d.error || 'Delete failed'); return }
-      showSuccess('Deleted'); load()
-    } catch { alert('Failed to delete') }
+      if (!r.ok) { update(tid, d.error || 'Delete failed', 'danger'); return }
+      update(tid, `Deleted ${row.price_date}`, 'success')
+      load()
+    } catch { update(tid, 'Failed to delete', 'danger') }
   }
-
-  function showSuccess(msg: string) { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000) }
 
   // Derive active karat columns from latest row
   const activeKarats = rows.length > 0
@@ -126,40 +131,46 @@ export default function GoldPage() {
     const label = newKarat.trim().toUpperCase()
     if (!label) return
     setKaratWorking(true)
+    const tid = toast(`Adding karat column ${label}...`, 'loading')
     try {
       const r = await fetch('/api/gold/karat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ label }),
       })
       const d = await r.json()
-      if (!r.ok) { alert(d.error || 'Failed'); return }
+      if (!r.ok) { update(tid, d.error || 'Failed', 'danger'); return }
       setNewKarat('')
-      showSuccess(`Added ${label}`)
+      update(tid, `${label} column added`, 'success')
       load()
-    } finally { setKaratWorking(false) }
+    } catch (e: any) { update(tid, e.message, 'danger') }
+    finally { setKaratWorking(false) }
   }
 
   async function handleRemoveKarat(label: string) {
     if (!confirm(`Remove ${label} column from all rows?`)) return
     setKaratWorking(true)
+    const tid = toast(`Removing ${label} column...`, 'loading')
     try {
       const r = await fetch(`/api/gold/karat?label=${label}`, { method: 'DELETE' })
       const d = await r.json()
-      if (!r.ok) { alert(d.error || 'Failed'); return }
-      showSuccess(`Removed ${label}`)
+      if (!r.ok) { update(tid, d.error || 'Failed', 'danger'); return }
+      update(tid, `${label} column removed`, 'success')
       load()
-    } finally { setKaratWorking(false) }
+    } catch (e: any) { update(tid, e.message, 'danger') }
+    finally { setKaratWorking(false) }
   }
 
   async function handleFetchAmark() {
     setFetching(true); setError('')
+    const tid = toast('Fetching prices from Amark.com...', 'loading')
     try {
       const r = await fetch('/api/gold/fetch-amark', { method: 'POST' })
       const d = await r.json()
-      if (!r.ok || !d.success) { setError(d.message || d.error || 'Fetch failed'); return }
-      showSuccess(`Fetched: Gold $${d.goldOz}/oz → 18K $${d.karatPrices?.['18K']}/gr`)
+      if (!r.ok || !d.success) { update(tid, d.message || d.error || 'Fetch failed', 'danger'); setError(d.message || d.error || 'Fetch failed'); return }
+      update(tid, `Fetched: Gold $${d.goldOz}/oz · 18K $${d.karatPrices?.['18K']}/gr`, 'success')
       load()
-    } catch (e: any) { setError(e.message) } finally { setFetching(false) }
+    } catch (e: any) { update(tid, e.message, 'danger'); setError(e.message) }
+    finally { setFetching(false) }
   }
 
   // Computed 18K price from form inputs (preview)
@@ -226,11 +237,6 @@ export default function GoldPage() {
         </div>
       </div>
 
-      {successMsg && (
-        <div style={{ borderLeft: '2px solid var(--color-success)', padding: '10px 14px', marginBottom: '1rem', background: '#F2F7F4', color: 'var(--color-success)', fontSize: 'var(--text-sm)' }}>
-          <i className="fa-solid fa-check" style={{ marginRight: 8 }} />{successMsg}
-        </div>
-      )}
 
       {error && (
         <div style={{ borderLeft: '2px solid var(--color-danger)', padding: '10px 14px', marginBottom: '1rem', background: '#FAF2F2', color: 'var(--color-danger)', fontSize: 'var(--text-sm)' }}>

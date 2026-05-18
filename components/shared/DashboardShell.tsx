@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { UserProvider } from './UserContext'
 import { I18nProvider, useLang } from './I18nContext'
+import { ToastProvider } from './ToastContext'
 import type { Role } from '@/types'
 
 interface Props {
@@ -36,7 +37,9 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
 export default function DashboardShell({ user, children }: Props) {
   return (
     <I18nProvider>
-      <DashboardContent user={user}>{children}</DashboardContent>
+      <ToastProvider>
+        <DashboardContent user={user}>{children}</DashboardContent>
+      </ToastProvider>
     </I18nProvider>
   )
 }
