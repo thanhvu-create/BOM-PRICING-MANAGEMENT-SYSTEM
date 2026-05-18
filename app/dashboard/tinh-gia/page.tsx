@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useUser } from '@/components/shared/UserContext'
+import { useLang } from '@/components/shared/I18nContext'
 
 /* ── TYPES ─────────────────────────────────────────────────── */
 interface Dropdowns {
@@ -64,6 +65,7 @@ const card: React.CSSProperties = { background: 'var(--bg-surface)', border: '1p
 /* ── COMPONENT ─────────────────────────────────────────────── */
 export default function TinhGiaPage() {
   const { role, store: userStore } = useUser()
+  const { t } = useLang()
   const isAdmin    = role === 'Admin'
   const isManager  = role === 'Manager'
   const canSeeAll  = isAdmin || isManager
@@ -109,8 +111,74 @@ export default function TinhGiaPage() {
   const [savedBomId, setSavedBomId] = useState('')
   const [saveError, setSaveError] = useState('')
 
+  // Edit mode
+  const [editBomId, setEditBomId] = useState<string | null>(null)
+  const [saveAsNew, setSaveAsNew] = useState(false)
+  const [fillLoading, setFillLoading] = useState(false)
+
   // Lookup debounce timers
   const lookupTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
+
+  /* ── Read ?edit=BOMID from URL ── */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const bomId = params.get('edit')
+    if (bomId) setEditBomId(bomId)
+  }, [])
+
+  /* ── Load BOM for editing ── */
+  async function loadForEdit(bomId: string) {
+    setFillLoading(true)
+    try {
+      const r = await fetch(`/api/bom/${bomId}`)
+      const d = await r.json()
+      if (!d.header) return
+      const h = d.header
+      setDate(h.date || today())
+      setProductType(h.product_type || '')
+      setSoMo(h.so_mo || '')
+      setModel(h.model || '')
+      setPriceListType(h.price_list_type || '')
+      setSpType(h.sp_type || 'Basic')
+      setLaborHours(String(h.labor_hours || 0))
+      setSalesPerson(h.sales_person || '')
+      setStore(h.store || '')
+      setCustomerName(h.customer_name || '')
+      setNote(h.note || '')
+      setImg1(h.img1 || '')
+      setImg2(h.img2 || '')
+      setImg3(h.img3 || '')
+      setFolderUrl(h.folder_url || '')
+
+      if (d.golds?.length > 0) {
+        const filled: GoldRow[] = d.golds.map((g: any) => ({
+          id: nextId(), goldType: g.gold_type, color: g.color,
+          weight: String(g.weight), pricePerGr: 0, cost: 0,
+        }))
+        setGoldRows(filled)
+        filled.forEach(row => fetchGoldPrice(row.id, h.date || today(), row.goldType))
+      }
+
+      if (d.stones?.length > 0) {
+        setStoneRows(d.stones.map((s: any) => ({
+          id: nextId(), groupCode: s.group_code,
+          size: String(s.size || ''), ctw1pc: String(s.ctw1pc || ''),
+          qty: String(s.qty || ''), tlHot: s.tl_hot || 0,
+          gradeId: s.grade_id || '', giaBan: s.gia_ban || 0,
+          inputType: s.input_type || 'mm',
+        })))
+      }
+
+      setStep(1)
+    } catch (e) { console.error('loadForEdit failed', e) }
+    finally { setFillLoading(false) }
+  }
+
+  /* ── Trigger load when editBomId is set AND dropdowns are ready ── */
+  useEffect(() => {
+    if (editBomId && !loadingDD) loadForEdit(editBomId)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editBomId, loadingDD])
 
   /* ── Load dropdowns ── */
   useEffect(() => {
@@ -262,13 +330,16 @@ export default function TinhGiaPage() {
     setSaveError(''); setSaving(true)
     try {
       const pct = parseFloat(discountPct) || 0
-      const r = await fetch('/api/bom', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...buildPayload(), discountPct: pct }),
+      const payload = { ...buildPayload(), discountPct: pct }
+      const isUpdate = editBomId && !saveAsNew
+      const r = await fetch(isUpdate ? `/api/bom/${editBomId}` : '/api/bom', {
+        method: isUpdate ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
       const d = await r.json()
-      if (!r.ok) { setSaveError(d.error || 'Save failed'); return }
-      setSavedBomId(d.data?.bom_id || 'Saved')
+      if (!r.ok) { setSaveError(d.error || d.message || 'Save failed'); return }
+      setSavedBomId(isUpdate ? editBomId! : (d.data?.bom_id || d.bomId || 'Saved'))
     } catch (e: any) { setSaveError(e.message) } finally { setSaving(false) }
   }
 
@@ -354,10 +425,10 @@ export default function TinhGiaPage() {
   )
 
   const steps = [
-    { label: '1. INFO (HEADER)', icon: 'fa-regular fa-file' },
-    { label: '2. GOLD',          icon: 'fa-solid fa-coins' },
-    { label: '3. STONES',        icon: 'fa-solid fa-gem' },
-    { label: '4. SUMMARY',       icon: 'fa-solid fa-calculator' },
+    { label: t('step1'), icon: 'fa-regular fa-file' },
+    { label: t('step2'), icon: 'fa-solid fa-coins' },
+    { label: t('step3'), icon: 'fa-solid fa-gem' },
+    { label: t('step4'), icon: 'fa-solid fa-calculator' },
   ]
 
   return (
@@ -400,7 +471,7 @@ export default function TinhGiaPage() {
               letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: 5,
             }}>
-            <i className="fa-solid fa-trash-can" style={{ fontSize: 10 }} />RESET
+            <i className="fa-solid fa-trash-can" style={{ fontSize: 10 }} />{t('reset')}
           </button>
         </div>
       </div>
@@ -417,26 +488,26 @@ export default function TinhGiaPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
               <div>
                 <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>
-                  DATE <span style={{ color: 'var(--color-danger)' }}>*</span>
+                  {t('labelDate')} <span style={{ color: 'var(--color-danger)' }}>*</span>
                 </label>
                 <input type="date" style={inputUnder} value={date} onChange={e => onDateChange(e.target.value)} />
               </div>
               <div>
                 <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>
-                  PRODUCT TYPE <span style={{ color: 'var(--color-danger)' }}>*</span>
+                  {t('labelProductType')} <span style={{ color: 'var(--color-danger)' }}>*</span>
                 </label>
                 <select style={selectBox} value={productType} onChange={e => setProductType(e.target.value)}>
                   <option value="">— Chọn —</option>
-                  {dropdowns?.productTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                  {dropdowns?.productTypes.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>CUSTOMER NAME</label>
+                <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>{t('labelCustomer')}</label>
                 <input style={inputUnder} value={customerName} onChange={e => setCustomerName(e.target.value)} placeholder="Tên khách hàng" />
               </div>
               <div>
                 <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>
-                  SO / MO <span style={{ color: 'var(--color-danger)' }}>*</span>
+                  {t('labelSoMo')} <span style={{ color: 'var(--color-danger)' }}>*</span>
                 </label>
                 <input style={inputUnder} value={soMo} onChange={e => setSoMo(e.target.value)} placeholder="Số SO hoặc MO" />
               </div>
@@ -444,27 +515,27 @@ export default function TinhGiaPage() {
             {/* Row 2: MODEL NUMBER | PRICE LIST TYPE | SALESPERSON | STORE */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
               <div>
-                <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>MODEL NUMBER</label>
+                <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>{t('labelModelNum')}</label>
                 <input style={inputUnder} value={model} onChange={e => setModel(e.target.value)} placeholder="Model" />
               </div>
               <div>
                 <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>
-                  PRICE LIST TYPE <span style={{ color: 'var(--color-danger)' }}>*</span>
+                  {t('labelPriceListType')} <span style={{ color: 'var(--color-danger)' }}>*</span>
                 </label>
                 <select style={selectBox} value={priceListType} onChange={e => setPriceListType(e.target.value)}>
                   <option value="">— Chọn —</option>
-                  {dropdowns?.priceListTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                  {dropdowns?.priceListTypes.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>SALESPERSON</label>
+                <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>{t('labelSalesperson')}</label>
                 <select style={selectBox} value={salesPerson} onChange={e => setSalesPerson(e.target.value)}>
                   <option value="">— None —</option>
                   {dropdowns?.salesPersonNames.map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>STORE</label>
+                <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>{t('labelStore')}</label>
                 <select style={selectBox} value={store} onChange={e => setStore(e.target.value)}>
                   <option value="">— None —</option>
                   {[...new Set(dropdowns?.storeNames ?? [])].map(n => <option key={n} value={n}>{n}</option>)}
@@ -486,13 +557,13 @@ export default function TinhGiaPage() {
                 <input style={inputUnder} value={img3} onChange={e => setImg3(e.target.value)} placeholder="https://..." />
               </div>
               <div>
-                <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>FOLDER URL</label>
+                <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>{t('labelFolderUrl')}</label>
                 <input style={inputUnder} value={folderUrl} onChange={e => setFolderUrl(e.target.value)} placeholder="https://..." />
               </div>
             </div>
             {/* Row 4: NOTE (full width) */}
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>NOTE</label>
+              <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>{t('labelNote')}</label>
               <textarea style={{ ...inputUnder, resize: 'vertical', minHeight: 56 }} value={note} onChange={e => setNote(e.target.value)} placeholder="Ghi chú..." />
             </div>
             {(!date || !soMo || !priceListType) && (
@@ -520,7 +591,7 @@ export default function TinhGiaPage() {
           <div style={{ padding: '1.5rem', overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 550 }}>
               <thead>
-                <tr>{['#', 'Loại Vàng', 'Màu', 'Trọng Lượng (gr)', 'Giá/gr', 'Thành Tiền', ''].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
+                <tr>{['#', t('labelGoldType'), t('labelColor'), t('labelWeight'), t('labelPricePerGr'), t('labelGoldTotal'), ''].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
               </thead>
               <tbody>
                 {goldRows.map((r, i) => (
@@ -528,7 +599,7 @@ export default function TinhGiaPage() {
                     <td style={{ ...tdStyle, width: 30, textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>{i + 1}</td>
                     <td style={{ ...tdStyle, width: 100 }}>
                       <select style={tdInput} value={r.goldType} onChange={e => updateGold(r.id, 'goldType', e.target.value)}>
-                        {(dropdowns?.goldTypes || ['10K','14K','18K','20K','22K','24K','PT','AG']).map(t => <option key={t} value={t}>{t}</option>)}
+                        {(dropdowns?.goldTypes || ['10K','14K','18K','20K','22K','24K','PT','AG']).map(opt => <option key={opt} value={opt}>{opt}</option>)}
                       </select>
                     </td>
                     <td style={{ ...tdStyle, width: 120 }}>
@@ -571,7 +642,7 @@ export default function TinhGiaPage() {
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={openStoneTypeList} className="btn-outline" style={{ padding: '5px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                <i className="fa-regular fa-gem" style={{ fontSize: 10 }} />Stone Types
+                <i className="fa-regular fa-gem" style={{ fontSize: 10 }} />{t('stoneTypeListTitle')}
               </button>
               <button onClick={addStoneRow} className="btn-outline" style={{ padding: '5px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}>
                 <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />Thêm dòng
@@ -584,7 +655,7 @@ export default function TinhGiaPage() {
             </p>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 680 }}>
               <thead>
-                <tr>{['#', 'Group Code', 'MM Size', 'CTW/pc', 'Qty', 'TL Hột', 'Grade', 'Giá', ''].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
+                <tr>{['#', t('labelStoneGroup'), t('labelMmSize'), t('labelCtw'), t('labelQty'), t('labelTlHot'), t('labelGradeId'), t('labelStonePrice'), ''].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
               </thead>
               <tbody>
                 {stoneRows.map((r, i) => (
@@ -692,12 +763,12 @@ export default function TinhGiaPage() {
                 <div style={{ padding: '1rem 1.5rem' }}>
                   {/* Cost rows — Admin/Manager only */}
                   {canSeeAll && [
-                    ['Gold Cost',   pricing.costGold],
-                    ['Stone Cost',  pricing.costStones],
-                    ['Labor Cost',  pricing.costLabor],
-                    ['Subtotal',    pricing.costSubtotal],
-                    ['CIF',         pricing.costCif],
-                    ['Total Cost',  pricing.costTotal],
+                    [t('labelCostGold'),     pricing.costGold],
+                    [t('labelCostStones'),   pricing.costStones],
+                    [t('labelCostLabor'),    pricing.costLabor],
+                    [t('labelCostSubtotal'), pricing.costSubtotal],
+                    [t('labelCif'),          pricing.costCif],
+                    [t('labelCostTotal'),    pricing.costTotal],
                   ].map(([l, v]) => (
                     <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border-light)' }}>
                       <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>{l}</span>
@@ -707,13 +778,13 @@ export default function TinhGiaPage() {
 
                   {/* Sell Price */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 6px', borderTop: '1px solid var(--border-strong)', marginTop: canSeeAll ? 4 : 0 }}>
-                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sell Price</span>
+                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('labelSellPrice')}</span>
                     <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400 }}>{fmt$(pricing.sellPrice)}</span>
                   </div>
 
                   {/* Inline Discount */}
                   <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 10, marginTop: 4 }}>
-                    <label style={{ ...lbl, marginBottom: 6 }}>Chiết Khấu %</label>
+                    <label style={{ ...lbl, marginBottom: 6 }}>{t('labelDiscount')} %</label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <input type="number" min="0" max="100" step="0.5"
                         style={{ width: 80, border: '1px solid var(--border-base)', borderRadius: 0, padding: '5px 8px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', outline: 'none', color: 'var(--text-primary)' }}
@@ -731,7 +802,7 @@ export default function TinhGiaPage() {
                   {isVNStore && vndEst && (
                     <div style={{ background: 'var(--bg-muted)', padding: '8px 12px', marginTop: 8 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Est. VND</span>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('labelEstVnd')}</span>
                         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
                           {vndEst.toLocaleString('vi-VN')} ₫
                         </span>
@@ -747,10 +818,25 @@ export default function TinhGiaPage() {
                   </div>
                 )}
                 <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)' }}>
+                  {/* Save as New checkbox — only in edit mode */}
+                  {editBomId && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, fontSize: 'var(--text-sm)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                      <input type="checkbox" checked={saveAsNew} onChange={e => setSaveAsNew(e.target.checked)}
+                        style={{ accentColor: 'var(--btn-dark-bg)', width: 14, height: 14 }} />
+                      Lưu thành BOM mới (giữ nguyên BOM gốc)
+                    </label>
+                  )}
                   <button onClick={saveBOM} className="btn-primary"
                     style={{ width: '100%', justifyContent: 'center', padding: '10px', display: 'flex', alignItems: 'center', gap: 8 }}
-                    disabled={saving}>
-                    {saving ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 12 }} />Đang lưu...</> : <><i className="fa-solid fa-floppy-disk" style={{ fontSize: 12 }} />Lưu BOM</>}
+                    disabled={saving || fillLoading}>
+                    {saving
+                      ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 12 }} />{t('saving')}</>
+                      : fillLoading
+                        ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 12 }} />{t('loading')}</>
+                        : editBomId && !saveAsNew
+                          ? <><i className="fa-solid fa-pen-to-square" style={{ fontSize: 12 }} />{t('updateBOM')}</>
+                          : <><i className="fa-solid fa-floppy-disk" style={{ fontSize: 12 }} />{t('saveBOM')}</>
+                    }
                   </button>
                 </div>
               </div>
@@ -765,7 +851,7 @@ export default function TinhGiaPage() {
           onClick={e => e.target === e.currentTarget && setShowStoneTypes(false)}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 600, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>Stone Types</h3>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>{t('stoneTypeListTitle')}</h3>
               <button onClick={() => setShowStoneTypes(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 20 }}>
                 <i className="fa-solid fa-xmark" />
               </button>
@@ -773,7 +859,7 @@ export default function TinhGiaPage() {
             <div style={{ padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border-light)' }}>
               <input
                 style={{ width: '100%', border: '1px solid var(--border-base)', borderRadius: 0, padding: '7px 10px', fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', outline: 'none' }}
-                placeholder="Tìm Group Code, tên Việt, tên Anh..."
+                placeholder={t('stoneTypeSearchPlh')}
                 value={stoneTypeSearch}
                 onChange={e => setStoneTypeSearch(e.target.value)}
                 autoFocus
@@ -782,17 +868,17 @@ export default function TinhGiaPage() {
             <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 1.5rem' }}>
               {stoneTypeLoading ? (
                 <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                  <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />Đang tải...
+                  <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
                 </div>
               ) : filteredStoneTypes.length === 0 ? (
                 <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
-                  {stoneTypeSearch ? 'Không tìm thấy kết quả' : 'Không có dữ liệu'}
+                  {stoneTypeSearch ? t('stoneTypeNoResult') : t('stoneTypeNoData')}
                 </p>
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
                   <thead>
                     <tr>
-                      {['Group Code', 'Tên Tiếng Việt', 'Full Name (EN)'].map(h => (
+                      {['Group Code', t('colViName'), 'Full Name (EN)'].map(h => (
                         <th key={h} style={{ ...thStyle, position: 'sticky', top: 0 }}>{h}</th>
                       ))}
                     </tr>

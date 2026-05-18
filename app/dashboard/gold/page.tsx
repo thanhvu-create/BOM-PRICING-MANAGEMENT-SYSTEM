@@ -33,7 +33,7 @@ const labelStyle: React.CSSProperties = {
   letterSpacing: '0.1em', color: 'var(--text-secondary)', marginBottom: 4,
 }
 
-const KARAT_KEYS = ['10K', '14K', '18K', '20K', '22K', '24K', 'PT', 'AG']
+const DEFAULT_KARATS = ['10K', '14K', '18K', '20K', '22K', '24K', 'PT', 'AG']
 
 export default function GoldPage() {
   const [rows, setRows] = useState<GoldRow[]>([])
@@ -41,9 +41,15 @@ export default function GoldPage() {
   const [modal, setModal] = useState<'add' | 'edit' | null>(null)
   const [editRow, setEditRow] = useState<GoldRow | null>(null)
   const [saving, setSaving] = useState(false)
+  const [fetching, setFetching] = useState(false)
   const [error, setError] = useState('')
   const [formError, setFormError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+
+  // Karat Cols management
+  const [showKaratPanel, setShowKaratPanel] = useState(false)
+  const [newKarat, setNewKarat] = useState('')
+  const [karatWorking, setKaratWorking] = useState(false)
 
   // Form fields
   const [fDate, setFDate] = useState('')
@@ -111,6 +117,51 @@ export default function GoldPage() {
 
   function showSuccess(msg: string) { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000) }
 
+  // Derive active karat columns from latest row
+  const activeKarats = rows.length > 0
+    ? Object.keys(rows[0].karat_prices || {}).sort()
+    : DEFAULT_KARATS
+
+  async function handleAddKarat() {
+    const label = newKarat.trim().toUpperCase()
+    if (!label) return
+    setKaratWorking(true)
+    try {
+      const r = await fetch('/api/gold/karat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label }),
+      })
+      const d = await r.json()
+      if (!r.ok) { alert(d.error || 'Failed'); return }
+      setNewKarat('')
+      showSuccess(`Added ${label}`)
+      load()
+    } finally { setKaratWorking(false) }
+  }
+
+  async function handleRemoveKarat(label: string) {
+    if (!confirm(`Remove ${label} column from all rows?`)) return
+    setKaratWorking(true)
+    try {
+      const r = await fetch(`/api/gold/karat?label=${label}`, { method: 'DELETE' })
+      const d = await r.json()
+      if (!r.ok) { alert(d.error || 'Failed'); return }
+      showSuccess(`Removed ${label}`)
+      load()
+    } finally { setKaratWorking(false) }
+  }
+
+  async function handleFetchAmark() {
+    setFetching(true); setError('')
+    try {
+      const r = await fetch('/api/gold/fetch-amark', { method: 'POST' })
+      const d = await r.json()
+      if (!r.ok || !d.success) { setError(d.message || d.error || 'Fetch failed'); return }
+      showSuccess(`Fetched: Gold $${d.goldOz}/oz → 18K $${d.karatPrices?.['18K']}/gr`)
+      load()
+    } catch (e: any) { setError(e.message) } finally { setFetching(false) }
+  }
+
   // Computed 18K price from form inputs (preview)
   function previewPrice(karat: number) {
     const oz = parseFloat(fGoldOz) || 0
@@ -128,15 +179,47 @@ export default function GoldPage() {
           <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', letterSpacing: '0.04em', margin: 0 }}>Daily metal prices — auto-fetched from Amark.com</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <button className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
-            <i className="fa-solid fa-cloud-arrow-down" style={{ fontSize: 11 }} />Fetch Today (Amark)
+          <button onClick={handleFetchAmark} disabled={fetching} className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)', opacity: fetching ? 0.6 : 1 }}>
+            <i className={`fa-solid ${fetching ? 'fa-circle-notch fa-spin' : 'fa-cloud-arrow-down'}`} style={{ fontSize: 11 }} />
+            {fetching ? 'Fetching...' : 'Fetch Today (Amark)'}
           </button>
           <button onClick={openAdd} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
             <i className="fa-solid fa-plus" style={{ fontSize: 11 }} />+ Add Manual
           </button>
-          <button className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
-            <i className="fa-solid fa-table-columns" style={{ fontSize: 11 }} />Karat Cols <i className="fa-solid fa-chevron-down" style={{ fontSize: 9 }} />
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setShowKaratPanel(v => !v)} className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
+              <i className="fa-solid fa-table-columns" style={{ fontSize: 11 }} />Karat Cols <i className="fa-solid fa-chevron-down" style={{ fontSize: 9 }} />
+            </button>
+            {showKaratPanel && (
+              <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, padding: '1rem', width: 260, zIndex: 100, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', marginBottom: 8 }}>Active Karats</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  {activeKarats.map(k => (
+                    <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, border: '1px solid var(--border-base)', padding: '2px 8px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)' }}>
+                      {k}
+                      {!DEFAULT_KARATS.includes(k) && (
+                        <button onClick={() => handleRemoveKarat(k)} disabled={karatWorking}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', padding: 0, fontSize: 10, lineHeight: 1 }}>
+                          ×
+                        </button>
+                      )}
+                    </span>
+                  ))}
+                </div>
+                <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', marginBottom: 6 }}>Add Custom Karat</p>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input value={newKarat} onChange={e => setNewKarat(e.target.value.toUpperCase())}
+                    onKeyDown={e => e.key === 'Enter' && handleAddKarat()}
+                    placeholder="e.g. 16K" maxLength={4}
+                    style={{ flex: 1, border: '1px solid var(--border-base)', borderRadius: 0, padding: '5px 8px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', outline: 'none' }} />
+                  <button onClick={handleAddKarat} disabled={karatWorking || !newKarat}
+                    style={{ background: 'var(--btn-dark-bg)', color: 'var(--text-inverse)', border: 'none', borderRadius: 0, padding: '5px 12px', cursor: 'pointer', fontSize: 'var(--text-xs)', opacity: (!newKarat || karatWorking) ? 0.5 : 1 }}>
+                    Add
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
           <button className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
             <i className="fa-solid fa-clock" style={{ fontSize: 11 }} />Auto Trigger <i className="fa-solid fa-chevron-down" style={{ fontSize: 9 }} />
           </button>
@@ -160,20 +243,22 @@ export default function GoldPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
             <thead>
               <tr>
-                {['Date', 'Gold (oz)', 'PT (oz)', 'AG (oz)', 'Loss Factor', '18K $/gr', '24K $/gr', 'PT $/gr', 'Actions'].map(h => (
+                {['Date', 'Gold (oz)', 'PT (oz)', 'AG (oz)', 'Loss Factor',
+                  ...activeKarats.map(k => `${k} $/gr`),
+                  'Actions'].map(h => (
                   <th key={h} style={th}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                <tr><td colSpan={5 + activeKarats.length + 1} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                   <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />Loading...
                 </td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No data</td></tr>
+                <tr><td colSpan={5 + activeKarats.length + 1} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No data</td></tr>
               ) : rows.map(r => (
-                <tr key={r.id}
+                <tr key={r.price_date}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                   onMouseLeave={e => (e.currentTarget.style.background = '')}>
                   <td style={{ ...td, fontFamily: 'var(--font-body)', fontWeight: 700, color: 'var(--text-primary)' }}>{r.price_date}</td>
@@ -181,9 +266,11 @@ export default function GoldPage() {
                   <td style={td}>{r.amark_pt_oz?.toFixed(2)}</td>
                   <td style={td}>{r.amark_ag_oz?.toFixed(3)}</td>
                   <td style={{ ...td, color: '#2E8B8B' }}>{r.loss_factor}</td>
-                  <td style={{ ...td, color: '#2E8B8B' }}>${r.karat_prices?.['18K']?.toFixed(4)}</td>
-                  <td style={{ ...td, color: '#2E8B8B' }}>${r.karat_prices?.['24K']?.toFixed(4)}</td>
-                  <td style={{ ...td, color: '#2E8B8B' }}>${r.karat_prices?.['PT']?.toFixed(4)}</td>
+                  {activeKarats.map(k => (
+                    <td key={k} style={{ ...td, color: '#2E8B8B' }}>
+                      {r.karat_prices?.[k] != null ? `$${r.karat_prices[k].toFixed(4)}` : '—'}
+                    </td>
+                  ))}
                   <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-light)' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => openEdit(r)}

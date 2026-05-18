@@ -68,6 +68,35 @@ export async function GET(
   }
 }
 
+// DELETE /api/bom/[bomId] — xóa BOM (Admin only)
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ bomId: string }> }
+) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { data: profile } = await supabase
+      .from('users').select('role').eq('id', user.id).single()
+    if (profile?.role !== 'Admin') {
+      return NextResponse.json({ error: 'Admin only' }, { status: 403 })
+    }
+
+    const { bomId } = await params
+    const db = createServiceClient()
+
+    // Cascade delete via FK (bom_gold + bom_stone auto-deleted)
+    const { error } = await db.from('bom').delete().eq('bom_id', bomId)
+    if (error) throw error
+
+    return NextResponse.json({ success: true })
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}
+
 // PUT /api/bom/[bomId] — cập nhật BOM
 export async function PUT(
   request: Request,
@@ -89,9 +118,8 @@ export async function PUT(
 
     const db = createServiceClient()
 
-    // Lấy created_by gốc
-    const { data: existing } = await db
-      .from('bom').select('created_by, timestamp').eq('bom_id', bomId).single()
+    // Verify BOM exists
+    await db.from('bom').select('bom_id').eq('bom_id', bomId).single()
 
     const discountPct = Number(payload.discountPct) || 0
     const discountPrice = discountPct > 0

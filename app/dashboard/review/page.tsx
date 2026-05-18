@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useUser } from '@/components/shared/UserContext'
+import { useLang } from '@/components/shared/I18nContext'
 
 /* ── TYPES ─────────────────────────────────────────────────── */
 interface BomRow {
@@ -53,10 +54,11 @@ const PAGE_SIZE = 20
 /* ── COMPONENT ───────────────────────────────────────────────*/
 export default function ReviewPage() {
   const { role, store: myStore } = useUser()
+  const { t } = useLang()
 
   const showCost   = role === 'Admin' || role === 'Manager'
   const showStones = role !== 'Sales' && role !== 'Sales Supervisor'
-  const canDiscount = role === 'Admin' || role === 'Manager'
+  const canDiscount = role === 'Admin' || role === 'Manager' || role === 'Sales Supervisor'
 
   const [boms, setBoms] = useState<BomRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -175,8 +177,39 @@ export default function ReviewPage() {
     } catch (e: any) { setDiscountError(e.message) } finally { setDiscountSaving(false) }
   }
 
+  /* ── Delete BOM ─── */
+  async function deleteBom(bomId: string) {
+    if (!confirm(`Xóa BOM ${bomId}? Không thể hoàn tác.`)) return
+    try {
+      const r = await fetch(`/api/bom/${bomId}`, { method: 'DELETE' })
+      const d = await r.json()
+      if (!r.ok) { alert(d.error || 'Delete failed'); return }
+      loadBoms()
+    } catch { alert('Delete failed') }
+  }
+
+  /* ── Image proxy helpers for print ─── */
+  function extractDriveId(url: string): string | null {
+    if (!url) return null
+    const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/)
+    const pathMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/)
+    return idMatch?.[1] || pathMatch?.[1] || null
+  }
+
+  async function fetchDataUri(url: string): Promise<string> {
+    if (!url) return ''
+    const fileId = extractDriveId(url)
+    if (!fileId) return url
+    try {
+      const r = await fetch(`/api/images/proxy?fileId=${fileId}`)
+      const d = await r.json()
+      if (d.success) return `data:${d.contentType};base64,${d.base64}`
+    } catch {}
+    return ''
+  }
+
   /* ── Print Quotation ─── */
-  function printQuotation() {
+  async function printQuotation() {
     if (!quotData) return
     const h = quotData.header
     const isVN = String(h.store || '').toUpperCase().startsWith('VN')
@@ -199,6 +232,14 @@ export default function ReviewPage() {
 
     const dateStr = h.date ? new Date(h.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase() : ''
 
+    // Pre-fetch images as data: URIs (required for print popup window)
+    const [logoDataUri, img1Uri, img2Uri, img3Uri] = await Promise.all([
+      fetchDataUri(h.logoUrl || ''),
+      fetchDataUri(h.img1 || ''),
+      fetchDataUri(h.img2 || ''),
+      fetchDataUri(h.img3 || ''),
+    ])
+
     const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -213,12 +254,9 @@ export default function ReviewPage() {
   .brand { font-family: 'Cormorant Garamond', serif; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: #6B645C; margin-bottom: 4px; }
   h1 { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; color: #1A1814; margin-bottom: 24px; letter-spacing: 0.05em; }
   hr { border: none; border-top: 1px solid #C8C3BB; margin: 20px 0; }
-  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-bottom: 20px; }
   .info-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #DDD8CF; }
   .info-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #6B645C; }
   .info-val { font-size: 13px; color: #1A1814; }
-  .images { display: flex; gap: 10px; margin: 16px 0; }
-  .images img { max-height: 90px; max-width: 90px; object-fit: cover; border: 1px solid #C8C3BB; }
   .section-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: #6B645C; margin: 20px 0 10px; border-bottom: 1px solid #DDD8CF; padding-bottom: 4px; }
   .material-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #DDD8CF; font-size: 13px; }
   .price-box { background: #e91d79; color: #fff; padding: 18px 20px; margin-top: 24px; }
@@ -233,7 +271,7 @@ export default function ReviewPage() {
 </style>
 </head>
 <body>
-  ${h.logoUrl ? `<div class="logo-wrap"><img src="${h.logoUrl}" alt="Logo"/></div>` : ''}
+  ${logoDataUri ? `<div class="logo-wrap"><img src="${logoDataUri}" alt="Logo"/></div>` : ''}
   <div class="brand">JEWELRY BOM TEMPLATE</div>
   <h1>BÁO GIÁ / QUOTATION</h1>
   <hr/>
@@ -248,9 +286,9 @@ export default function ReviewPage() {
       ${h.store ? `<div class="info-row"><span class="info-label">Store</span><span class="info-val">${h.store}</span></div>` : ''}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${h.img1 ? `<img src="${h.img1}" style="max-height:90px;max-width:90px;object-fit:cover;border:1px solid #C8C3BB" alt=""/>` : ''}
-      ${h.img2 ? `<img src="${h.img2}" style="max-height:90px;max-width:90px;object-fit:cover;border:1px solid #C8C3BB" alt=""/>` : ''}
-      ${h.img3 ? `<img src="${h.img3}" style="max-height:90px;max-width:90px;object-fit:cover;border:1px solid #C8C3BB" alt=""/>` : ''}
+      ${img1Uri ? `<img src="${img1Uri}" style="max-height:90px;max-width:90px;object-fit:cover;border:1px solid #C8C3BB" alt=""/>` : ''}
+      ${img2Uri ? `<img src="${img2Uri}" style="max-height:90px;max-width:90px;object-fit:cover;border:1px solid #C8C3BB" alt=""/>` : ''}
+      ${img3Uri ? `<img src="${img3Uri}" style="max-height:90px;max-width:90px;object-fit:cover;border:1px solid #C8C3BB" alt=""/>` : ''}
     </div>
   </div>
 
@@ -293,11 +331,11 @@ export default function ReviewPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: 16, color: 'var(--text-secondary)' }} />
-          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>BOM Price History</h2>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>{t('reviewTitle')}</h2>
         </div>
         <button onClick={loadBoms}
           style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', padding: '6px 14px', fontFamily: 'var(--font-body)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', background: 'transparent', border: '1px solid #4A6B8C', color: '#4A6B8C', borderRadius: 0 }}>
-          <i className="fa-solid fa-rotate" style={{ fontSize: 11 }} />REFRESH
+          <i className="fa-solid fa-rotate" style={{ fontSize: 11 }} />{t('refresh')}
         </button>
       </div>
 
@@ -305,7 +343,7 @@ export default function ReviewPage() {
       <div style={{ marginBottom: '0.75rem' }}>
         <input
           style={{ border: '1px solid var(--border-base)', padding: '8px 12px', fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', background: 'var(--bg-surface)', outline: 'none', width: '100%', borderRadius: 0, color: 'var(--text-primary)', boxSizing: 'border-box' }}
-          placeholder="Search by BOM ID, SO/MO, Salesperson, Store..."
+          placeholder={t('searchPlh')}
           value={search}
           onChange={e => { setSearch(e.target.value); setPage(1) }}
         />
@@ -320,7 +358,7 @@ export default function ReviewPage() {
             onChange={e => { setDateTo(e.target.value); setPage(1) }} />
           <select style={{ ...inputStyle, width: '100%' }} value={storeFilter}
             onChange={e => { setStoreFilter(e.target.value); setPage(1) }}>
-            <option value="">All Stores</option>
+            <option value="">{t('allStores')}</option>
             {['VN', 'US', 'ADM'].map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
@@ -336,19 +374,19 @@ export default function ReviewPage() {
             <thead>
               <tr>
                 {[
-                  'BOM ID', 'Date', 'SO/MO', 'Model', 'Stones',
-                  ...(showCost ? ['Cost ($)', 'Sell ($)', 'Disc%', 'After Disc'] : []),
-                  'Salesperson', 'Store', 'Actions'
+                  t('colBomId'), t('colDate'), t('colSoMo'), t('colModel'), t('colStones'),
+                  ...(showCost ? [t('colCost'), t('colSell'), t('colDisc'), t('colAfterDisc')] : []),
+                  t('colSalesperson'), t('colStore'), t('colActions')
                 ].map(h => <th key={h} style={th}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr><td colSpan={14} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                  <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />Đang tải...
+                  <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
                 </td></tr>
               ) : paged.length === 0 ? (
-                <tr><td colSpan={14} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Không có BOM nào</td></tr>
+                <tr><td colSpan={14} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>{t('noData')}</td></tr>
               ) : paged.map(b => (
                 <tr key={b.id}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
@@ -411,13 +449,13 @@ export default function ReviewPage() {
                         </button>
                       )}
                       {/* Edit — all roles */}
-                      <button title="Edit"
-                        style={{ background: 'none', border: '1px solid #8C7340', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: '#8C7340' }}>
+                      <a href={`/dashboard/tinh-gia?edit=${b.bom_id}`} title="Edit"
+                        style={{ display: 'inline-flex', alignItems: 'center', background: 'none', border: '1px solid #8C7340', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: '#8C7340', textDecoration: 'none' }}>
                         <i className="fa-solid fa-pen-to-square" />
-                      </button>
+                      </a>
                       {/* Delete — Admin only */}
                       {role === 'Admin' && (
-                        <button title="Delete"
+                        <button onClick={() => deleteBom(b.bom_id)} title="Delete"
                           style={{ background: 'none', border: '1px solid var(--color-danger)', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--color-danger)' }}>
                           <i className="fa-solid fa-trash" />
                         </button>
@@ -469,14 +507,14 @@ export default function ReviewPage() {
             {/* Header */}
             <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1 }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>
-                Báo Giá / Quotation
+                {t('quotationTitle')}
               </h3>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <button
                   onClick={printQuotation}
                   disabled={quotLoading || !quotData}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#e91d79', color: '#fff', border: '1px solid #e91d79', borderRadius: 0, padding: '7px 16px', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', opacity: (quotLoading || !quotData) ? 0.6 : 1 }}>
-                  <i className="fa-solid fa-print" style={{ fontSize: 11 }} />In / PDF
+                  <i className="fa-solid fa-print" style={{ fontSize: 11 }} />{t('printPDF')}
                 </button>
                 <button onClick={closeQuotation} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 20 }}>
                   <i className="fa-solid fa-xmark" />
@@ -488,7 +526,7 @@ export default function ReviewPage() {
             <div style={{ padding: '1.5rem' }}>
               {quotLoading ? (
                 <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
-                  <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />Đang tải...
+                  <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
                 </div>
               ) : quotData && (() => {
                 const h = quotData.header
@@ -555,18 +593,18 @@ export default function ReviewPage() {
 
                     {/* Material */}
                     <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-secondary)', marginBottom: 8, borderBottom: '1px solid var(--border-light)', paddingBottom: 4 }}>
-                      CHẤT LIỆU / MATERIAL
+                      {t('quotMaterial')}
                     </p>
                     {goldTypes && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border-light)', fontSize: 'var(--text-sm)' }}>
-                      <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>Gold Type</span>
+                      <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>{t('quotGoldType')}</span>
                       <span>{goldTypes}</span>
                     </div>}
                     {goldColors && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border-light)', fontSize: 'var(--text-sm)' }}>
-                      <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>Color</span>
+                      <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>{t('quotColor')}</span>
                       <span>{goldColors}</span>
                     </div>}
                     {totalWeight > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border-light)', fontSize: 'var(--text-sm)' }}>
-                      <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>Total Weight</span>
+                      <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>{t('quotWeight')}</span>
                       <span style={{ fontFamily: 'var(--font-mono)' }}>{totalWeight.toFixed(2)} gr</span>
                     </div>}
                     {stoneNames && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border-light)', fontSize: 'var(--text-sm)' }}>
@@ -576,7 +614,7 @@ export default function ReviewPage() {
 
                     {/* Price info */}
                     <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--text-secondary)', marginTop: 20, marginBottom: 8, borderBottom: '1px solid var(--border-light)', paddingBottom: 4 }}>
-                      THÔNG TIN BÁO GIÁ
+                      {t('quotInfo')}
                     </p>
                     {h.price_list_type && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border-light)', fontSize: 'var(--text-sm)' }}>
                       <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>Price List</span>
@@ -590,7 +628,7 @@ export default function ReviewPage() {
                     {/* Price footer */}
                     <div style={{ background: '#e91d79', color: '#fff', padding: '18px 20px', marginTop: 24 }}>
                       <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.14em', opacity: 0.85, marginBottom: 6 }}>
-                        GIÁ BÁN LẺ DỰ KIẾN / ESTIMATED RETAIL PRICE
+                        {t('quotRetailPrice')}
                       </p>
                       {vndAmt && (
                         <p style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, marginBottom: 4 }}>
@@ -633,7 +671,7 @@ export default function ReviewPage() {
             <div style={{ padding: '1.5rem' }}>
               {detailLoading ? (
                 <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                  <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />Đang tải...
+                  <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
                 </div>
               ) : detailData && (
                 <>
@@ -768,7 +806,7 @@ export default function ReviewPage() {
           onClick={e => e.target === e.currentTarget && closeDiscount()}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, padding: '1.5rem', width: 400 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>Chiết Khấu</h3>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>{t('applyDiscountTitle')}</h3>
               <button onClick={closeDiscount} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18 }}>
                 <i className="fa-solid fa-xmark" />
               </button>
@@ -782,7 +820,7 @@ export default function ReviewPage() {
 
             <div style={{ marginBottom: '1rem' }}>
               <label style={{ display: 'block', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', marginBottom: 4 }}>
-                Discount % {role !== 'Admin' && <span style={{ color: 'var(--text-muted)' }}>(Max: {getMaxDisc()}%)</span>}
+                {t('labelDiscount')} % {role !== 'Admin' && <span style={{ color: 'var(--text-muted)' }}>({t('warnMaxDiscount')}: {getMaxDisc()}%)</span>}
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <input
@@ -804,13 +842,13 @@ export default function ReviewPage() {
 
             {!discountSuccess ? (
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: '1rem' }}>
-                <button onClick={closeDiscount} className="btn-outline" style={{ padding: '8px 18px' }}>Hủy</button>
+                <button onClick={closeDiscount} className="btn-outline" style={{ padding: '8px 18px' }}>{t('cancel')}</button>
                 <button onClick={applyDiscount} className="btn-primary" style={{ padding: '8px 18px' }} disabled={discountSaving}>
-                  {discountSaving ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 6 }} />Đang lưu...</> : 'Áp Dụng'}
+                  {discountSaving ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 6 }} />{t('saving')}</> : t('save')}
                 </button>
               </div>
             ) : (
-              <button onClick={closeDiscount} className="btn-outline" style={{ width: '100%', padding: '8px', justifyContent: 'center', display: 'flex' }}>Đóng</button>
+              <button onClick={closeDiscount} className="btn-outline" style={{ width: '100%', padding: '8px', justifyContent: 'center', display: 'flex' }}>{t('cancel')}</button>
             )}
           </div>
         </div>

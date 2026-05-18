@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { UserProvider } from './UserContext'
+import { I18nProvider, useLang } from './I18nContext'
 import type { Role } from '@/types'
 
 interface Props {
@@ -12,30 +13,38 @@ interface Props {
 }
 
 const NAV_ITEMS = [
-  { key: 'dashboard',  label: 'DASHBOARD',     icon: 'fa-house',             href: '/dashboard',           roles: ['Admin','Manager','Sales Supervisor','Sales','Order'] },
-  { key: 'tinh-gia',   label: 'BOM PRICING',   icon: 'fa-calculator',        href: '/dashboard/tinh-gia',  roles: ['Admin','Manager','Sales Supervisor','Sales','Order'] },
-  { key: 'review',     label: 'PRICE HISTORY', icon: 'fa-clock-rotate-left', href: '/dashboard/review',    roles: ['Admin','Manager','Sales Supervisor','Sales','Order'] },
-  { key: 'gold',       label: 'GOLD PRICES',   icon: 'fa-coins',             href: '/dashboard/gold',      roles: ['Admin','Manager'] },
-  { key: 'mk',         label: 'MK DATA',       icon: 'fa-tags',              href: '/dashboard/mk',        roles: ['Admin','Manager'] },
-  { key: 'master',     label: 'STONE DATA',    icon: 'fa-gem',               href: '/dashboard/master',    roles: ['Admin','Manager'] },
-  { key: 'users',      label: 'USER MGMT',     icon: 'fa-users',             href: '/dashboard/users',     roles: ['Admin'] },
+  { key: 'dashboard', i18nKey: 'home',    icon: 'fa-house',             href: '/dashboard',           roles: ['Admin','Manager','Sales Supervisor','Sales','Order'] },
+  { key: 'tinh-gia',  i18nKey: 'tinhgia', icon: 'fa-calculator',        href: '/dashboard/tinh-gia',  roles: ['Admin','Manager','Sales Supervisor','Sales','Order'] },
+  { key: 'review',    i18nKey: 'review',  icon: 'fa-clock-rotate-left', href: '/dashboard/review',    roles: ['Admin','Manager','Sales Supervisor','Sales','Order'] },
+  { key: 'gold',      i18nKey: 'gold',    icon: 'fa-coins',             href: '/dashboard/gold',      roles: ['Admin','Manager'] },
+  { key: 'mk',        i18nKey: 'mk',      icon: 'fa-tags',              href: '/dashboard/mk',        roles: ['Admin','Manager'] },
+  { key: 'master',    i18nKey: 'master',  icon: 'fa-gem',               href: '/dashboard/master',    roles: ['Admin','Manager'] },
+  { key: 'users',     i18nKey: 'users',   icon: 'fa-users',             href: '/dashboard/users',     roles: ['Admin'] },
 ]
 
-const PAGE_TITLES: Record<string, string> = {
-  '/dashboard':            'Dashboard',
-  '/dashboard/tinh-gia':   'BOM Pricing',
-  '/dashboard/review':     'Price History',
-  '/dashboard/gold':       'Gold Prices',
-  '/dashboard/mk':         'MK Data',
-  '/dashboard/master':     'Stone Data',
-  '/dashboard/users':      'User Mgmt',
+const PAGE_TITLE_KEYS: Record<string, string> = {
+  '/dashboard':            'pageTitleHome',
+  '/dashboard/tinh-gia':   'pageTitleTinhgia',
+  '/dashboard/review':     'pageTitleReview',
+  '/dashboard/gold':       'pageTitleGold',
+  '/dashboard/mk':         'pageTitleMk',
+  '/dashboard/master':     'pageTitleMaster',
+  '/dashboard/users':      'pageTitleUsers',
 }
 
 export default function DashboardShell({ user, children }: Props) {
+  return (
+    <I18nProvider>
+      <DashboardContent user={user}>{children}</DashboardContent>
+    </I18nProvider>
+  )
+}
+
+function DashboardContent({ user, children }: Props) {
   const router = useRouter()
   const pathname = usePathname()
+  const { lang, setLang, t } = useLang()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [lang, setLang] = useState<'vi' | 'en'>('vi')
   const [vndRate, setVndRate] = useState(0)
   const [mgrDiscCap, setMgrDiscCap] = useState(20)
   const mgrDiscTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -99,7 +108,8 @@ export default function DashboardShell({ user, children }: Props) {
     return pathname.startsWith(href)
   }
 
-  const pageTitle = PAGE_TITLES[pathname] ?? 'Dashboard'
+  const pageTitleKey = PAGE_TITLE_KEYS[pathname] ?? 'home'
+  const pageTitle = t(pageTitleKey)
 
   const sessionUser = {
     username: user.username,
@@ -188,7 +198,7 @@ export default function DashboardShell({ user, children }: Props) {
                 }}
               >
                 <i className="fa-solid fa-right-from-bracket" style={{ fontSize: 11 }} />
-                SIGN OUT
+                {t('signOut')}
               </button>
             </div>
 
@@ -225,7 +235,7 @@ export default function DashboardShell({ user, children }: Props) {
                   }}
                 >
                   <i className={`fa-solid ${n.icon}`} style={{ fontSize: 10 }} />
-                  {n.label}
+                  {t(n.i18nKey)}
                 </a>
               ))}
             </nav>
@@ -253,7 +263,7 @@ export default function DashboardShell({ user, children }: Props) {
               {isAdmin && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-                    MANAGER DISCOUNT CAP
+                    {t('mgrDiscCapLabel')}
                   </span>
                   <input
                     type="number" min={0} max={100} step={1}
@@ -267,7 +277,7 @@ export default function DashboardShell({ user, children }: Props) {
 
               {/* Lang toggle */}
               <button
-                onClick={() => setLang(l => l === 'vi' ? 'en' : 'vi')}
+                onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
                 style={{
                   padding: '4px 10px', border: '1px solid var(--border-base)',
                   borderRadius: 0, background: 'transparent',
@@ -310,7 +320,7 @@ export default function DashboardShell({ user, children }: Props) {
                   textDecoration: 'none',
                 }}>
                 <i className={`fa-solid ${n.icon}`} style={{ width: 20, textAlign: 'center', fontSize: 13 }} />
-                {n.label}
+                {t(n.i18nKey)}
               </a>
             ))}
 
@@ -336,16 +346,17 @@ export default function DashboardShell({ user, children }: Props) {
 
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
-                  onClick={() => { setLang(l => l === 'vi' ? 'en' : 'vi'); setMobileOpen(false) }}
+                  onClick={() => { setLang(lang === 'vi' ? 'en' : 'vi'); setMobileOpen(false) }}
                   style={{ flex: 1, padding: '8px 0', border: '1px solid var(--border-base)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', letterSpacing: '0.08em', textTransform: 'uppercase' }}
                 >
-                  {lang === 'vi' ? 'EN' : 'VI'}
+                  {lang === 'vi' ? 'VI' : 'EN'}
                 </button>
                 <button
                   onClick={handleLogout}
                   style={{ flex: 1, padding: '8px 0', border: '1px solid var(--color-danger)', background: 'transparent', cursor: 'pointer', color: 'var(--color-danger)', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', letterSpacing: '0.08em', textTransform: 'uppercase' }}
                 >
-                  <i className="fa-solid fa-right-from-bracket" style={{ marginRight: 6 }} />SIGN OUT
+                  <i className="fa-solid fa-right-from-bracket" style={{ marginRight: 6 }} />
+                  {t('signOut')}
                 </button>
               </div>
             </div>
