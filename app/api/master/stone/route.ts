@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: profile } = await createServiceClient().from('users').select('role').eq('id', user.id).single()
-    if (profile?.role !== 'Admin')
+    if (!['Admin', 'Manager'].includes(profile?.role || ''))
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const payload = await request.json()
@@ -77,7 +77,7 @@ export async function DELETE(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: profile } = await createServiceClient().from('users').select('role').eq('id', user.id).single()
-    if (profile?.role !== 'Admin')
+    if (!['Admin', 'Manager'].includes(profile?.role || ''))
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { searchParams } = new URL(request.url)

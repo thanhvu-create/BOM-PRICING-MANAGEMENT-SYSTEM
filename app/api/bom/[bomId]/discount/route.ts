@@ -37,6 +37,7 @@ export async function POST(
     const { error } = await db.from('bom').update({
       discount_pct:   pct / 100,          // lưu dạng decimal
       discount_price: Number(newSellPrice) || 0,
+      updated_at:     new Date().toISOString(),
       updated_by:     username,
       // sell_price KHÔNG thay đổi — giữ giá gốc
     }).eq('bom_id', bomId)

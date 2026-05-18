@@ -11,7 +11,7 @@ export async function GET() {
     const db = createServiceClient()
     const { data, error } = await db
       .from('stone_material')
-      .select('group_code, full_name_vi, full_name_en')
+      .select('group_code, full_name_vn, full_name_en')
       .order('group_code')
 
     if (error) throw error
@@ -24,7 +24,7 @@ export async function GET() {
       return true
     }).map(r => ({
       code:   r.group_code,
-      viName: r.full_name_vi || '',
+      viName: r.full_name_vn || '',
       enName: r.full_name_en || '',
     }))
 

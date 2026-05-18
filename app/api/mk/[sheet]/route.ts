@@ -11,7 +11,7 @@ const SHEET_TABLE: Record<string, string> = {
   'price_gram':      'mk_price_gram',
   'store_markup':    'mk_store_markup',
   'salesperson':     'salesperson',
-  'store':           'store',
+  'store':           'stores',
 }
 
 export async function GET(

@@ -18,7 +18,7 @@ export async function GET() {
       .order('date', { ascending: false })
     if (error) throw error
 
-    const today = new Date().toISOString().substring(0, 10)
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
     const thisMonth = today.substring(0, 7)
 
     let totalBOMs = 0, todayBOMs = 0, monthBOMs = 0, totalValue = 0, discountedCount = 0

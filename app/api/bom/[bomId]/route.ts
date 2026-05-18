@@ -149,9 +149,10 @@ export async function PUT(
       img2:            header.img2 || '',
       img3:            header.img3 || '',
       folder_url:      header.folderUrl || '',
+      updated_at:      new Date().toISOString(),
       updated_by:      username,
       customer_name:   header.customerName || '',
-      discount_pct:    discountPct / 100,
+      discount_pct:    discountPct / 100,   // stored as decimal (0.05 = 5%)
       discount_price:  discountPrice,
       sales_person:    header.salesPerson || '',
       store:           header.store || '',
