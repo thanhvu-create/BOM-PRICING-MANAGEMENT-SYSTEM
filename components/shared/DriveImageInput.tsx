@@ -25,116 +25,131 @@ function extractFileId(url: string): string | null {
   return null
 }
 
-export default function DriveImageInput({ label, value, onChange, inputStyle, labelStyle }: Props) {
-  const [src, setSrc] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(false)
-  const [lightbox, setLightbox] = useState(false)
-  const lastFetched = useRef<string>('')
+// Browser loads these URLs using existing Google session cookies — works for group-restricted files
+function thumbUrl(fileId: string) {
+  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`
+}
+function fullUrl(fileId: string) {
+  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600`
+}
 
-  /* Auto-preview when value loaded from edit-mode */
+export default function DriveImageInput({ label, value, onChange, inputStyle, labelStyle }: Props) {
+  const [fileId, setFileId] = useState<string | null>(null)
+  const [imgKey, setImgKey] = useState(0)          // bump to force img reload
+  const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
+  const [lightbox, setLightbox] = useState(false)
+  const lastApplied = useRef('')
+
+  // Auto-preview when value is set externally (edit-mode restore)
   useEffect(() => {
-    if (value && value !== lastFetched.current && extractFileId(value)) {
-      fetchPreview(value)
+    const fid = extractFileId(value)
+    if (fid && fid !== lastApplied.current) {
+      lastApplied.current = fid
+      setFileId(fid)
+      setStatus('loading')
+      setImgKey(k => k + 1)
     }
-    if (!value) { setSrc(null); setError(false); lastFetched.current = '' }
+    if (!value) {
+      setFileId(null)
+      setStatus('idle')
+      lastApplied.current = ''
+    }
   }, [value])
 
-  async function fetchPreview(url?: string) {
-    const target = url ?? value
-    const fileId = extractFileId(target)
-    if (!fileId) { setError(true); return }
-    if (lastFetched.current === fileId) return
-    setLoading(true); setError(false); setSrc(null)
-    try {
-      const r = await fetch(`/api/images/proxy?fileId=${fileId}`)
-      const d = await r.json()
-      if (d.base64) {
-        setSrc(`data:${d.contentType};base64,${d.base64}`)
-        lastFetched.current = fileId
-      } else {
-        setError(true)
-      }
-    } catch { setError(true) }
-    finally { setLoading(false) }
+  function triggerPreview() {
+    const fid = extractFileId(value)
+    if (!fid) { if (value) setStatus('error'); return }
+    lastApplied.current = fid
+    setFileId(fid)
+    setStatus('loading')
+    setImgKey(k => k + 1)   // force img re-fetch
   }
 
   return (
     <div>
-      {/* Label */}
       <label style={labelStyle}>{label}</label>
 
-      {/* Input row */}
+      {/* Input + preview button */}
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0 }}>
         <input
           style={{ ...inputStyle, flex: 1, minWidth: 0 }}
           value={value}
           onChange={e => onChange(e.target.value)}
-          onBlur={() => fetchPreview()}
+          onBlur={triggerPreview}
           placeholder="https://drive.google.com/..."
         />
         <button
           type="button"
-          onClick={() => fetchPreview()}
+          onClick={triggerPreview}
           title="Preview image"
           style={{
-            flexShrink: 0,
-            height: 28, width: 28,
-            border: '1px solid var(--border-base)',
-            borderLeft: 'none',
-            background: loading ? 'var(--bg-muted)' : 'var(--bg-surface)',
+            flexShrink: 0, height: 28, width: 28,
+            border: '1px solid var(--border-base)', borderLeft: 'none',
+            background: status === 'loading' ? 'var(--bg-muted)' : 'var(--bg-surface)',
             color: 'var(--text-secondary)',
-            cursor: loading ? 'wait' : 'pointer',
+            cursor: status === 'loading' ? 'wait' : 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             borderRadius: 0,
           }}
         >
-          {loading
-            ? <i className="fa-solid fa-circle-notch" style={{ fontSize: 10, animation: 'spin 0.9s linear infinite' }} />
+          {status === 'loading'
+            ? <i className="fa-solid fa-circle-notch" style={{ fontSize: 10, animation: 'imgSpin 0.9s linear infinite' }} />
             : <i className="fa-solid fa-image" style={{ fontSize: 10 }} />
           }
         </button>
       </div>
 
-      {/* Thumbnail */}
-      {src && (
-        <div style={{ marginTop: 6 }}>
-          <img
-            src={src}
-            alt="preview"
-            onClick={() => setLightbox(true)}
-            style={{
-              height: 72, width: 'auto', maxWidth: '100%',
-              objectFit: 'cover', cursor: 'zoom-in',
-              border: '1px solid var(--border-base)',
-              display: 'block',
-            }}
-          />
-        </div>
+      {/* Hidden img that loads via browser Google session */}
+      {fileId && (
+        <img
+          key={`${fileId}-${imgKey}`}
+          src={thumbUrl(fileId)}
+          alt="preview"
+          crossOrigin="use-credentials"
+          onLoad={() => setStatus('ok')}
+          onError={() => setStatus('error')}
+          onClick={() => status === 'ok' && setLightbox(true)}
+          style={{
+            display: status === 'ok' ? 'block' : 'none',
+            height: 72, width: 'auto', maxWidth: '100%',
+            objectFit: 'cover', cursor: 'zoom-in',
+            border: '1px solid var(--border-base)',
+            marginTop: 6,
+          }}
+        />
       )}
 
-      {/* Error hint */}
-      {error && value && (
-        <p style={{ margin: '4px 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-danger)' }}>
-          <i className="fa-solid fa-circle-xmark" style={{ marginRight: 4 }} />
-          Cannot load image — check URL or sharing permissions
+      {/* Loading indicator (shown while img is fetching) */}
+      {status === 'loading' && (
+        <p style={{ margin: '6px 0 0', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <i className="fa-solid fa-circle-notch" style={{ animation: 'imgSpin 0.9s linear infinite', fontSize: 10 }} />
+          Loading preview...
+        </p>
+      )}
+
+      {/* Error */}
+      {status === 'error' && value && (
+        <p style={{ margin: '4px 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-danger)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <i className="fa-solid fa-circle-xmark" />
+          Cannot load — ensure file is shared with your Google account
         </p>
       )}
 
       {/* Lightbox */}
-      {lightbox && src && (
+      {lightbox && fileId && (
         <div
           onClick={() => setLightbox(false)}
           style={{
             position: 'fixed', inset: 0, zIndex: 9998,
-            background: 'rgba(26,24,20,0.85)',
+            background: 'rgba(26,24,20,0.88)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'zoom-out',
           }}
         >
           <img
-            src={src}
+            src={fullUrl(fileId)}
             alt="full preview"
+            crossOrigin="use-credentials"
             style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }}
             onClick={e => e.stopPropagation()}
           />
@@ -152,7 +167,10 @@ export default function DriveImageInput({ label, value, onChange, inputStyle, la
       )}
 
       <style>{`
-        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes imgSpin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
       `}</style>
     </div>
   )
