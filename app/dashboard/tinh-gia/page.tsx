@@ -620,7 +620,7 @@ export default function TinhGiaPage() {
               </p>
             )}
           </div>
-          <StepNav canNext={canGoNext()} onNext={() => setStep(2)} />
+          <StepNav canNext={canGoNext()} onNext={() => setStep(2)} nextLabel="Tiếp Tục →" />
         </div>
       )}
 
@@ -629,73 +629,114 @@ export default function TinhGiaPage() {
         <div style={card}>
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <p style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <i className="fa-solid fa-coins" style={{ color: 'var(--text-secondary)', fontSize: 14 }} />Gold Materials
+              <i className="fa-solid fa-coins" style={{ color: 'var(--text-secondary)', fontSize: 14 }} />Dữ liệu Vàng
             </p>
-            <button onClick={addGoldRow} className="btn-outline" style={{ padding: '5px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}>
-              <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />Thêm dòng
+            <button onClick={addGoldRow} style={{
+              padding: '5px 14px', fontSize: 'var(--text-xs)', fontWeight: 500,
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+              border: '1px solid var(--color-success)', color: 'var(--color-success)',
+              background: 'transparent', borderRadius: 0, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-body)',
+            }}>
+              <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />Thêm Dòng Vàng
             </button>
           </div>
           <div style={{ padding: '1.5rem', overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 550 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
               <thead>
-                <tr>{['#', t('labelGoldType'), t('labelColor'), t('labelWeight'), t('labelPricePerGr'), t('labelGoldTotal'), ''].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
+                <tr>
+                  {['#', 'Gold Type', 'Color', 'Weight (gr)', 'Giá/gr', 'Giá Mỗi Loại', 'Xóa'].map(h => (
+                    <th key={h} style={{ ...thStyle, textAlign: h === 'Giá/gr' || h === 'Giá Mỗi Loại' ? 'right' : 'left' }}>{h}</th>
+                  ))}
+                </tr>
               </thead>
               <tbody>
                 {goldRows.map((r, i) => (
-                  <tr key={r.id}>
+                  <tr key={r.id}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '')}>
                     <td style={{ ...tdStyle, width: 30, textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>{i + 1}</td>
-                    <td style={{ ...tdStyle, width: 100 }}>
+                    <td style={{ ...tdStyle, width: 120 }}>
                       <select style={tdInput} value={r.goldType} onChange={e => updateGold(r.id, 'goldType', e.target.value)}>
                         {(dropdowns?.goldTypes || ['10K','14K','18K','20K','22K','24K','PT','AG']).map(opt => <option key={opt} value={opt}>{opt}</option>)}
                       </select>
                     </td>
-                    <td style={{ ...tdStyle, width: 120 }}>
+                    <td style={{ ...tdStyle, width: 130 }}>
                       <select style={tdInput} value={r.color} onChange={e => updateGold(r.id, 'color', e.target.value)}>
                         {(dropdowns?.colors || ['Yellow','White','Rose','Platinum']).map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </td>
-                    <td style={{ ...tdStyle, width: 140 }}>
+                    <td style={{ ...tdStyle }}>
                       <input type="number" style={tdInput} value={r.weight} min="0" step="0.01" placeholder="0.00"
                         onChange={e => updateGold(r.id, 'weight', e.target.value)} />
                     </td>
-                    <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textAlign: 'right', paddingRight: 8 }}>
-                      {r.pricePerGr > 0 ? fmt$(r.pricePerGr) : '—'}
+                    {/* Giá/gr — accent gold color */}
+                    <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: '#B8860B', textAlign: 'right', paddingRight: 10, fontWeight: 600 }}>
+                      {r.pricePerGr > 0 ? fmt$(r.pricePerGr) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </td>
-                    <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', fontWeight: 500, textAlign: 'right', paddingRight: 8 }}>
-                      {r.cost > 0 ? fmt$(r.cost) : '—'}
+                    {/* Giá mỗi loại — accent gold color */}
+                    <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: '#B8860B', textAlign: 'right', paddingRight: 10, fontWeight: 700 }}>
+                      {r.cost > 0 ? fmt$(r.cost) : <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>—</span>}
                     </td>
-                    <td style={{ ...tdStyle, width: 36, textAlign: 'center' }}>
-                      {goldRows.length > 1 && (
-                        <button onClick={() => removeGoldRow(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: 13 }}>
-                          <i className="fa-solid fa-trash-can" />
+                    <td style={{ ...tdStyle, width: 44, textAlign: 'center' }}>
+                      {goldRows.length > 1 ? (
+                        <button onClick={() => removeGoldRow(r.id)} style={{
+                          background: 'none', border: '1px solid var(--color-danger)',
+                          borderRadius: 0, padding: '3px 8px',
+                          cursor: 'pointer', color: 'var(--color-danger)',
+                        }}>
+                          <i className="fa-solid fa-trash-can" style={{ fontSize: 11 }} />
                         </button>
-                      )}
+                      ) : <span />}
                     </td>
                   </tr>
                 ))}
               </tbody>
+              {/* Totals row */}
+              {goldRows.some(r => r.cost > 0 || (parseFloat(r.weight) || 0) > 0) && (() => {
+                const totalWeight = goldRows.reduce((s, r) => s + (parseFloat(r.weight) || 0), 0)
+                const totalCost   = goldRows.reduce((s, r) => s + r.cost, 0)
+                return (
+                  <tfoot>
+                    <tr style={{ background: '#F5EDD8' }}>
+                      <td colSpan={3} style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontWeight: 600, fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right', color: 'var(--text-secondary)', paddingRight: 10 }}>
+                        Tổng Cộng:
+                      </td>
+                      <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-primary)', paddingLeft: 8 }}>
+                        {totalWeight.toFixed(2)} gr
+                      </td>
+                      <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)' }} />
+                      <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', fontWeight: 700, color: '#B8860B', textAlign: 'right', paddingRight: 10 }}>
+                        {totalCost > 0 ? fmt$(totalCost) : '—'}
+                      </td>
+                      <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)' }} />
+                    </tr>
+                  </tfoot>
+                )
+              })()}
             </table>
           </div>
-          {/* SP Type — chỉ cho CASE A (không có hột) */}
-          <div style={{ padding: '0 1.5rem 1.25rem', borderTop: '1px solid var(--border-light)', paddingTop: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-              <div>
-                <label style={{ ...lbl, marginBottom: 6 }}>SP Type (Kiểu SP trơn)</label>
-                {hasStones ? (
-                  <div style={{ padding: '5px 0', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
-                    TSTT <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>(tự động khi có hột)</span>
-                  </div>
-                ) : (
-                  <select style={{ ...selectBox, width: 160 }} value={spType} onChange={e => setSpType(e.target.value)}>
-                    {(dropdowns?.spTypes?.length ? dropdowns.spTypes : ['Basic', 'Fancy']).map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                )}
-              </div>
+
+          {/* SP Type — chỉ cho CASE A */}
+          <div style={{ padding: '0.75rem 1.5rem 1rem', borderTop: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: 24 }}>
+            <div>
+              <label style={{ ...lbl, marginBottom: 4 }}>SP Type (Kiểu SP trơn)</label>
+              {hasStones ? (
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+                  TSTT <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)' }}>(tự động khi có hột)</span>
+                </span>
+              ) : (
+                <select style={{ ...selectBox, width: 160 }} value={spType} onChange={e => setSpType(e.target.value)}>
+                  {(dropdowns?.spTypes?.length ? dropdowns.spTypes : ['Basic', 'Fancy']).map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
-          <StepNav canNext={canGoNext()} onPrev={() => setStep(1)} onNext={() => setStep(3)} />
+
+          <StepNav canNext={canGoNext()} onPrev={() => setStep(1)} onNext={() => setStep(3)}
+            prevLabel="← Quay Lại" nextLabel="Tiếp Tục →" />
         </div>
       )}
 
@@ -788,7 +829,7 @@ export default function TinhGiaPage() {
               </div>
             </div>
           )}
-          <StepNav canNext={true} onPrev={() => setStep(2)} onNext={() => { setStep(4); calculate() }} nextLabel="Tính Giá →" />
+          <StepNav canNext={true} onPrev={() => setStep(2)} onNext={() => { setStep(4); calculate() }} prevLabel="← Quay Lại" nextLabel="Tính Giá →" />
         </div>
       )}
 
@@ -992,9 +1033,9 @@ export default function TinhGiaPage() {
 }
 
 /* ── STEP NAV ─────────────────────────────────────────────── */
-function StepNav({ canNext, onPrev, onNext, nextLabel }: {
+function StepNav({ canNext, onPrev, onNext, nextLabel, prevLabel }: {
   canNext: boolean
-  onPrev?: () => void; onNext?: () => void; nextLabel?: string
+  onPrev?: () => void; onNext?: () => void; nextLabel?: string; prevLabel?: string
 }) {
   const navBtn: React.CSSProperties = {
     border: '1px solid var(--btn-dark-bg)', padding: '8px 24px', borderRadius: 0,
@@ -1005,11 +1046,11 @@ function StepNav({ canNext, onPrev, onNext, nextLabel }: {
   return (
     <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
       {onPrev
-        ? <button onClick={onPrev} style={{ ...navBtn, background: 'transparent', color: 'var(--text-primary)' }}>← BACK</button>
+        ? <button onClick={onPrev} style={{ ...navBtn, background: 'transparent', color: 'var(--text-primary)' }}>{prevLabel || '← Quay Lại'}</button>
         : <div />}
       {onNext && (
         <button onClick={onNext} style={{ ...navBtn, background: canNext ? 'var(--btn-dark-bg)' : 'var(--bg-muted)', color: 'var(--text-inverse)', cursor: canNext ? 'pointer' : 'not-allowed' }} disabled={!canNext}>
-          {nextLabel || 'NEXT →'}
+          {nextLabel || 'Tiếp Tục →'}
         </button>
       )}
     </div>
