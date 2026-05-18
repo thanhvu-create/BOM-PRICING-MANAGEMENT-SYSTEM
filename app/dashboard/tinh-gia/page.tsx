@@ -183,6 +183,14 @@ export default function TinhGiaPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editBomId, loadingDD])
 
+  /* ── Auto-fetch gold prices on initial load (no edit mode) ── */
+  useEffect(() => {
+    if (!loadingDD && !editBomId && date) {
+      goldRows.forEach(r => fetchGoldPrice(r.id, date, r.goldType))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingDD])
+
   /* ── Load dropdowns ── */
   useEffect(() => {
     const storeParam = (canSeeAll || !userStore) ? '' : `?store=${userStore}`
@@ -203,11 +211,12 @@ export default function TinhGiaPage() {
     try {
       const r = await fetch(`/api/bom/gold-price?date=${goldDate}&goldType=${goldType}`)
       const d = await r.json()
-      if (d.pricePerGr != null) {
+      const price = d.pricePerGram ?? d.pricePerGr  // API returns pricePerGram
+      if (price != null && price > 0) {
         setGoldRows(rows => rows.map(row => {
           if (row.id !== rowId) return row
           const w = parseFloat(row.weight) || 0
-          return { ...row, pricePerGr: d.pricePerGr, cost: d.pricePerGr * w }
+          return { ...row, pricePerGr: price, cost: price * w }
         }))
       }
     } catch { }
@@ -254,7 +263,11 @@ export default function TinhGiaPage() {
       return updated
     }))
   }
-  function addGoldRow()         { setGoldRows(r => [...r, newGold()]) }
+  function addGoldRow() {
+    const row = newGold()
+    setGoldRows(r => [...r, row])
+    if (date) fetchGoldPrice(row.id, date, row.goldType)
+  }
   function removeGoldRow(id: number) { setGoldRows(r => r.filter(x => x.id !== id)) }
 
   /* ── Stone row handlers ── */
@@ -304,7 +317,8 @@ export default function TinhGiaPage() {
 
     return {
       header: {
-        date, productType, soMo, model, priceListType, spType,
+        date, productType, soMo, model, priceListType,
+        spType: effectiveSpType,
         laborHours: parseFloat(laborHours) || 0,
         salesPerson, store, customerName, note,
         img1, img2, img3, folderUrl,
@@ -410,6 +424,10 @@ export default function TinhGiaPage() {
     const q = stoneTypeSearch.toLowerCase()
     return !q || s.code.toLowerCase().includes(q) || s.viName.toLowerCase().includes(q) || s.enName.toLowerCase().includes(q)
   })
+
+  /* ── SP Type lock logic (CASE B → TSTT) ── */
+  const hasStones = stoneRows.some(r => r.groupCode && ((parseFloat(r.ctw1pc) || 0) > 0 || (parseFloat(r.qty) || 0) > 0))
+  const effectiveSpType = hasStones ? 'TSTT' : spType
 
   /* ── Discount calc ── */
   const discountedPrice = pricing && parseFloat(discountPct) > 0
@@ -658,6 +676,25 @@ export default function TinhGiaPage() {
               </tbody>
             </table>
           </div>
+          {/* SP Type — chỉ cho CASE A (không có hột) */}
+          <div style={{ padding: '0 1.5rem 1.25rem', borderTop: '1px solid var(--border-light)', paddingTop: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+              <div>
+                <label style={{ ...lbl, marginBottom: 6 }}>SP Type (Kiểu SP trơn)</label>
+                {hasStones ? (
+                  <div style={{ padding: '5px 0', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+                    TSTT <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>(tự động khi có hột)</span>
+                  </div>
+                ) : (
+                  <select style={{ ...selectBox, width: 160 }} value={spType} onChange={e => setSpType(e.target.value)}>
+                    {(dropdowns?.spTypes?.length ? dropdowns.spTypes : ['Basic', 'Fancy']).map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+          </div>
           <StepNav canNext={canGoNext()} onPrev={() => setStep(1)} onNext={() => setStep(3)} />
         </div>
       )}
@@ -730,6 +767,27 @@ export default function TinhGiaPage() {
               </tbody>
             </table>
           </div>
+          {/* Labor Hours — chỉ cần nhập khi có hột (CASE B) */}
+          {hasStones && (
+            <div style={{ padding: '0 1.5rem 1.25rem', borderTop: '1px solid var(--border-light)', paddingTop: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                <div>
+                  <label style={{ ...lbl, marginBottom: 6 }}>
+                    {t('labelLaborHours')} <span style={{ color: 'var(--color-danger)' }}>*</span>
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
+                      (giờ lắp ráp — bắt buộc khi có hột)
+                    </span>
+                  </label>
+                  <input
+                    type="number" min="0" step="0.5" placeholder="0"
+                    style={{ ...tdInput, width: 120 }}
+                    value={laborHours}
+                    onChange={e => setLaborHours(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
           <StepNav canNext={true} onPrev={() => setStep(2)} onNext={() => { setStep(4); calculate() }} nextLabel="Tính Giá →" />
         </div>
       )}
