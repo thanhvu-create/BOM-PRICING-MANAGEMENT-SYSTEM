@@ -25,11 +25,50 @@ function extractFileId(url: string): string | null {
   return null
 }
 
-// Module-level token cache (survives re-renders, cleared on page reload)
+// ── Token cache ──────────────────────────────────────────────────────────────
+// 1. In-memory (survives re-renders within page)
+// 2. localStorage (survives page reload — reuse until expiry ~55 min)
+// After first consent, Google silently re-issues token → no popup ever again.
+const LS_KEY = 'bom_gdrive_token'
+const LS_EXP = 'bom_gdrive_token_exp'
+
 let _token: string | null = null
 let _tokenExpiry = 0
 
+function loadCachedToken() {
+  try {
+    const t = localStorage.getItem(LS_KEY)
+    const exp = Number(localStorage.getItem(LS_EXP) ?? 0)
+    if (t && exp > Date.now()) {
+      _token = t
+      _tokenExpiry = exp
+    }
+  } catch {}
+}
+
+function saveToken(token: string, expiresIn: number) {
+  _token = token
+  _tokenExpiry = Date.now() + (expiresIn - 300) * 1000  // 5-min buffer
+  try {
+    localStorage.setItem(LS_KEY, token)
+    localStorage.setItem(LS_EXP, String(_tokenExpiry))
+  } catch {}
+}
+
+function clearToken() {
+  _token = null
+  _tokenExpiry = 0
+  try {
+    localStorage.removeItem(LS_KEY)
+    localStorage.removeItem(LS_EXP)
+  } catch {}
+}
+
 function getToken(): Promise<string | null> {
+  // Try loading from localStorage first (page reload case)
+  if (!_token) loadCachedToken()
+
+  // In-memory hit
   if (_token && Date.now() < _tokenExpiry) return Promise.resolve(_token)
 
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
@@ -45,34 +84,43 @@ function getToken(): Promise<string | null> {
       scope: 'https://www.googleapis.com/auth/drive.readonly',
       callback: (res: any) => {
         if (res?.access_token) {
-          _token = res.access_token
-          _tokenExpiry = Date.now() + ((res.expires_in ?? 3600) - 300) * 1000
+          saveToken(res.access_token, res.expires_in ?? 3600)
           resolve(res.access_token)
         } else {
+          clearToken()
           resolve(null)
         }
       },
-      error_callback: () => resolve(null),
+      error_callback: () => { clearToken(); resolve(null) },
     })
-    // prompt: '' → silent if already consented, popup only on first use
+    // prompt: '' → silent when already consented (no popup after first time)
     client.requestAccessToken({ prompt: '' })
   })
 }
 
-async function loadImage(fileId: string): Promise<{ src: string; fullSrc: string } | null> {
+async function fetchWithToken(fileId: string, token: string): Promise<string | null> {
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  )
+  if (res.status === 401) { clearToken(); return null }
+  if (!res.ok) return null
+  const blob = await res.blob()
+  return URL.createObjectURL(blob)
+}
+
+async function loadImage(fileId: string): Promise<string | null> {
   const token = await getToken()
   if (!token) return null
 
   try {
-    // Fetch thumbnail (w400)
-    const res = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-    if (!res.ok) return null
-    const blob = await res.blob()
-    const src = URL.createObjectURL(blob)
-    return { src, fullSrc: src }
+    const src = await fetchWithToken(fileId, token)
+    if (src) return src
+
+    // 401 path: token was stale, clearToken() already called → get fresh one
+    const fresh = await getToken()
+    if (!fresh) return null
+    return await fetchWithToken(fileId, fresh)
   } catch {
     return null
   }
@@ -105,9 +153,9 @@ export default function DriveImageInput({ label, value, onChange, inputStyle, la
       return
     }
 
-    const result = await loadImage(fid)
-    if (result) {
-      setImg(result.src)
+    const src = await loadImage(fid)
+    if (src) {
+      setImg(src)
       setStatus('ok')
     } else {
       setStatus('error')
