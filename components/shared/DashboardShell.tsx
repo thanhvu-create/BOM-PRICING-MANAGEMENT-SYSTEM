@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { UserProvider } from './UserContext'
 import { I18nProvider, useLang } from './I18nContext'
@@ -218,7 +219,7 @@ function DashboardContent({ user, children }: Props) {
             {/* Nav items */}
             <nav style={{ display: 'flex', gap: 0 }}>
               {visibleNav.map(n => (
-                <a
+                <Link
                   key={n.key}
                   href={n.href}
                   style={{
@@ -236,7 +237,7 @@ function DashboardContent({ user, children }: Props) {
                 >
                   <i className={`fa-solid ${n.icon}`} style={{ fontSize: 10 }} />
                   {t(n.i18nKey)}
-                </a>
+                </Link>
               ))}
             </nav>
 
@@ -310,7 +311,7 @@ function DashboardContent({ user, children }: Props) {
             </div>
 
             {visibleNav.map(n => (
-              <a key={n.key} href={n.href} onClick={() => setMobileOpen(false)}
+              <Link key={n.key} href={n.href} onClick={() => setMobileOpen(false)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '0.875rem 0', borderBottom: '1px solid var(--border-light)',
@@ -321,7 +322,7 @@ function DashboardContent({ user, children }: Props) {
                 }}>
                 <i className={`fa-solid ${n.icon}`} style={{ width: 20, textAlign: 'center', fontSize: 13 }} />
                 {t(n.i18nKey)}
-              </a>
+              </Link>
             ))}
 
             <div style={{ marginTop: 'auto', paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
