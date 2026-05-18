@@ -262,13 +262,13 @@ export default function GoldPage() {
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                   onMouseLeave={e => (e.currentTarget.style.background = '')}>
                   <td style={{ ...td, fontFamily: 'var(--font-body)', fontWeight: 700, color: 'var(--text-primary)' }}>{r.price_date}</td>
-                  <td style={{ ...td, color: '#B8860B' }}>{r.amark_gold_oz?.toFixed(2)}</td>
-                  <td style={td}>{r.amark_pt_oz?.toFixed(2)}</td>
-                  <td style={td}>{r.amark_ag_oz?.toFixed(3)}</td>
+                  <td style={{ ...td, color: '#B8860B' }}>{Number(r.amark_gold_oz).toFixed(2)}</td>
+                  <td style={td}>{Number(r.amark_pt_oz).toFixed(2)}</td>
+                  <td style={td}>{Number(r.amark_ag_oz).toFixed(3)}</td>
                   <td style={{ ...td, color: '#2E8B8B' }}>{r.loss_factor}</td>
                   {activeKarats.map(k => (
                     <td key={k} style={{ ...td, color: '#2E8B8B' }}>
-                      {r.karat_prices?.[k] != null ? `$${r.karat_prices[k].toFixed(4)}` : '—'}
+                      {r.karat_prices?.[k] != null ? `$${Number(r.karat_prices[k]).toFixed(4)}` : '—'}
                     </td>
                   ))}
                   <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-light)' }}>
