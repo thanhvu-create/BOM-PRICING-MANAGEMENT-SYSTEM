@@ -119,6 +119,9 @@ export default function TinhGiaPage() {
   const [saveAsNew, setSaveAsNew] = useState(false)
   const [fillLoading, setFillLoading] = useState(false)
 
+  // Custom confirm dialog (KHÔNG dùng window.confirm)
+  const [confirmVisible, setConfirmVisible] = useState(false)
+
   // Lookup debounce timers
   const lookupTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
 
@@ -378,8 +381,9 @@ export default function TinhGiaPage() {
   }
 
   /* ── Reset ── */
-  function resetAll() {
-    if (!confirm('Xóa toàn bộ dữ liệu đã nhập?')) return
+  function resetAll() { setConfirmVisible(true) }
+  function doReset() {
+    setConfirmVisible(false)
     setStep(1); setDate(today()); setProductType(dropdowns?.productTypes?.[0] || '')
     setSoMo(''); setModel(''); setPriceListType(dropdowns?.priceListTypes?.[0] || '')
     setSpType('Basic'); setLaborHours('0')
@@ -387,6 +391,7 @@ export default function TinhGiaPage() {
     setImg1(''); setImg2(''); setImg3(''); setFolderUrl('')
     setGoldRows([newGold()]); setStoneRows([newStone()])
     setPricing(null); setDiscountPct(''); setSavedBomId(''); setSaveError('')
+    setEditBomId(null); setSaveAsNew(false)
   }
 
   /* ── Date change → re-fetch gold prices ── */
@@ -428,6 +433,11 @@ export default function TinhGiaPage() {
   /* ── SP Type lock logic (CASE B → TSTT) ── */
   const hasStones = stoneRows.some(r => r.groupCode && ((parseFloat(r.ctw1pc) || 0) > 0 || (parseFloat(r.qty) || 0) > 0))
   const effectiveSpType = hasStones ? 'TSTT' : spType
+
+  /* ── Stone totals (dùng cho Step 3 footer + Step 4 summary) ── */
+  const totalStoneQtyVal = stoneRows.reduce((s, r) => s + (parseInt(r.qty) || 0), 0)
+  const totalStoneTlVal  = stoneRows.reduce((s, r) => s + r.tlHot, 0)
+  const totalStoneGiaVal = stoneRows.reduce((s, r) => s + r.giaBan, 0)
 
   /* ── Discount calc ── */
   const discountedPrice = pricing && parseFloat(discountPct) > 0
@@ -645,7 +655,10 @@ export default function TinhGiaPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
               <thead>
                 <tr>
-                  {['#', 'Gold Type', 'Color', 'Weight (gr)', 'Giá/gr', 'Giá Mỗi Loại', 'Xóa'].map(h => (
+                  {['#', 'Gold Type', 'Color', 'Weight (gr)',
+                    ...(canSeeAll ? ['Giá/gr', 'Giá Mỗi Loại'] : []),
+                    'Xóa'
+                  ].map(h => (
                     <th key={h} style={{ ...thStyle, textAlign: h === 'Giá/gr' || h === 'Giá Mỗi Loại' ? 'right' : 'left' }}>{h}</th>
                   ))}
                 </tr>
@@ -670,14 +683,18 @@ export default function TinhGiaPage() {
                       <input type="number" style={tdInput} value={r.weight} min="0" step="0.01" placeholder="0.00"
                         onChange={e => updateGold(r.id, 'weight', e.target.value)} />
                     </td>
-                    {/* Giá/gr — accent gold color */}
-                    <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: '#B8860B', textAlign: 'right', paddingRight: 10, fontWeight: 600 }}>
-                      {r.pricePerGr > 0 ? fmt$(r.pricePerGr) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
-                    </td>
-                    {/* Giá mỗi loại — accent gold color */}
-                    <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: '#B8860B', textAlign: 'right', paddingRight: 10, fontWeight: 700 }}>
-                      {r.cost > 0 ? fmt$(r.cost) : <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>—</span>}
-                    </td>
+                    {/* Giá/gr — cost-restricted (Admin/Manager only) */}
+                    {canSeeAll && (
+                      <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: '#B8860B', textAlign: 'right', paddingRight: 10, fontWeight: 600 }}>
+                        {r.pricePerGr > 0 ? fmt$(r.pricePerGr) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                      </td>
+                    )}
+                    {/* Giá mỗi loại — cost-restricted */}
+                    {canSeeAll && (
+                      <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: '#B8860B', textAlign: 'right', paddingRight: 10, fontWeight: 700 }}>
+                        {r.cost > 0 ? fmt$(r.cost) : <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>—</span>}
+                      </td>
+                    )}
                     <td style={{ ...tdStyle, width: 44, textAlign: 'center' }}>
                       {goldRows.length > 1 ? (
                         <button onClick={() => removeGoldRow(r.id)} style={{
@@ -705,10 +722,12 @@ export default function TinhGiaPage() {
                       <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-primary)', paddingLeft: 8 }}>
                         {totalWeight.toFixed(2)} gr
                       </td>
-                      <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)' }} />
-                      <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', fontWeight: 700, color: '#B8860B', textAlign: 'right', paddingRight: 10 }}>
-                        {totalCost > 0 ? fmt$(totalCost) : '—'}
-                      </td>
+                      {canSeeAll && <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)' }} />}
+                      {canSeeAll && (
+                        <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', fontWeight: 700, color: '#B8860B', textAlign: 'right', paddingRight: 10 }}>
+                          {totalCost > 0 ? fmt$(totalCost) : '—'}
+                        </td>
+                      )}
                       <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)' }} />
                     </tr>
                   </tfoot>
@@ -762,7 +781,12 @@ export default function TinhGiaPage() {
             </p>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 680 }}>
               <thead>
-                <tr>{['#', t('labelStoneGroup'), t('labelMmSize'), t('labelCtw'), t('labelQty'), t('labelTlHot'), t('labelGradeId'), t('labelStonePrice'), ''].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr>
+                <tr>
+                  {['#', t('labelStoneGroup'), t('labelMmSize'), t('labelCtw'), t('labelQty'), t('labelTlHot'), 'Input', t('labelGradeId'),
+                    ...(canSeeAll ? [t('labelStonePrice')] : []),
+                    ''
+                  ].map((h, i) => <th key={`sh-${i}`} style={thStyle}>{h}</th>)}
+                </tr>
               </thead>
               <tbody>
                 {stoneRows.map((r, i) => (
@@ -790,12 +814,18 @@ export default function TinhGiaPage() {
                     <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textAlign: 'right', paddingRight: 6 }}>
                       {r.tlHot > 0 ? r.tlHot.toFixed(3) : '—'}
                     </td>
+                    <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textAlign: 'center' }}>
+                      {r.inputType || 'mm'}
+                    </td>
                     <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: r.gradeId ? 'var(--color-success)' : 'var(--text-muted)', paddingRight: 6 }}>
                       {r.gradeId || '—'}
                     </td>
-                    <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', textAlign: 'right', paddingRight: 6 }}>
-                      {r.giaBan > 0 ? fmt$(r.giaBan) : '—'}
-                    </td>
+                    {/* Giá bán — cost-restricted */}
+                    {canSeeAll && (
+                      <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', textAlign: 'right', paddingRight: 6 }}>
+                        {r.giaBan > 0 ? fmt$(r.giaBan) : '—'}
+                      </td>
+                    )}
                     <td style={{ ...tdStyle, width: 36, textAlign: 'center' }}>
                       {stoneRows.length > 1 && (
                         <button onClick={() => removeStoneRow(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: 13 }}>
@@ -806,29 +836,32 @@ export default function TinhGiaPage() {
                   </tr>
                 ))}
               </tbody>
+              {/* TỔNG CỘNG footer */}
+              {stoneRows.some(r => r.tlHot > 0 || (parseInt(r.qty) || 0) > 0) && (
+                <tfoot>
+                  <tr style={{ background: '#F5EDD8' }}>
+                    <td colSpan={4} style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontWeight: 600, fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right', color: 'var(--text-secondary)', paddingRight: 10 }}>
+                      Tổng Cộng:
+                    </td>
+                    <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {totalStoneQtyVal}
+                    </td>
+                    <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'right', paddingRight: 6 }}>
+                      {totalStoneTlVal.toFixed(3)}
+                    </td>
+                    <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)' }} />
+                    <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)' }} />
+                    {canSeeAll && (
+                      <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', fontWeight: 700, color: '#B8860B', textAlign: 'right', paddingRight: 6 }}>
+                        {totalStoneGiaVal > 0 ? fmt$(totalStoneGiaVal) : '—'}
+                      </td>
+                    )}
+                    <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)' }} />
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
-          {/* Labor Hours — chỉ cần nhập khi có hột (CASE B) */}
-          {hasStones && (
-            <div style={{ padding: '0 1.5rem 1.25rem', borderTop: '1px solid var(--border-light)', paddingTop: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                <div>
-                  <label style={{ ...lbl, marginBottom: 6 }}>
-                    {t('labelLaborHours')} <span style={{ color: 'var(--color-danger)' }}>*</span>
-                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
-                      (giờ lắp ráp — bắt buộc khi có hột)
-                    </span>
-                  </label>
-                  <input
-                    type="number" min="0" step="0.5" placeholder="0"
-                    style={{ ...tdInput, width: 120 }}
-                    value={laborHours}
-                    onChange={e => setLaborHours(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
           <StepNav canNext={true} onPrev={() => setStep(2)} onNext={() => { setStep(4); calculate() }} prevLabel="← Quay Lại" nextLabel="Tính Giá →" />
         </div>
       )}
@@ -836,13 +869,6 @@ export default function TinhGiaPage() {
       {/* ── STEP 4: BÁO GIÁ ── */}
       {step === 4 && (
         <div>
-          <div style={{ display: 'flex', gap: 10, marginBottom: '1.5rem', alignItems: 'center' }}>
-            <button onClick={calculate} className="btn-primary" style={{ padding: '9px 20px', display: 'flex', alignItems: 'center', gap: 6 }} disabled={calculating}>
-              {calculating ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 11 }} />Đang tính...</> : <><i className="fa-solid fa-calculator" style={{ fontSize: 11 }} />Tính lại</>}
-            </button>
-            <button onClick={() => setStep(3)} className="btn-outline" style={{ padding: '9px 20px' }}>← Hột Đá</button>
-          </div>
-
           {calcError && (
             <div style={{ borderLeft: '2px solid var(--color-danger)', padding: '10px 14px', marginBottom: '1rem', color: 'var(--color-danger)', fontSize: 'var(--text-sm)', background: '#FAF2F2' }}>
               <i className="fa-solid fa-triangle-exclamation" style={{ marginRight: 8 }} />{calcError}
@@ -856,107 +882,200 @@ export default function TinhGiaPage() {
             </div>
           )}
 
-          {!calculating && pricing && (
+          {!calculating && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              {/* BOM info summary */}
-              <div style={card}>
-                <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <i className="fa-solid fa-calculator" style={{ color: 'var(--text-secondary)', fontSize: 13 }} />
-                  <p style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>Summary &amp; Quotation</p>
-                </div>
-                <div style={{ padding: '1rem 1.5rem' }}>
-                  {[
-                    { label: 'Date', val: date },
-                    { label: 'SO/MO', val: soMo },
-                    { label: 'Model', val: model },
-                    { label: 'Price List', val: priceListType },
-                    { label: 'SP Type', val: spType },
-                    ...(salesPerson ? [{ label: 'Salesperson', val: salesPerson }] : []),
-                    ...(store ? [{ label: 'Store', val: store }] : []),
-                    ...(customerName ? [{ label: 'Customer', val: customerName }] : []),
-                  ].map(r => (
-                    <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border-light)' }}>
-                      <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>{r.label}</span>
-                      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>{r.val}</span>
+              {/* ── LEFT: BOM Info + Labor + SP Type ── */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+
+                {/* Labor Hours (CASE B) */}
+                {hasStones && (
+                  <div style={{ ...card, padding: '1.25rem 1.5rem' }}>
+                    <label style={{ ...lbl, marginBottom: 8 }}>
+                      {t('labelLaborHours')} <span style={{ color: 'var(--color-danger)' }}>*</span>
+                      <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
+                        (giờ lắp ráp)
+                      </span>
+                    </label>
+                    <input
+                      type="number" min="0" step="0.5" placeholder="0"
+                      style={{ ...tdInput, width: 140 }}
+                      value={laborHours}
+                      onChange={e => setLaborHours(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {/* SP Type (CASE A only) */}
+                {!hasStones && (
+                  <div style={{ ...card, padding: '1.25rem 1.5rem' }}>
+                    <label style={{ ...lbl, marginBottom: 8 }}>SP Type (Kiểu SP trơn)</label>
+                    <select style={{ ...selectBox, width: 180 }} value={spType} onChange={e => setSpType(e.target.value)}>
+                      {(dropdowns?.spTypes?.length ? dropdowns.spTypes : ['Basic', 'Fancy']).map(st => (
+                        <option key={st} value={st}>{st}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Stone Stats (CASE B) */}
+                {hasStones && totalStoneQtyVal > 0 && (
+                  <div style={card}>
+                    <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--border-light)', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)' }}>
+                      Stone Summary
                     </div>
-                  ))}
+                    <div style={{ padding: '0.875rem 1.25rem' }}>
+                      {[
+                        { label: 'Total Qty', val: String(totalStoneQtyVal) + ' pcs' },
+                        { label: 'Total CTW', val: totalStoneTlVal.toFixed(3) + ' ct' },
+                        ...(canSeeAll ? [{ label: 'Stone Cost', val: fmt$(totalStoneGiaVal) }] : []),
+                      ].map(r => (
+                        <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)' }}>
+                          <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>{r.label}</span>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>{r.val}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* BOM Info Summary */}
+                <div style={card}>
+                  <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--border-light)', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)' }}>
+                    BOM Info
+                  </div>
+                  <div style={{ padding: '0.875rem 1.25rem' }}>
+                    {[
+                      { label: 'Date', val: date },
+                      { label: 'SO/MO', val: soMo },
+                      ...(model ? [{ label: 'Model', val: model }] : []),
+                      { label: 'Price List', val: priceListType },
+                      { label: 'SP Type', val: effectiveSpType },
+                      ...(salesPerson ? [{ label: 'Salesperson', val: salesPerson }] : []),
+                      ...(store ? [{ label: 'Store', val: store }] : []),
+                      ...(customerName ? [{ label: 'Customer', val: customerName }] : []),
+                    ].map(r => (
+                      <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)' }}>
+                        <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>{r.label}</span>
+                        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', textAlign: 'right', maxWidth: '55%', wordBreak: 'break-word' }}>{r.val}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Recalculate button */}
+                <button onClick={calculate} className="btn-outline"
+                  style={{ padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 6, alignSelf: 'flex-start' }}
+                  disabled={calculating}>
+                  <i className="fa-solid fa-rotate" style={{ fontSize: 11 }} />Tính Lại
+                </button>
               </div>
 
-              {/* Pricing breakdown */}
+              {/* ── RIGHT: Pricing Breakdown ── */}
               <div style={card}>
                 <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)' }}>
                   <p style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>Báo Giá</p>
                 </div>
                 <div style={{ padding: '1rem 1.5rem' }}>
+
                   {/* Cost rows — Admin/Manager only */}
-                  {canSeeAll && [
-                    [t('labelCostGold'),     pricing.costGold],
-                    [t('labelCostStones'),   pricing.costStones],
-                    [t('labelCostLabor'),    pricing.costLabor],
-                    [t('labelCostSubtotal'), pricing.costSubtotal],
-                    [t('labelCif'),          pricing.costCif],
-                    [t('labelCostTotal'),    pricing.costTotal],
-                  ].map(([l, v]) => (
-                    <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border-light)' }}>
-                      <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>{l}</span>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)' }}>{fmt$(Number(v))}</span>
-                    </div>
-                  ))}
-
-                  {/* Sell Price */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 6px', borderTop: '1px solid var(--border-strong)', marginTop: canSeeAll ? 4 : 0 }}>
-                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('labelSellPrice')}</span>
-                    <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400 }}>{fmt$(pricing.sellPrice)}</span>
-                  </div>
-
-                  {/* Inline Discount */}
-                  <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 10, marginTop: 4 }}>
-                    <label style={{ ...lbl, marginBottom: 6 }}>{t('labelDiscount')} %</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <input type="number" min="0" max="100" step="0.5"
-                        style={{ width: 80, border: '1px solid var(--border-base)', borderRadius: 0, padding: '5px 8px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', outline: 'none', color: 'var(--text-primary)' }}
-                        value={discountPct} onChange={e => setDiscountPct(e.target.value)} placeholder="0" />
-                      <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>%</span>
-                      {discountedPrice && (
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-success)', fontWeight: 500 }}>
-                          → {fmt$(discountedPrice)}
-                        </span>
+                  {canSeeAll && pricing && (
+                    <div style={{ marginBottom: 8 }}>
+                      {[
+                        [t('labelCostGold'),     pricing.costGold],
+                        [t('labelCostStones'),   pricing.costStones],
+                        [t('labelCostLabor'),    pricing.costLabor],
+                        [t('labelCostSubtotal'), pricing.costSubtotal],
+                        [t('labelCif'),          pricing.costCif],
+                      ].filter(([, v]) => Number(v) > 0).map(([l, v]) => (
+                        <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)' }}>
+                          <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>{l}</span>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-danger)' }}>{fmt$(Number(v))}</span>
+                        </div>
+                      ))}
+                      {/* TỔNG COST — prominently red */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 4px', borderTop: '1px solid var(--border-base)', marginTop: 4 }}>
+                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-danger)' }}>{t('labelCostTotal')}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-danger)' }}>{fmt$(pricing.costTotal)}</span>
+                      </div>
+                      {pricing.costTotal > 0 && pricing.sellPrice > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0 6px' }}>
+                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Markup</span>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                            ×{(pricing.sellPrice / pricing.costTotal).toFixed(2)}
+                          </span>
+                        </div>
                       )}
                     </div>
-                  </div>
+                  )}
 
-                  {/* VND estimate — only VN store */}
-                  {isVNStore && vndEst && (
-                    <div style={{ background: 'var(--bg-muted)', padding: '8px 12px', marginTop: 8 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('labelEstVnd')}</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>
-                          {vndEst.toLocaleString('vi-VN')} ₫
-                        </span>
+                  {/* Sell Price */}
+                  {pricing && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '10px 0 8px', borderTop: canSeeAll ? '1px solid var(--border-strong)' : 'none' }}>
+                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('labelSellPrice')}</span>
+                      <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400 }}>{fmt$(pricing.sellPrice)}</span>
+                    </div>
+                  )}
+
+                  {/* Inline Discount — Admin/Manager only */}
+                  {canSeeAll && (
+                    <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 10, marginTop: 4 }}>
+                      <label style={{ ...lbl, marginBottom: 6 }}>{t('labelDiscount')} %</label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input type="number" min="0" max="100" step="0.5"
+                          style={{ width: 80, border: '1px solid var(--border-base)', borderRadius: 0, padding: '5px 8px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', outline: 'none', color: 'var(--text-primary)', background: 'var(--bg-surface)' }}
+                          value={discountPct} onChange={e => setDiscountPct(e.target.value)} placeholder="0" />
+                        <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>%</span>
+                        {discountedPrice && (
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-success)', fontWeight: 600 }}>
+                            → {fmt$(discountedPrice)}
+                          </span>
+                        )}
                       </div>
+                    </div>
+                  )}
+
+                  {/* GIÁ BÁN LẺ DỰ KIẾN — green highlighted block */}
+                  {pricing && (
+                    <div style={{ borderLeft: '3px solid var(--color-success)', background: '#F2F7F4', padding: '10px 14px', marginTop: 12 }}>
+                      <div style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-success)', fontWeight: 600, marginBottom: 4 }}>
+                        Giá Bán Lẻ Dự Kiến
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--color-success)', lineHeight: 1.1 }}>
+                        {fmt$(discountedPrice ?? pricing.sellPrice)}
+                      </div>
+                      {isVNStore && vndEst && (
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-success)', marginTop: 4, opacity: 0.85 }}>
+                          {vndEst.toLocaleString('vi-VN')} ₫
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {/* Save button */}
+                {/* Save error */}
                 {saveError && (
                   <div style={{ margin: '0 1.5rem', borderLeft: '2px solid var(--color-danger)', padding: '8px 12px', color: 'var(--color-danger)', fontSize: 'var(--text-sm)', background: '#FAF2F2' }}>
                     {saveError}
                   </div>
                 )}
-                <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)' }}>
-                  {/* Save as New checkbox — only in edit mode */}
-                  {editBomId && (
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, fontSize: 'var(--text-sm)', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                      <input type="checkbox" checked={saveAsNew} onChange={e => setSaveAsNew(e.target.checked)}
-                        style={{ accentColor: 'var(--btn-dark-bg)', width: 14, height: 14 }} />
-                      Lưu thành BOM mới (giữ nguyên BOM gốc)
-                    </label>
-                  )}
+
+                {/* Bottom action bar */}
+                <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button onClick={() => setStep(3)} className="btn-outline" style={{ padding: '8px 18px', flexShrink: 0 }}>
+                    ← Hột Đá
+                  </button>
+                  <div style={{ flex: 1 }}>
+                    {editBomId && (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 'var(--text-xs)', cursor: 'pointer', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        <input type="checkbox" checked={saveAsNew} onChange={e => setSaveAsNew(e.target.checked)}
+                          style={{ accentColor: 'var(--btn-dark-bg)', width: 13, height: 13 }} />
+                        Lưu thành BOM mới
+                      </label>
+                    )}
+                  </div>
                   <button onClick={saveBOM} className="btn-primary"
-                    style={{ width: '100%', justifyContent: 'center', padding: '10px', display: 'flex', alignItems: 'center', gap: 8 }}
-                    disabled={saving || fillLoading}>
+                    style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}
+                    disabled={saving || fillLoading || !pricing}>
                     {saving
                       ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 12 }} />{t('saving')}</>
                       : fillLoading
@@ -970,6 +1089,48 @@ export default function TinhGiaPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── CONFIRM RESET DIALOG ── */}
+      {confirmVisible && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 400 }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)' }}>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0, color: 'var(--text-primary)' }}>
+                Xác nhận Reset
+              </h3>
+            </div>
+            <div style={{ padding: '1.25rem 1.5rem' }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: 0 }}>
+                Xóa toàn bộ dữ liệu đã nhập? Thao tác này không thể hoàn tác.
+              </p>
+            </div>
+            <div style={{ padding: '0.75rem 1.5rem', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                onClick={() => setConfirmVisible(false)}
+                style={{
+                  border: '1px solid var(--border-base)', background: 'transparent',
+                  borderRadius: 0, padding: '7px 20px', cursor: 'pointer',
+                  fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)',
+                  fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase',
+                  color: 'var(--text-secondary)',
+                }}>
+                Hủy
+              </button>
+              <button
+                onClick={doReset}
+                style={{
+                  border: '1px solid var(--color-danger)', background: 'var(--color-danger)',
+                  borderRadius: 0, padding: '7px 20px', cursor: 'pointer',
+                  fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)',
+                  fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase',
+                  color: '#fff',
+                }}>
+                <i className="fa-solid fa-trash-can" style={{ marginRight: 6, fontSize: 10 }} />Reset
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
