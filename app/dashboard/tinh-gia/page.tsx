@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useUser } from '@/components/shared/UserContext'
 import { useLang } from '@/components/shared/I18nContext'
 import { useToast } from '@/components/shared/ToastContext'
+import DriveImageInput from '@/components/shared/DriveImageInput'
 
 /* ── TYPES ─────────────────────────────────────────────────── */
 interface Dropdowns {
@@ -563,18 +564,27 @@ export default function TinhGiaPage() {
             </div>
             {/* Row 3: IMAGE 1 | IMAGE 2 | IMAGE 3 | FOLDER URL */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-              <div>
-                <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>IMAGE 1 URL</label>
-                <input style={inputUnder} value={img1} onChange={e => setImg1(e.target.value)} placeholder="https://..." />
-              </div>
-              <div>
-                <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>IMAGE 2 URL</label>
-                <input style={inputUnder} value={img2} onChange={e => setImg2(e.target.value)} placeholder="https://..." />
-              </div>
-              <div>
-                <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>IMAGE 3 URL</label>
-                <input style={inputUnder} value={img3} onChange={e => setImg3(e.target.value)} placeholder="https://..." />
-              </div>
+              <DriveImageInput
+                label="IMAGE 1 URL"
+                value={img1}
+                onChange={setImg1}
+                inputStyle={inputUnder}
+                labelStyle={{ ...lbl, fontWeight: 500, marginBottom: 6 }}
+              />
+              <DriveImageInput
+                label="IMAGE 2 URL"
+                value={img2}
+                onChange={setImg2}
+                inputStyle={inputUnder}
+                labelStyle={{ ...lbl, fontWeight: 500, marginBottom: 6 }}
+              />
+              <DriveImageInput
+                label="IMAGE 3 URL"
+                value={img3}
+                onChange={setImg3}
+                inputStyle={inputUnder}
+                labelStyle={{ ...lbl, fontWeight: 500, marginBottom: 6 }}
+              />
               <div>
                 <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>{t('labelFolderUrl')}</label>
                 <input style={inputUnder} value={folderUrl} onChange={e => setFolderUrl(e.target.value)} placeholder="https://..." />
