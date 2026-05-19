@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 const OZ = 31.103
@@ -42,11 +42,20 @@ export async function POST(request: Request) {
     if (!['Admin', 'Manager'].includes(profile?.role || ''))
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const { date, goldOz, ptOz, agOz, lossFactor } = await request.json()
+    const { date, goldOz, ptOz, agOz, lossFactor, overwriteIfSameDate } = await request.json()
     const lf = Number(lossFactor) || 1.06
     const karat_prices = computeKaratPrices(Number(goldOz)||0, Number(ptOz)||0, Number(agOz)||0, lf)
 
     const db = createServiceClient()
+
+    // Check if date already exists when overwrite is false
+    if (!overwriteIfSameDate) {
+      const { data: existing } = await db.from('gold_material').select('price_date').eq('price_date', date).single()
+      if (existing) {
+        return NextResponse.json({ error: `Đã có giá ngày ${date}. Bật "Ghi đè" để cập nhật.` }, { status: 409 })
+      }
+    }
+
     const { error } = await db.from('gold_material').upsert({
       price_date:    date,
       amark_gold_oz: Number(goldOz) || 0,

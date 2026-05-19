@@ -972,94 +972,62 @@ export default function TinhGiaPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
               {/* ── LEFT: BOM Info + Labor + SP Type ── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ ...card, padding: '1.25rem 1.5rem', height: '100%' }}>
+                  <h6 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, margin: '0 0 1rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-light)' }}>
+                    Thông số Sản Xuất
+                  </h6>
 
-                {/* Labor Hours (CASE B) */}
-                {hasStones && (
-                  <div style={{ ...card, padding: '1.25rem 1.5rem' }}>
-                    <label style={{ ...lbl, marginBottom: 8 }}>
-                      {t('labelLaborHours')} <span style={{ color: 'var(--color-danger)' }}>*</span>
-                      <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0, marginLeft: 6 }}>
-                        (giờ lắp ráp)
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Tổng số hột:</span>
+                    <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>{totalStoneQtyVal}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Tổng lượng hột (CTW):</span>
+                    <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>{totalStoneTlVal.toFixed(3)}</strong>
+                  </div>
+                  
+                  <hr style={{ border: 'none', borderTop: '1px solid var(--border-light)', margin: '1rem 0' }} />
+
+                  {/* Labor Hours (CASE B) */}
+                  {hasStones && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={{ ...lbl, marginBottom: 8 }}>
+                        {t('labelLaborHours')} <span style={{ color: 'var(--color-danger)' }}>*</span>
+                      </label>
+                      <input
+                        type="number" min="0" step="0.5" placeholder="0"
+                        style={{ ...tdInput }}
+                        value={laborHours}
+                        onChange={e => { setLaborHours(e.target.value); calculate() }}
+                        onBlur={calculate}
+                      />
+                    </div>
+                  )}
+
+                  {/* SP Type */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ ...lbl, marginBottom: 8 }}>SP Type</label>
+                    {hasStones ? (
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-muted)', display: 'block', padding: '4px 0' }}>
+                        TSTT <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)' }}>(tự động)</span>
                       </span>
-                    </label>
-                    <input
-                      type="number" min="0" step="0.5" placeholder="0"
-                      style={{ ...tdInput, width: 140 }}
-                      value={laborHours}
-                      onChange={e => setLaborHours(e.target.value)}
-                    />
-                  </div>
-                )}
-
-                {/* SP Type (CASE A only) */}
-                {!hasStones && (
-                  <div style={{ ...card, padding: '1.25rem 1.5rem' }}>
-                    <label style={{ ...lbl, marginBottom: 8 }}>SP Type (Kiểu SP trơn)</label>
-                    <select style={{ ...selectBox, width: 180 }} value={spType} onChange={e => setSpType(e.target.value)}>
-                      {(dropdowns?.spTypes?.length ? dropdowns.spTypes : ['Basic', 'Fancy']).map(st => (
-                        <option key={st} value={st}>{st}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* Stone Stats (CASE B) */}
-                {hasStones && totalStoneQtyVal > 0 && (
-                  <div style={card}>
-                    <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--border-light)', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)' }}>
-                      Stone Summary
-                    </div>
-                    <div style={{ padding: '0.875rem 1.25rem' }}>
-                      {[
-                        { label: 'Total Qty', val: String(totalStoneQtyVal) + ' pcs' },
-                        { label: 'Total CTW', val: totalStoneTlVal.toFixed(3) + ' ct' },
-                        ...(canSeeAll ? [{ label: 'Stone Cost', val: fmt$(totalStoneGiaVal) }] : []),
-                      ].map(r => (
-                        <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)' }}>
-                          <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>{r.label}</span>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-primary)' }}>{r.val}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* BOM Info Summary */}
-                <div style={card}>
-                  <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--border-light)', fontSize: 'var(--text-xs)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)' }}>
-                    BOM Info
-                  </div>
-                  <div style={{ padding: '0.875rem 1.25rem' }}>
-                    {[
-                      { label: 'Date', val: date },
-                      { label: 'SO/MO', val: soMo },
-                      ...(model ? [{ label: 'Model', val: model }] : []),
-                      { label: 'Price List', val: priceListType },
-                      { label: 'SP Type', val: effectiveSpType },
-                      ...(salesPerson ? [{ label: 'Salesperson', val: salesPerson }] : []),
-                      ...(store ? [{ label: 'Store', val: store }] : []),
-                      ...(customerName ? [{ label: 'Customer', val: customerName }] : []),
-                    ].map(r => (
-                      <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)' }}>
-                        <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>{r.label}</span>
-                        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', textAlign: 'right', maxWidth: '55%', wordBreak: 'break-word' }}>{r.val}</span>
-                      </div>
-                    ))}
+                    ) : (
+                      <select style={{ ...selectBox }} value={spType} onChange={e => { setSpType(e.target.value); calculate() }}>
+                        {(dropdowns?.spTypes?.length ? dropdowns.spTypes : ['Basic', 'Fancy']).map(st => (
+                          <option key={st} value={st}>{st}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
-
-                {/* Recalculate button */}
-                <button onClick={calculate} className="btn-outline"
-                  style={{ padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 6, alignSelf: 'flex-start' }}
-                  disabled={calculating}>
-                  <i className="fa-solid fa-rotate" style={{ fontSize: 11 }} />Tính Lại
-                </button>
               </div>
 
               {/* ── RIGHT: Pricing Breakdown ── */}
               <div style={card}>
                 <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)' }}>
-                  <p style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>Báo Giá</p>
+                  <h6 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, margin: 0, paddingBottom: '0.5rem' }} className={canSeeAll ? "" : "cost-restricted"}>
+                    Báo Cáo Chi Phí (Cost)
+                  </h6>
                 </div>
                 <div style={{ padding: '1rem 1.5rem' }}>
 
@@ -1067,76 +1035,54 @@ export default function TinhGiaPage() {
                   {canSeeAll && pricing && (
                     <div style={{ marginBottom: 8 }}>
                       {[
-                        [t('labelCostGold'),     pricing.costGold],
-                        [t('labelCostStones'),   pricing.costStones],
-                        [t('labelCostLabor'),    pricing.costLabor],
-                        [t('labelCostSubtotal'), pricing.costSubtotal],
-                        [t('labelCif'),          pricing.costCif],
-                      ].filter(([, v]) => Number(v) > 0).map(([l, v]) => (
-                        <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)' }}>
-                          <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>{l}</span>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-danger)' }}>{fmt$(Number(v))}</span>
+                        ['Chi phí Vàng',     pricing.costGold],
+                        ['Chi phí Hột',   pricing.costStones],
+                        ['Chi phí Công',    pricing.costLabor],
+                        ['CIF (Thuế/Phí)',          pricing.costCif],
+                      ].map(([l, v]) => (
+                        <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', marginBottom: '0.5rem' }}>
+                          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>{l as string}:</span>
+                          <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-danger)' }}>{fmt$(Number(v))}</strong>
                         </div>
                       ))}
-                      {/* TỔNG COST — prominently red */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0 4px', borderTop: '1px solid var(--border-base)', marginTop: 4 }}>
-                        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-danger)' }}>{t('labelCostTotal')}</span>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-danger)' }}>{fmt$(pricing.costTotal)}</span>
-                      </div>
-                      {pricing.costTotal > 0 && pricing.sellPrice > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0 6px' }}>
-                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Markup</span>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                            ×{(pricing.sellPrice / pricing.costTotal).toFixed(2)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                      
+                      <hr style={{ border: 'none', borderTop: '1px solid var(--border-light)', margin: '0.5rem 0 1rem' }} />
 
-                  {/* Sell Price */}
-                  {pricing && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '10px 0 8px', borderTop: canSeeAll ? '1px solid var(--border-strong)' : 'none' }}>
-                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t('labelSellPrice')}</span>
-                      <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400 }}>{fmt$(pricing.sellPrice)}</span>
+                      {/* TỔNG COST — prominently red */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 0 1rem' }}>
+                        <span style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>TỔNG COST:</span>
+                        <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-danger)' }}>{fmt$(pricing.costTotal)}</strong>
+                      </div>
                     </div>
                   )}
 
                   {/* Inline Discount — Admin/Manager only */}
-                  {canSeeAll && (
-                    <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 10, marginTop: 4 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                        <label style={{ ...lbl, marginBottom: 0 }}>{t('labelDiscount')}</label>
-                        {!isAdmin && (
-                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-                            Max: {maxDiscPct}%
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  {canSeeAll && pricing && (
+                    <div style={{ marginBottom: '1rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--bg-base)', border: '1px solid var(--border-light)', borderRadius: 4 }}>
+                        <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', flexShrink: 0 }}>
+                          Discount
+                        </span>
                         <input type="number" min="0" max={maxDiscPct} step="0.5"
-                          style={{ width: 72, border: '1px solid var(--border-base)', borderRadius: 0, padding: '5px 8px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', outline: 'none', color: 'var(--text-primary)', background: 'var(--bg-surface)' }}
+                          style={{ width: 60, border: 'none', borderBottom: '1px solid var(--border-base)', borderRadius: 0, padding: '2px 4px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', outline: 'none', color: 'var(--text-primary)', background: 'transparent', textAlign: 'center' }}
                           value={discountPct}
                           onChange={e => {
                             const raw = e.target.value
                             setDiscountPct(raw)
-                            // Clamp for downstream calc but store raw so "2." doesn't lose decimal
                             const p = Math.min(Math.max(parseFloat(raw) || 0, 0), maxDiscPct)
-                            if (pricing && p > 0) setDiscountAmt((pricing.sellPrice * p / 100).toFixed(2))
+                            if (p > 0) setDiscountAmt((pricing.sellPrice * p / 100).toFixed(2))
                             else setDiscountAmt('')
                           }}
                           onBlur={e => {
-                            // Clamp display on blur (GAS behaviour)
                             const p = Math.min(Math.max(parseFloat(e.target.value) || 0, 0), maxDiscPct)
                             setDiscountPct(p > 0 ? String(p) : '')
                           }}
                           placeholder="0" />
-                        <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>%</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>% =</span>
                         <input type="number" min="0" step="0.01"
-                          style={{ width: 96, border: '1px solid var(--border-base)', borderRadius: 0, padding: '5px 8px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', outline: 'none', color: 'var(--text-primary)', background: 'var(--bg-surface)' }}
+                          style={{ width: 80, border: 'none', borderBottom: '1px solid var(--border-base)', borderRadius: 0, padding: '2px 4px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', outline: 'none', color: 'var(--text-primary)', background: 'transparent', textAlign: 'right' }}
                           value={discountAmt}
                           onChange={e => {
-                            if (!pricing) return
                             const raw = e.target.value
                             setDiscountAmt(raw)
                             const maxAmt = pricing.sellPrice * maxDiscPct / 100
@@ -1146,73 +1092,96 @@ export default function TinhGiaPage() {
                             else setDiscountPct('')
                           }}
                           onBlur={e => {
-                            if (!pricing) return
                             const maxAmt = pricing.sellPrice * maxDiscPct / 100
                             const a = Math.min(Math.max(parseFloat(e.target.value) || 0, 0), maxAmt)
                             setDiscountAmt(a > 0 ? String(a) : '')
                           }}
                           placeholder="0.00" />
-                        <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>$</span>
-                        {discountedPrice != null && (
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-warning)', fontWeight: 600 }}>
-                            → {fmt$(discountedPrice)}
-                          </span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>$</span>
+                        <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-muted)', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                          {discountedPrice != null ? fmt$(discountedPrice) : '—'}
+                        </span>
+                      </div>
+                      {!isAdmin && (
+                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: 4, textAlign: 'right' }}>
+                          Max: {maxDiscPct}%
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* GIÁ BÁN LẺ DỰ KIẾN */}
+                  {pricing && (
+                    <div style={{ background: '#F2F7F4', border: '1px solid #C3E6CB', borderRadius: 4, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        GIÁ BÁN LẺ DỰ KIẾN:
+                      </span>
+                      <div style={{ textAlign: 'right' }}>
+                        <strong style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--text-primary)' }}>
+                          {fmt$(discountedPrice ?? pricing.sellPrice)}
+                        </strong>
+                        {isVNStore && vndEst && (
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginTop: 2 }}>
+                            {vndEst.toLocaleString('vi-VN')} ₫
+                          </div>
                         )}
                       </div>
                     </div>
                   )}
 
-                  {/* GIÁ BÁN LẺ DỰ KIẾN — green highlighted block */}
-                  {pricing && (
-                    <div style={{ borderLeft: '3px solid var(--color-success)', background: '#F2F7F4', padding: '10px 14px', marginTop: 12 }}>
-                      <div style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-success)', fontWeight: 600, marginBottom: 4 }}>
-                        Giá Bán Lẻ Dự Kiến
+                  {/* 2 dòng phân tích — cost-restricted */}
+                  {canSeeAll && pricing && (
+                    <div style={{ fontSize: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}>
+                        <span>÷ Tổng Cost (Tỷ lệ markup)</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 500 }}>
+                          {pricing.costTotal > 0 ? ((discountedPrice ?? pricing.sellPrice) / pricing.costTotal).toFixed(2) : '—'}
+                        </span>
                       </div>
-                      <div style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--color-success)', lineHeight: 1.1 }}>
-                        {fmt$(discountedPrice ?? pricing.sellPrice)}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', color: 'var(--text-secondary)' }}>
+                        <span>− Tổng Cost (Lợi nhuận)</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 500, color: 'var(--color-success)' }}>
+                          {pricing.costTotal > 0 ? fmt$((discountedPrice ?? pricing.sellPrice) - pricing.costTotal) : '—'}
+                        </span>
                       </div>
-                      {isVNStore && vndEst && (
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-success)', marginTop: 4, opacity: 0.85 }}>
-                          {vndEst.toLocaleString('vi-VN')} ₫
-                        </div>
-                      )}
                     </div>
                   )}
+
                 </div>
 
                 {/* Save error */}
                 {saveError && (
-                  <div style={{ margin: '0 1.5rem', borderLeft: '2px solid var(--color-danger)', padding: '8px 12px', color: 'var(--color-danger)', fontSize: 'var(--text-sm)', background: '#FAF2F2' }}>
+                  <div style={{ margin: '0 1.5rem 1rem', borderLeft: '2px solid var(--color-danger)', padding: '8px 12px', color: 'var(--color-danger)', fontSize: 'var(--text-sm)', background: '#FAF2F2' }}>
                     {saveError}
                   </div>
                 )}
 
                 {/* Bottom action bar */}
-                <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-base)' }}>
                   <button onClick={() => setStep(3)} className="btn-outline" style={{ padding: '8px 18px', flexShrink: 0 }}>
-                    ← Hột Đá
+                    ← Quay lại
                   </button>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     {editBomId && (
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 'var(--text-xs)', cursor: 'pointer', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                        <input type="checkbox" checked={saveAsNew} onChange={e => setSaveAsNew(e.target.checked)}
-                          style={{ accentColor: 'var(--btn-dark-bg)', width: 13, height: 13 }} />
-                        Lưu thành BOM mới
-                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 4, border: '1px solid var(--btn-dark-bg)', background: 'var(--bg-surface)' }}>
+                        <input type="checkbox" id="chkSaveAsNew" checked={saveAsNew} onChange={e => setSaveAsNew(e.target.checked)}
+                          style={{ accentColor: 'var(--btn-dark-bg)', width: 14, height: 14, margin: 0 }} />
+                        <label htmlFor="chkSaveAsNew" style={{ fontSize: 'var(--text-xs)', cursor: 'pointer', color: 'var(--text-primary)', fontWeight: 600, margin: 0 }}>
+                          Lưu thành BOM mới
+                        </label>
+                      </div>
                     )}
+                    <button onClick={saveBOM} className="btn-primary"
+                      style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}
+                      disabled={saving || fillLoading || !pricing}>
+                      {saving
+                        ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 12 }} />Đang lưu</>
+                        : fillLoading
+                          ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 12 }} />Loading</>
+                          : <><i className="fa-solid fa-save" style={{ fontSize: 12 }} />LƯU BOM</>
+                      }
+                    </button>
                   </div>
-                  <button onClick={saveBOM} className="btn-primary"
-                    style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}
-                    disabled={saving || fillLoading || !pricing}>
-                    {saving
-                      ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 12 }} />{t('saving')}</>
-                      : fillLoading
-                        ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 12 }} />{t('loading')}</>
-                        : editBomId && !saveAsNew
-                          ? <><i className="fa-solid fa-pen-to-square" style={{ fontSize: 12 }} />{t('updateBOM')}</>
-                          : <><i className="fa-solid fa-floppy-disk" style={{ fontSize: 12 }} />{t('saveBOM')}</>
-                    }
-                  </button>
                 </div>
               </div>
             </div>

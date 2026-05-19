@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 const OZ = 31.103
@@ -31,7 +31,18 @@ export async function POST(request: NextRequest) {
 
     // Update each row — add the new karat price
     for (const row of (rows || [])) {
-      const existing = row.karat_prices || {}
+      // Parse existing karat_prices safely (handle corrupted data)
+      let existing: Record<string, number> = {}
+      let rawKp = row.karat_prices
+      if (typeof rawKp === 'string') {
+        try { rawKp = JSON.parse(rawKp) } catch {}
+      }
+      if (rawKp && typeof rawKp === 'object') {
+        // Strip numeric index keys (corruption artifact)
+        for (const [k, v] of Object.entries(rawKp)) {
+          if (!/^\d+$/.test(k)) existing[k] = v as number
+        }
+      }
       if (existing[clean] !== undefined) continue // already exists
       const price = Math.round((row.amark_gold_oz / OZ) * (karatNum / 24) * row.loss_factor * 10000) / 10000
       const updated = { ...existing, [clean]: price }

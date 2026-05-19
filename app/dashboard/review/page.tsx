@@ -655,7 +655,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
           {totalPages > 1 && (
             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
               <select
-                value={PAGE_SIZE}
+                defaultValue={PAGE_SIZE}
                 style={{ border: '1px solid var(--border-base)', background: 'var(--bg-surface)', padding: '3px 6px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', color: 'var(--text-primary)', borderRadius: 0, outline: 'none', cursor: 'pointer' }}
                 >
                 <option value={20}>20 / page</option>
