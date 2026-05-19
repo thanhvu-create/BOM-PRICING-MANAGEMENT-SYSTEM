@@ -18,7 +18,7 @@ interface Dropdowns {
   storeNames: string[]
 }
 interface GoldRow  { id: number; goldType: string; color: string; weight: string; pricePerGr: number; cost: number }
-interface StoneRow { id: number; groupCode: string; size: string; ctw1pc: string; qty: string; tlHot: number; gradeId: string; giaBan: number; inputType: string; sellingPrice: number }
+interface StoneRow { id: number; groupCode: string; size: string; ctw1pc: string; qty: string; tlHot: number; gradeId: string; giaBan: number; inputType: string; sellingPrice: number; pricingUnit: string }
 interface PricingData {
   costGold: number; costStones: number; costLabor: number
   costSubtotal: number; costCif: number; costTotal: number; sellPrice: number
@@ -30,7 +30,7 @@ function nextId() { return ++_rowId }
 function today() { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }) }
 function fmt$(n: number) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
 function newGold(): GoldRow  { return { id: nextId(), goldType: '18K', color: 'Yellow', weight: '', pricePerGr: 0, cost: 0 } }
-function newStone(): StoneRow { return { id: nextId(), groupCode: '', size: '', ctw1pc: '', qty: '', tlHot: 0, gradeId: '', giaBan: 0, inputType: 'mm', sellingPrice: 0 } }
+function newStone(): StoneRow { return { id: nextId(), groupCode: '', size: '', ctw1pc: '', qty: '', tlHot: 0, gradeId: '', giaBan: 0, inputType: 'mm', sellingPrice: 0, pricingUnit: 'ct' } }
 
 /* ── STYLE CONSTANTS ───────────────────────────────────────── */
 const inputUnder: React.CSSProperties = {
@@ -170,21 +170,24 @@ export default function TinhGiaPage() {
       }
 
       if (d.stones?.length > 0) {
-        setStoneRows(d.stones.map((s: any) => {
+        const filledStones: StoneRow[] = d.stones.map((s: any) => {
           const ctw = Number(s.ctw1pc) || 0
           const qty = Number(s.qty) || 0
           const tlHot = s.tl_hot || ctw * qty
           const giaBan = s.gia_ban || 0
-          // Back-compute sellingPrice from giaBan/tlHot for cache
-          const sellingPrice = tlHot > 0 ? giaBan / tlHot : 0
           return {
             id: nextId(), groupCode: s.group_code,
             size: String(s.size || ''), ctw1pc: String(ctw || ''),
             qty: String(qty || ''), tlHot,
             gradeId: s.grade_id || '', giaBan, inputType: s.input_type || 'mm',
-            sellingPrice,
+            sellingPrice: 0, pricingUnit: 'ct',
           }
-        }))
+        })
+        setStoneRows(filledStones)
+        // Trigger fresh lookup để lấy đúng pricingUnit + sellingPrice cho mỗi stone
+        filledStones.forEach(row => {
+          if (row.groupCode) scheduleLookup(row.id, row.groupCode, row.size, row.ctw1pc)
+        })
       }
 
       // Restore discount (stored as decimal in DB, e.g. 0.05 = 5%)
@@ -271,12 +274,14 @@ export default function TinhGiaPage() {
           const qty  = parseFloat(row.qty) || 0
           const tlHot = ctw * qty
           const sp = Number(d.selling_price) || 0
+          const pu = (d.pricing_unit || 'ct').toLowerCase()
           return {
             ...row,
             gradeId:      d.grade_id   || '',
             inputType:    d.type_input || 'mm',
             sellingPrice: sp,
-            giaBan:       sp * tlHot,
+            pricingUnit:  pu,
+            giaBan:       pu === 'pc' ? qty * sp : tlHot * sp,
           }
         }))
       }
@@ -317,7 +322,7 @@ export default function TinhGiaPage() {
         updated.tlHot = ctw * qty
         if (r.inputType === 'mm' && r.sellingPrice > 0) {
           // mm type: recalc giaBan from cached sellingPrice, no re-lookup
-          updated.giaBan = r.sellingPrice * updated.tlHot
+          updated.giaBan = r.pricingUnit === 'pc' ? qty * r.sellingPrice : updated.tlHot * r.sellingPrice
         } else {
           // ct type: size to check is ctw — need re-lookup
           updated.giaBan = 0
@@ -329,7 +334,7 @@ export default function TinhGiaPage() {
         updated.tlHot = ctw * qty
         if (r.sellingPrice > 0) {
           // Recalc giaBan from cached sellingPrice — no re-lookup
-          updated.giaBan = r.sellingPrice * updated.tlHot
+          updated.giaBan = r.pricingUnit === 'pc' ? qty * r.sellingPrice : updated.tlHot * r.sellingPrice
         } else if (r.gradeId) {
           scheduleLookup(id, r.groupCode, r.size, r.ctw1pc)
         }
@@ -1264,7 +1269,7 @@ export default function TinhGiaPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
                   <thead>
                     <tr>
-                      {['Group Code', t('colViName'), 'Full Name (EN)'].map(h => (
+                      {['Group Code', t('colViName'), 'Full Name (EN)', 'Type', 'Unit'].map(h => (
                         <th key={h} style={{ ...thStyle, position: 'sticky', top: 0 }}>{h}</th>
                       ))}
                     </tr>
@@ -1277,6 +1282,16 @@ export default function TinhGiaPage() {
                         <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '6px 6px' }}>{s.code}</td>
                         <td style={{ ...tdStyle, padding: '6px 6px' }}>{s.viName || '—'}</td>
                         <td style={{ ...tdStyle, color: 'var(--text-secondary)', padding: '6px 6px' }}>{s.enName || '—'}</td>
+                        <td style={{ ...tdStyle, padding: '6px 6px', textAlign: 'center' }}>
+                          <span style={{ display: 'inline-block', padding: '1px 7px', border: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            {s.typeInput || 'mm'}
+                          </span>
+                        </td>
+                        <td style={{ ...tdStyle, padding: '6px 6px', textAlign: 'center' }}>
+                          <span style={{ display: 'inline-block', padding: '1px 7px', border: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.05em', background: s.unit === 'pc' ? 'var(--bg-muted)' : 'transparent' }}>
+                            {s.unit || 'ct'}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

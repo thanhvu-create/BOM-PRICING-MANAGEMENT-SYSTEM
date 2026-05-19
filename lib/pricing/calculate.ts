@@ -11,7 +11,7 @@ export async function calculateBOMCost(payload: BOMPayload): Promise<PricingResu
   try {
     const { header, golds, stones } = payload
     const hasStones = stones.some(
-      s => String(s.groupCode || '').trim() !== '' || (Number(s.ctw1pc) || 0) > 0 || (Number(s.qty) || 0) > 0
+      s => String(s.groupCode || '').trim() !== '' && (Number(s.qty) || 0) > 0
     )
 
     // ── 1. GOLD COST ─────────────────────────────────────────
@@ -81,9 +81,11 @@ export async function calculateBOMCost(payload: BOMPayload): Promise<PricingResu
 
       fees?.forEach(f => {
         const name = (f.unit_name || '').toLowerCase().trim()
-        if (name.includes('nhận hột') || name.includes('setting')) {
+        // Normalize Vietnamese diacritics to ASCII for robust matching (handles NFD/NFC DB encoding)
+        const nameAscii = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd')
+        if (name.includes('nhận hột') || nameAscii.includes('nhan hot') || name.includes('setting') || name.includes('stone')) {
           feePerStone = Number(f.unit_price) || 0
-        } else if (name.includes('lắp ráp') || name.includes('assembl')) {
+        } else if (name.includes('lắp ráp') || nameAscii.includes('lap rap') || name.includes('assembl') || name.includes('labor') || name.includes('labour')) {
           feePerHour = Number(f.unit_price) || 0
         }
       })
@@ -106,7 +108,7 @@ export async function calculateBOMCost(payload: BOMPayload): Promise<PricingResu
         .select('cif_rate')
         .eq('price_list_type', header.priceListType)
         .single()
-      if (cifRow && cifRow.cif_rate !== null && cifRow.cif_rate !== undefined && cifRow.cif_rate !== '') {
+      if (cifRow && Number(cifRow.cif_rate) > 0) {
         cifRate = Number(cifRow.cif_rate)
       }
     }

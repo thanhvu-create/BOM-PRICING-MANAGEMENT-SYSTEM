@@ -11,7 +11,7 @@ export async function GET() {
     const db = createServiceClient()
     const { data, error } = await db
       .from('stone_material')
-      .select('group_code, full_name_vn, full_name_en')
+      .select('group_code, full_name_vi, full_name_en, unit, type_input')
       .order('group_code')
 
     if (error) throw error
@@ -24,8 +24,10 @@ export async function GET() {
       return true
     }).map(r => ({
       code:   r.group_code,
-      viName: r.full_name_vn || '',
+      viName: r.full_name_vi || '',
       enName: r.full_name_en || '',
+      unit:      (r.unit || 'ct').toLowerCase(),
+      typeInput: (r.type_input || 'mm').toLowerCase(),
     }))
 
     return NextResponse.json({ success: true, data: result })

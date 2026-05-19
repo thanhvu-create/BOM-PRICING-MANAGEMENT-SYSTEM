@@ -428,14 +428,16 @@ CREATE OR REPLACE FUNCTION lookup_stone_grade(
 RETURNS TABLE (
   grade_id      text,
   input_type    text,
-  selling_price numeric
+  selling_price numeric,
+  pricing_unit  text
 ) AS $$
 BEGIN
   RETURN QUERY
   SELECT
     sm.grade_id,
     sm.type_input,
-    sm.selling_price
+    sm.selling_price,
+    sm.unit
   FROM stone_material sm
   WHERE sm.group_code = p_group_code
     AND (
