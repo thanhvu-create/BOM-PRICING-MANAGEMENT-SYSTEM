@@ -86,6 +86,7 @@ export default function ReviewPage() {
   const [quotBomId, setQuotBomId] = useState<string | null>(null)
   const [quotData, setQuotData] = useState<BomDetail | null>(null)
   const [quotLoading, setQuotLoading] = useState(false)
+  const [quotImages, setQuotImages] = useState<Record<string, string>>({})
 
   // Discount modal
   const [discountBom, setDiscountBom] = useState<BomRow | null>(null)
@@ -172,6 +173,23 @@ export default function ReviewPage() {
     load()
   }, [detailData])
 
+  /* ── Quotation images async load ─── */
+  useEffect(() => {
+    if (!quotData) { setQuotImages({}); return }
+    const h = quotData.header
+    const urls = [h.logoUrl, h.img1, h.img2, h.img3].filter(Boolean) as string[]
+    if (urls.length === 0) return
+    const load = async () => {
+      const results: Record<string, string> = {}
+      await Promise.all(urls.map(async url => {
+        const uri = await fetchDataUri(url)
+        if (uri) results[url] = uri
+      }))
+      setQuotImages(results)
+    }
+    load()
+  }, [quotData])
+
   /* ── Thumbnail async load for table rows (GAS exact: async after render, 📷 placeholder) ── */
   useEffect(() => {
     const rows = paged.filter(b => b.img1 && !thumbUrls[b.bom_id])
@@ -194,7 +212,7 @@ export default function ReviewPage() {
     } catch { update(tid, 'Failed to load quotation', 'danger') }
     finally { setQuotLoading(false) }
   }
-  function closeQuotation() { setQuotBomId(null); setQuotData(null) }
+  function closeQuotation() { setQuotBomId(null); setQuotData(null); setQuotImages({}) }
 
   /* ── Discount modal ─── */
   function getMaxDisc() {
@@ -283,7 +301,7 @@ export default function ReviewPage() {
   async function fetchDataUri(url: string): Promise<string> {
     if (!url) return ''
     const fileId = extractDriveId(url)
-    if (!fileId) return url
+    if (!fileId) return ''
     try {
       const r = await fetch(`/api/images/proxy?fileId=${fileId}`)
       const d = await r.json()
@@ -680,9 +698,9 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
       {quotBomId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={e => e.target === e.currentTarget && closeQuotation()}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 660, maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 660, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
-            <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1 }}>
+            <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>
                 {t('quotationTitle')}
               </h3>
@@ -700,7 +718,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
             </div>
 
             {/* Body */}
-            <div style={{ padding: '1.5rem' }}>
+            <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto' }}>
               {quotLoading ? (
                 <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
                   <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
@@ -726,9 +744,9 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                 return (
                   <div>
                     {/* Logo */}
-                    {h.logoUrl && (
+                    {h.logoUrl && quotImages[h.logoUrl] && (
                       <div style={{ marginBottom: 16 }}>
-                        <img src={h.logoUrl} alt="Logo" style={{ maxHeight: 110, maxWidth: 280, objectFit: 'contain' }} />
+                        <img src={quotImages[h.logoUrl]} alt="Logo" style={{ maxHeight: 110, maxWidth: 280, objectFit: 'contain' }} />
                       </div>
                     )}
 
@@ -761,8 +779,12 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                       {(h.img1 || h.img2 || h.img3) && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {[h.img1, h.img2, h.img3].filter(Boolean).map((url, i) => (
-                            <img key={i} src={url} alt={`img${i+1}`}
-                              style={{ width: 80, height: 80, objectFit: 'cover', border: '1px solid var(--border-base)' }} />
+                            quotImages[url]
+                              ? <img key={i} src={quotImages[url]} alt={`img${i+1}`}
+                                  style={{ width: 80, height: 80, objectFit: 'cover', border: '1px solid var(--border-base)' }} />
+                              : <div key={i} style={{ width: 80, height: 80, border: '1px solid var(--border-base)', background: 'var(--bg-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 18 }}>
+                                  <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 14 }} />
+                                </div>
                           ))}
                         </div>
                       )}
@@ -834,8 +856,8 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
       {detailBomId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={e => e.target === e.currentTarget && closeDetail()}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 740, maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1 }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 740, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <div>
                 <p style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 600, margin: 0 }}>{detailBomId}</p>
                 {detailData && <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: '2px 0 0' }}>{detailData.header?.date} · {detailData.header?.model}</p>}
@@ -853,7 +875,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
               </div>
             </div>
 
-            <div style={{ padding: '1.5rem' }}>
+            <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto' }}>
               {detailLoading ? (
                 <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                   <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
@@ -864,9 +886,13 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                   {(detailData.header.img1 || detailData.header.img2 || detailData.header.img3) && (
                     <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
                       {[detailData.header.img1, detailData.header.img2, detailData.header.img3].filter(Boolean).map((url: string, i: number) => (
-                        <img key={i} src={detailImages[url] || url} alt={`img${i+1}`}
-                          onClick={() => setLightboxSrc(detailImages[url] || url)}
-                          style={{ width: 90, height: 90, objectFit: 'cover', border: '1px solid var(--border-base)', cursor: 'zoom-in' }} />
+                        detailImages[url]
+                          ? <img key={i} src={detailImages[url]} alt={`img${i+1}`}
+                              onClick={() => setLightboxSrc(detailImages[url])}
+                              style={{ width: 90, height: 90, objectFit: 'cover', border: '1px solid var(--border-base)', cursor: 'zoom-in' }} />
+                          : <div key={i} style={{ width: 90, height: 90, border: '1px solid var(--border-base)', background: 'var(--bg-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                              <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 16 }} />
+                            </div>
                       ))}
                     </div>
                   )}
