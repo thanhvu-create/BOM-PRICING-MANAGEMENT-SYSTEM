@@ -108,15 +108,15 @@ export async function calculateBOMCost(payload: BOMPayload): Promise<PricingResu
         .select('cif_rate')
         .eq('price_list_type', header.priceListType)
         .single()
-      if (cifRow && Number(cifRow.cif_rate) > 0) {
-        cifRate = Number(cifRow.cif_rate)
+      if (cifRow != null) {
+        cifRate = Number(cifRow.cif_rate) // Allow 0 — GAS respects cif_rate=0 from DB
       }
     }
 
     // ── 5. SELL PRICE ────────────────────────────────────────
-    let costSubtotal: number
-    let costCif: number
-    let costTotal: number
+    let costSubtotal = 0
+    let costCif = 0
+    let costTotal = 0
     let sellPrice = 0
 
     if (!hasStones) {
@@ -196,7 +196,7 @@ export async function calculateBOMCost(payload: BOMPayload): Promise<PricingResu
         costCif,
         costTotal,
         sellPrice,
-        _debug: {
+        debug: {
           hasStones,
           totalStoneQty,
           laborHoursInput: header.laborHours,
