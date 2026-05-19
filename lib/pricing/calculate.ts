@@ -10,7 +10,9 @@ export async function calculateBOMCost(payload: BOMPayload): Promise<PricingResu
 
   try {
     const { header, golds, stones } = payload
-    const hasStones = stones.length > 0 && stones.some(s => (s.qty || 0) > 0)
+    const hasStones = stones.some(
+      s => String(s.groupCode || '').trim() !== '' || (Number(s.ctw1pc) || 0) > 0 || (Number(s.qty) || 0) > 0
+    )
 
     // ── 1. GOLD COST ─────────────────────────────────────────
     let totalGoldCost = 0
@@ -78,10 +80,10 @@ export async function calculateBOMCost(payload: BOMPayload): Promise<PricingResu
       let feePerHour = 0
 
       fees?.forEach(f => {
-        const name = (f.unit_name || '').toLowerCase()
-        if (name.includes('hột') || name.includes('stone') || name.includes('setting')) {
+        const name = (f.unit_name || '').trim()
+        if (name === 'Nhận hột') {
           feePerStone = Number(f.unit_price) || 0
-        } else if (name.includes('lắp') || name.includes('assembly') || name.includes('labor')) {
+        } else if (name === 'Lắp ráp') {
           feePerHour = Number(f.unit_price) || 0
         }
       })
@@ -151,7 +153,15 @@ export async function calculateBOMCost(payload: BOMPayload): Promise<PricingResu
         .limit(1)
 
       const sm = smRows?.[0]
-      const markup = sm?.markups?.[header.priceListType || '']
+      let markup = sm?.markups?.[header.priceListType || '']
+      // Normalize fallback: strip leading prefix like "1)HPUS -P" → "HPUS -P"
+      if ((!markup || Number(markup) === 0) && sm?.markups && header.priceListType) {
+        const normalized = header.priceListType.replace(/^[\dB]+[\d.]*\)\s*/, '').trim()
+        const matchKey = Object.keys(sm.markups).find(k =>
+          k.replace(/^[\dB]+[\d.]*\)\s*/, '').trim() === normalized
+        )
+        if (matchKey) markup = sm.markups[matchKey]
+      }
       if (markup && Number(markup) > 0) {
         sellPrice = costTotal * Number(markup)
       } else {

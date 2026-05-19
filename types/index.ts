@@ -157,7 +157,8 @@ export interface StoneMaterial {
   selling_price: number
   base_price: number
   mkup: number
-  full_name_vn: string
+  full_name_vi: string
+  full_name_en: string
 }
 
 // ── MK PRICING ───────────────────────────────────────────────

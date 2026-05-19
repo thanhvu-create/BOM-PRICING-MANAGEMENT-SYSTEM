@@ -52,6 +52,14 @@ export default function GoldPage() {
   const [newKarat, setNewKarat] = useState('')
   const [karatWorking, setKaratWorking] = useState(false)
 
+  // Auto Trigger panel
+  const [showTriggerPanel, setShowTriggerPanel] = useState(false)
+  const [triggerRunning, setTriggerRunning] = useState(false)
+
+  // Confirm dialogs
+  const [deleteGoldRow, setDeleteGoldRow] = useState<GoldRow | null>(null)
+  const [removeKaratLabel, setRemoveKaratLabel] = useState<string | null>(null)
+
   // Form fields
   const [fDate, setFDate] = useState('')
   const [fGoldOz, setFGoldOz] = useState('')
@@ -110,8 +118,12 @@ export default function GoldPage() {
     finally { setSaving(false) }
   }
 
-  async function handleDelete(row: GoldRow) {
-    if (!window.confirm(`Xóa dòng giá ${row.price_date}?`)) return
+  function handleDelete(row: GoldRow) { setDeleteGoldRow(row) }
+
+  async function doDeleteGold() {
+    if (!deleteGoldRow) return
+    const row = deleteGoldRow
+    setDeleteGoldRow(null)
     const tid = toast(`Deleting ${row.price_date}...`, 'loading')
     try {
       const r = await fetch(`/api/gold?date=${row.price_date}`, { method: 'DELETE' })
@@ -146,8 +158,12 @@ export default function GoldPage() {
     finally { setKaratWorking(false) }
   }
 
-  async function handleRemoveKarat(label: string) {
-    if (!confirm(`Remove ${label} column from all rows?`)) return
+  function handleRemoveKarat(label: string) { setRemoveKaratLabel(label) }
+
+  async function doRemoveKarat() {
+    if (!removeKaratLabel) return
+    const label = removeKaratLabel
+    setRemoveKaratLabel(null)
     setKaratWorking(true)
     const tid = toast(`Removing ${label} column...`, 'loading')
     try {
@@ -231,9 +247,39 @@ export default function GoldPage() {
               </div>
             )}
           </div>
-          <button className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
-            <i className="fa-solid fa-clock" style={{ fontSize: 11 }} />Auto Trigger <i className="fa-solid fa-chevron-down" style={{ fontSize: 9 }} />
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setShowTriggerPanel(v => !v)} className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
+              <i className="fa-solid fa-clock" style={{ fontSize: 11 }} />Auto Trigger <i className="fa-solid fa-chevron-down" style={{ fontSize: 9 }} />
+            </button>
+            {showTriggerPanel && (
+              <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, padding: '1rem', width: 260, zIndex: 100, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', marginBottom: 8 }}>Vercel Cron</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                  <i className="fa-solid fa-circle-check" style={{ color: 'var(--color-success)', fontSize: 12 }} />
+                  <span style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>0 1 * * *</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>(8:00 AM VN)</span>
+                </div>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginBottom: 10 }}>Tự động fetch giá Amark mỗi ngày. Để thay đổi lịch, cập nhật <code style={{ fontFamily: 'var(--font-mono)' }}>vercel.json</code>.</p>
+                <button
+                  onClick={async () => {
+                    setTriggerRunning(true)
+                    const tid = toast('Running trigger...', 'loading')
+                    try {
+                      const r = await fetch('/api/gold/trigger')
+                      const d = await r.json()
+                      if (d.success) { update(tid, 'Trigger ran successfully', 'success'); load() }
+                      else update(tid, d.message || 'Trigger failed', 'danger')
+                    } catch (e: any) { update(tid, e.message, 'danger') }
+                    finally { setTriggerRunning(false) }
+                  }}
+                  disabled={triggerRunning}
+                  style={{ width: '100%', background: 'var(--btn-dark-bg)', color: 'var(--text-inverse)', border: 'none', borderRadius: 0, padding: '6px 0', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: triggerRunning ? 'not-allowed' : 'pointer', opacity: triggerRunning ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <i className={`fa-solid ${triggerRunning ? 'fa-circle-notch fa-spin' : 'fa-play'}`} style={{ fontSize: 10 }} />
+                  {triggerRunning ? 'Running...' : 'Run Now'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -368,6 +414,38 @@ export default function GoldPage() {
               <button onClick={handleSave} className="btn-primary" style={{ padding: '8px 20px' }} disabled={saving}>
                 {saving ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 6 }} />Saving...</> : 'Save'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE GOLD ROW CONFIRM */}
+      {deleteGoldRow && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: 380, padding: '1.5rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>Xác nhận xóa</h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
+              Xóa dòng giá ngày <strong>{deleteGoldRow.price_date}</strong>? Hành động này không thể hoàn tác.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button onClick={() => setDeleteGoldRow(null)} className="btn-outline" style={{ padding: '8px 18px' }}>Hủy</button>
+              <button onClick={doDeleteGold} style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REMOVE KARAT COLUMN CONFIRM */}
+      {removeKaratLabel && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: 380, padding: '1.5rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>Xóa cột Karat</h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
+              Xóa cột <strong>{removeKaratLabel}</strong> khỏi tất cả dòng? Hành động này không thể hoàn tác.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button onClick={() => setRemoveKaratLabel(null)} className="btn-outline" style={{ padding: '8px 18px' }}>Hủy</button>
+              <button onClick={doRemoveKarat} style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Xóa</button>
             </div>
           </div>
         </div>

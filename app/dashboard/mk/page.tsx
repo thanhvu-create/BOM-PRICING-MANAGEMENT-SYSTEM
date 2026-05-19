@@ -78,6 +78,7 @@ export default function MKPage() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+  const [deleteRow, setDeleteRow] = useState<any>(null)
 
   const activeSheet = SHEETS.find(s => s.key === activeKey)!
 
@@ -102,7 +103,9 @@ export default function MKPage() {
   function openEdit(row: any) {
     setEditRow(row)
     const f: Record<string, string> = {}
-    activeSheet.columns.forEach(c => { f[c.key] = String(row[c.key] ?? '') })
+    // store_markup: include dynamic markup columns alongside base columns
+    const colsToFill = activeKey === 'store_markup' ? displayCols : activeSheet.columns
+    colsToFill.forEach(c => { f[c.key] = String(row[c.key] ?? '') })
     setForm(f); setFormError(''); setModal('edit')
   }
 
@@ -112,7 +115,8 @@ export default function MKPage() {
     setSaving(true); setFormError('')
     try {
       const body: any = {}
-      activeSheet.columns.forEach(c => {
+      const colsToSave = activeKey === 'store_markup' ? displayCols : activeSheet.columns
+      colsToSave.forEach(c => {
         body[c.key] = c.type === 'number' ? (parseFloat(form[c.key]) || 0) : (form[c.key] || '')
       })
       if (modal === 'edit' && editRow?.id) body.id = editRow.id
@@ -126,15 +130,21 @@ export default function MKPage() {
     } finally { setSaving(false) }
   }
 
-  async function handleDelete(row: any) {
-    if (!row.id) { alert('No ID to delete'); return }
-    if (!window.confirm('Xóa dòng này?')) return
+  function handleDelete(row: any) {
+    if (!row.id) return
+    setDeleteRow(row)
+  }
+
+  async function doDelete() {
+    if (!deleteRow?.id) return
+    const row = deleteRow
+    setDeleteRow(null)
     try {
       const r = await fetch(`/api/mk/${activeKey}?id=${row.id}`, { method: 'DELETE' })
       const d = await r.json()
-      if (!r.ok) { alert(d.error || 'Failed'); return }
+      if (!r.ok) { showMsg(d.error || 'Delete failed'); return }
       showMsg('Deleted'); load(activeKey)
-    } catch { alert('Failed') }
+    } catch { showMsg('Delete failed') }
   }
 
   function showMsg(msg: string) { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000) }
@@ -211,7 +221,9 @@ export default function MKPage() {
                       fontSize: 'var(--text-sm)',
                       maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
-                      {String(row[c.key] ?? '—')}
+                      {c.key === 'logo_url' && row[c.key]
+                        ? <img src={row[c.key]} alt="logo" style={{ maxHeight: 28, maxWidth: 80, objectFit: 'contain', verticalAlign: 'middle' }} />
+                        : String(row[c.key] ?? '—')}
                     </td>
                   ))}
                   <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--border-light)' }}>
@@ -233,6 +245,20 @@ export default function MKPage() {
         </div>
       </div>
 
+      {/* DELETE CONFIRM */}
+      {deleteRow && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: 380, padding: '1.5rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>Xác nhận xóa</h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>Bạn có chắc muốn xóa dòng này? Hành động này không thể hoàn tác.</p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button onClick={() => setDeleteRow(null)} className="btn-outline" style={{ padding: '8px 18px' }}>Hủy</button>
+              <button onClick={doDelete} style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL */}
       {modal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
@@ -250,7 +276,7 @@ export default function MKPage() {
             {formError && <div style={{ borderLeft: '2px solid var(--color-danger)', padding: '8px 12px', marginBottom: '1rem', color: 'var(--color-danger)', fontSize: 'var(--text-sm)' }}>{formError}</div>}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {activeSheet.columns.map((c, idx) => (
+              {(activeKey === 'store_markup' ? displayCols : activeSheet.columns).map((c, idx) => (
                 <div key={c.key}>
                   <label style={lbl}>{c.label}</label>
                   <input

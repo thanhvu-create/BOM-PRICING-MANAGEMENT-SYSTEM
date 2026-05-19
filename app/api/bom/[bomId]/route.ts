@@ -169,7 +169,7 @@ export async function PUT(
     if (goldRows.length > 0) await db.from('bom_gold').insert(goldRows)
 
     const stoneRows = (stones as any[] || [])
-      .filter(s => s.groupCode && Number(s.qty) > 0)
+      .filter(s => String(s.groupCode || '').trim() !== '' || (Number(s.ctw1pc) || 0) > 0 || (Number(s.qty) || 0) > 0)
       .map((s: any, i: number) => ({
         bom_id: bomId, idx: i + 1,
         group_code: s.groupCode, grade_id: s.gradeId || '',

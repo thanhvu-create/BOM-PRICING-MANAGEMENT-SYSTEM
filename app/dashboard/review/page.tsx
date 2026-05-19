@@ -54,13 +54,15 @@ const PAGE_SIZE = 20
 
 /* ── COMPONENT ───────────────────────────────────────────────*/
 export default function ReviewPage() {
-  const { role, store: myStore } = useUser()
+  const { role } = useUser()
   const { t } = useLang()
   const { toast, update, dismiss } = useToast()
 
-  const showCost   = role === 'Admin' || role === 'Manager'
-  const showStones = role !== 'Sales' && role !== 'Sales Supervisor'
-  const canDiscount = role === 'Admin' || role === 'Manager' || role === 'Sales Supervisor'
+  // GAS exact: cost-total-restricted = Admin/Manager only; cost-restricted = NOT Order; discount cols = all non-Order
+  const showCostTotal = role === 'Admin' || role === 'Manager'
+  const showSellPrice = role !== 'Order'
+  const showStones    = role !== 'Sales' && role !== 'Sales Supervisor'
+  const canDiscount   = role === 'Admin' || role === 'Manager' || role === 'Sales Supervisor'
 
   const [boms, setBoms] = useState<BomRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -76,6 +78,8 @@ export default function ReviewPage() {
   // Detail modal
   const [detailBomId, setDetailBomId] = useState<string | null>(null)
   const [detailData, setDetailData] = useState<BomDetail | null>(null)
+  const [detailImages, setDetailImages] = useState<Record<string, string>>({})
+  const [showDetailVnd, setShowDetailVnd] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
 
   // Quotation modal
@@ -86,10 +90,20 @@ export default function ReviewPage() {
   // Discount modal
   const [discountBom, setDiscountBom] = useState<BomRow | null>(null)
   const [discountPct, setDiscountPct] = useState('')
+  const [discountAmt, setDiscountAmt] = useState('')
   const [discountSaving, setDiscountSaving] = useState(false)
   const [discountError, setDiscountError] = useState('')
   const [discountSuccess, setDiscountSuccess] = useState('')
   const [mgrDiscCap, setMgrDiscCap] = useState(20)
+
+  // Delete confirm dialog
+  const [deleteBomId, setDeleteBomId] = useState<string | null>(null)
+
+  // Lightbox
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
+
+  // Table row thumbnails (async load after render)
+  const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({})
 
   useEffect(() => {
     fetch('/api/config?key=VND_RATE').then(r => r.json()).then(d => { if (d.rate) setVndRate(Number(d.rate)) }).catch(() => {})
@@ -116,11 +130,12 @@ export default function ReviewPage() {
       if (q && !b.bom_id?.toLowerCase().includes(q)
              && !b.model?.toLowerCase().includes(q)
              && !b.so_mo?.toLowerCase().includes(q)
+             && !b.product_type?.toLowerCase().includes(q)
              && !b.customer_name?.toLowerCase().includes(q)
              && !b.sales_person?.toLowerCase().includes(q)) return false
       if (dateFrom && b.date < dateFrom) return false
       if (dateTo && b.date > dateTo) return false
-      if (storeFilter && b.store !== storeFilter) return false
+      if (storeFilter && !b.store?.toUpperCase().startsWith(storeFilter)) return false
       return true
     })
   }, [boms, search, dateFrom, dateTo, storeFilter])
@@ -139,7 +154,34 @@ export default function ReviewPage() {
     } catch { update(tid, 'Failed to load BOM detail', 'danger') }
     finally { setDetailLoading(false) }
   }
-  function closeDetail() { setDetailBomId(null); setDetailData(null) }
+  function closeDetail() { setDetailBomId(null); setDetailData(null); setDetailImages({}); setShowDetailVnd(false) }
+
+  useEffect(() => {
+    if (!detailData) { setDetailImages({}); return }
+    const h = detailData.header
+    const urls = [h.img1, h.img2, h.img3].filter(Boolean) as string[]
+    if (urls.length === 0) return
+    const load = async () => {
+      const results: Record<string, string> = {}
+      await Promise.all(urls.map(async url => {
+        const uri = await fetchDataUri(url)
+        if (uri) results[url] = uri
+      }))
+      setDetailImages(results)
+    }
+    load()
+  }, [detailData])
+
+  /* ── Thumbnail async load for table rows (GAS exact: async after render, 📷 placeholder) ── */
+  useEffect(() => {
+    const rows = paged.filter(b => b.img1 && !thumbUrls[b.bom_id])
+    if (rows.length === 0) return
+    rows.forEach(async b => {
+      const uri = await fetchDataUri(b.img1)
+      if (uri) setThumbUrls(prev => ({ ...prev, [b.bom_id]: uri }))
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paged])
 
   /* ── Quotation modal ─── */
   async function openQuotation(bomId: string) {
@@ -161,39 +203,65 @@ export default function ReviewPage() {
     return 20
   }
 
+  function handleDiscPctChange(val: string) {
+    setDiscountPct(val)
+    if (!discountBom) return
+    const maxPct = getMaxDisc()
+    const pct = parseFloat(val)
+    if (isNaN(pct) || pct < 0) { setDiscountAmt(''); return }
+    const clamped = Math.min(pct, maxPct)
+    setDiscountAmt((discountBom.sell_price * clamped / 100).toFixed(2))
+  }
+
+  function handleDiscAmtChange(val: string) {
+    setDiscountAmt(val)
+    if (!discountBom || discountBom.sell_price <= 0) return
+    const maxPct = getMaxDisc()
+    const amt = parseFloat(val)
+    if (isNaN(amt) || amt < 0) { setDiscountPct(''); return }
+    const maxAmt = discountBom.sell_price * maxPct / 100
+    const clamped = Math.min(amt, maxAmt)
+    setDiscountPct(((clamped / discountBom.sell_price) * 100).toFixed(2))
+  }
+
   function openDiscount(b: BomRow) {
     setDiscountBom(b)
     const existing = discountPctNum(b.discount_pct)
     setDiscountPct(existing > 0 ? String(existing) : '')
+    setDiscountAmt(existing > 0 ? (b.sell_price * existing / 100).toFixed(2) : '')
     setDiscountError(''); setDiscountSuccess('')
   }
-  function closeDiscount() { setDiscountBom(null); setDiscountError(''); setDiscountSuccess('') }
+  function closeDiscount() { setDiscountBom(null); setDiscountAmt(''); setDiscountError(''); setDiscountSuccess('') }
 
   async function applyDiscount() {
     if (!discountBom) return
-    const pct = parseFloat(discountPct)
+    const pct = parseFloat(discountPct) || 0
     const maxPct = getMaxDisc()
-    if (isNaN(pct) || pct < 0 || pct > 100) { setDiscountError('Discount must be 0–100%'); return }
+    if (pct <= 0) { setDiscountError('Enter a discount percentage'); return }
+    if (pct > 100) { setDiscountError('Discount must be 0–100%'); return }
     if (pct > maxPct) { setDiscountError(`Max discount is ${maxPct}% for your role`); return }
     setDiscountSaving(true); setDiscountError('')
+    const newSellPrice = discountBom.sell_price * (1 - pct / 100)
     const tid = toast(`Applying ${pct}% discount to ${discountBom.bom_id}...`, 'loading')
     try {
       const r = await fetch(`/api/bom/${discountBom.bom_id}/discount`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discountPct: pct }),
+        body: JSON.stringify({ discountPct: pct, newSellPrice }),
       })
       const d = await r.json()
       if (!r.ok) { setDiscountError(d.error || 'Failed'); update(tid, d.error || 'Discount failed', 'danger'); return }
-      setDiscountSuccess(`Applied. Price after discount: ${fmt$(d.discountPrice)}`)
-      update(tid, `Discount applied — ${fmt$(d.discountPrice)} after ${pct}%`, 'success')
+      setDiscountSuccess(`Applied. Price after discount: ${fmt$(newSellPrice)}`)
+      update(tid, `Discount applied — ${fmt$(newSellPrice)} after ${pct}%`, 'success')
       loadBoms()
     } catch (e: any) { setDiscountError(e.message); update(tid, e.message, 'danger') }
     finally { setDiscountSaving(false) }
   }
 
   /* ── Delete BOM ─── */
-  async function deleteBom(bomId: string) {
-    if (!confirm(`Xóa BOM ${bomId}? Không thể hoàn tác.`)) return
+  async function confirmDelete() {
+    if (!deleteBomId) return
+    const bomId = deleteBomId
+    setDeleteBomId(null)
     const tid = toast(`Deleting BOM ${bomId}...`, 'loading')
     try {
       const r = await fetch(`/api/bom/${bomId}`, { method: 'DELETE' })
@@ -335,11 +403,86 @@ export default function ReviewPage() {
     setTimeout(() => { win.print() }, 900)
   }
 
-  const badge = (text: string) => (
-    <span style={{ border: '1px solid var(--border-base)', padding: '1px 8px', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)' }}>
-      {text || '—'}
-    </span>
-  )
+  /* ── Print Detail ─── */
+  async function printDetail() {
+    if (!detailData) return
+    const h = detailData.header
+    const effectiveSell = h.discount_pct > 0 ? h.discount_price : h.sell_price
+    const isVN = String(h.store || '').toUpperCase().startsWith('VN')
+    const vndAmt = (isVN && vndRate > 0)
+      ? Math.ceil(effectiveSell * vndRate / 100000) * 100000 : null
+
+    const [img1Uri, img2Uri, img3Uri] = await Promise.all([
+      fetchDataUri(h.img1 || ''), fetchDataUri(h.img2 || ''), fetchDataUri(h.img3 || ''),
+    ])
+
+    const goldRows = (detailData.golds || []).map(g =>
+      `<tr><td>${g.idx}</td><td>${g.gold_type}</td><td>${g.color}</td><td style="font-family:monospace">${g.weight} gr</td></tr>`
+    ).join('')
+
+    const stoneRows = showStones ? (detailData.stones || []).map(s =>
+      `<tr><td>${s.idx}</td><td>${s.group_code}</td><td style="font-family:monospace">${s.ctw1pc}</td><td style="font-family:monospace">${s.qty}</td><td style="font-family:monospace">${(s.tl_hot || 0).toFixed(3)}</td>${showCostTotal ? `<td style="font-family:monospace">${fmt$(s.gia_ban)}</td>` : ''}</tr>`
+    ).join('') : ''
+
+    const costRows = showCostTotal ? [
+      ['Gold Cost', h.cost_gold], ['Stone Cost', h.cost_stones], ['Labor Cost', h.cost_labor],
+      ['Subtotal', h.cost_subtotal], ['CIF', h.cost_cif], ['Total Cost', h.cost_total],
+    ].map(([l, v]) =>
+      `<div class="cr"><span class="cl">${l}</span><span class="cv">${fmt$(Number(v))}</span></div>`
+    ).join('') : ''
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+<title>BOM ${h.bom_id}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Jost:wght@400;500&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Jost',Arial,sans-serif;background:#fff;color:#1A1814;padding:28px;max-width:880px;margin:0 auto;font-size:12px}
+  h1{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400;margin-bottom:14px}
+  table{width:100%;border-collapse:collapse;margin-bottom:14px}
+  th{background:#F0EBE4;color:#6B645C;font-size:9px;text-transform:uppercase;letter-spacing:.1em;padding:6px 8px;border-bottom:1px solid #C8C3BB;text-align:left}
+  td{padding:5px 8px;border-bottom:1px solid #DDD8CF;font-size:11px}
+  .sec{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:#6B645C;margin:14px 0 6px;border-bottom:1px solid #DDD8CF;padding-bottom:3px}
+  .cr{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #DDD8CF}
+  .cl{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#6B645C}
+  .cv{font-family:monospace;font-size:11px}
+  .sell{display:flex;justify-content:space-between;padding:8px 0 3px;border-top:1px solid #1A1814;margin-top:3px}
+  @media print{body{padding:14px}}
+</style></head><body>
+<h1>BOM Detail — ${h.bom_id}</h1>
+<div style="display:flex;gap:8px;margin-bottom:14px">
+  ${[img1Uri, img2Uri, img3Uri].filter(Boolean).map(u => `<img src="${u}" style="height:75px;object-fit:cover;border:1px solid #C8C3BB" alt=""/>`).join('')}
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 18px;margin-bottom:14px">
+  ${[['Date',h.date],['SO/MO',h.so_mo],['Model',h.model],['Product Type',h.product_type],
+     ['Price List',h.price_list_type],['Salesperson',h.sales_person],['Store',h.store],['Customer',h.customer_name]
+    ].filter(([,v])=>v).map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #DDD8CF">
+    <span style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#6B645C">${l}</span>
+    <span style="font-size:11px">${v}</span></div>`).join('')}
+  ${h.note ? `<div style="grid-column:span 2;padding:3px 0;border-bottom:1px solid #DDD8CF"><span style="font-size:9px;text-transform:uppercase;color:#6B645C;display:block">Note</span><span>${h.note}</span></div>` : ''}
+</div>
+${detailData.golds?.length > 0 ? `<div class="sec">Vàng (Gold)</div>
+<table><thead><tr><th>#</th><th>Type</th><th>Color</th><th>Weight</th></tr></thead>
+<tbody>${goldRows}</tbody></table>` : ''}
+${showStones && detailData.stones?.length > 0 ? `<div class="sec">Hột đá (Stones)</div>
+<table><thead><tr><th>#</th><th>Group</th><th>CTW/pc</th><th>Qty</th><th>TL Hột</th>${showCostTotal ? '<th>Price</th>' : ''}</tr></thead>
+<tbody>${stoneRows}</tbody></table>` : ''}
+${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
+<div style="background:#F0EBE4;border:1px solid #DDD8CF;padding:12px">
+  ${costRows}
+  <div class="sell"><span style="font-weight:600;font-size:12px;text-transform:uppercase">Sell Price</span>
+    <span style="font-size:16px;font-family:'Cormorant Garamond',serif">${fmt$(h.sell_price)}</span></div>
+  ${h.discount_pct > 0 ? `<div class="cr" style="color:#4A7C59"><span>Discount (${fmtPct(h.discount_pct)})</span><span style="font-family:monospace">${fmt$(h.discount_price)}</span></div>` : ''}
+  ${vndAmt ? `<div style="margin-top:6px;font-size:11px;color:#6B645C">Est. VND: ${vndAmt.toLocaleString('vi-VN')} ₫</div>` : ''}
+</div>` : ''}
+</body></html>`
+
+    const win = window.open('', '_blank', 'width=900,height=1000,toolbar=0,scrollbars=1,status=0')
+    if (!win) return
+    win.document.write(html)
+    win.document.close()
+    setTimeout(() => { win.print() }, 900)
+  }
+
 
   return (
     <div className="fade-in">
@@ -390,23 +533,35 @@ export default function ReviewPage() {
             <thead>
               <tr>
                 {[
-                  t('colBomId'), t('colDate'), t('colSoMo'), t('colModel'), t('colStones'),
-                  ...(showCost ? [t('colCost'), t('colSell'), t('colDisc'), t('colAfterDisc')] : []),
+                  '', t('colBomId'), t('colDate'), t('colSoMo'), t('colModel'), t('colProductType'), t('colStones'),
+                  ...(showCostTotal ? [t('colCost')] : []),
+                  ...(showSellPrice ? [t('colSell'), t('colDisc'), t('colAfterDisc')] : []),
                   t('colSalesperson'), t('colStore'), t('colActions')
-                ].map(h => <th key={h} style={th}>{h}</th>)}
+                ].map((h, i) => <th key={i} style={h ? th : { ...th, width: 48 }}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={14} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                <tr><td colSpan={7 + (showCostTotal ? 1 : 0) + (showSellPrice ? 3 : 0) + 3} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                   <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
                 </td></tr>
               ) : paged.length === 0 ? (
-                <tr><td colSpan={14} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>{t('noData')}</td></tr>
+                <tr><td colSpan={7 + (showCostTotal ? 1 : 0) + (showSellPrice ? 3 : 0) + 3} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>{t('noData')}</td></tr>
               ) : paged.map(b => (
-                <tr key={b.id}
+                <tr key={b.bom_id}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                   onMouseLeave={e => (e.currentTarget.style.background = '')}>
+                  {/* Thumbnail */}
+                  <td style={{ ...td, width: 48, padding: '4px 6px', textAlign: 'center' }}>
+                    {thumbUrls[b.bom_id]
+                      ? <img src={thumbUrls[b.bom_id]} alt="" onClick={() => openDetail(b.bom_id)}
+                          style={{ width: 36, height: 36, objectFit: 'cover', cursor: 'pointer', border: '1px solid var(--border-light)', display: 'block' }} />
+                      : b.img1
+                        ? <span style={{ fontSize: 18, cursor: 'pointer', display: 'block' }} onClick={() => openDetail(b.bom_id)}>📷</span>
+                        : null
+                    }
+                  </td>
+                  {/* BOM ID */}
                   <td style={{ ...td, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
                     <button onClick={() => openDetail(b.bom_id)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
@@ -422,12 +577,16 @@ export default function ReviewPage() {
                   </td>
                   <td style={{ ...td, color: 'var(--text-secondary)', fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{b.date}</td>
                   <td style={{ ...td, fontSize: 'var(--text-xs)' }}>{b.so_mo || '—'}</td>
-                  <td style={td}>{b.model}</td>
+                  <td style={td}>{b.model || '—'}</td>
+                  {/* Product Type */}
+                  <td style={{ ...td, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{b.product_type || '—'}</td>
                   <td style={{ ...td, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', textAlign: 'right' }}>
                     {b.total_stone_qty > 0 ? b.total_stone_qty : '—'}
                   </td>
-                  {showCost && <>
+                  {showCostTotal && (
                     <td style={{ ...td, fontFamily: 'var(--font-mono)', textAlign: 'right', color: '#9B4040' }}>{fmt$(b.cost_total)}</td>
+                  )}
+                  {showSellPrice && <>
                     <td style={{ ...td, fontFamily: 'var(--font-mono)', textAlign: 'right', color: '#4A7C59' }}>{fmt$(b.sell_price)}</td>
                     <td style={{ ...td, fontSize: 'var(--text-xs)', color: b.discount_pct ? 'var(--color-success)' : 'var(--text-muted)' }}>
                       {b.discount_pct ? fmtPct(b.discount_pct) : '—'}
@@ -464,14 +623,16 @@ export default function ReviewPage() {
                           <i className="fa-solid fa-percent" />
                         </button>
                       )}
-                      {/* Edit — all roles */}
-                      <a href={`/dashboard/tinh-gia?edit=${b.bom_id}`} title="Edit"
-                        style={{ display: 'inline-flex', alignItems: 'center', background: 'none', border: '1px solid #8C7340', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: '#8C7340', textDecoration: 'none' }}>
-                        <i className="fa-solid fa-pen-to-square" />
-                      </a>
+                      {/* Edit — not Sales, not Sales Supervisor (GAS exact) */}
+                      {role !== 'Sales' && role !== 'Sales Supervisor' && (
+                        <a href={`/dashboard/tinh-gia?edit=${b.bom_id}`} title="Edit"
+                          style={{ display: 'inline-flex', alignItems: 'center', background: 'none', border: '1px solid #8C7340', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: '#8C7340', textDecoration: 'none' }}>
+                          <i className="fa-solid fa-pen-to-square" />
+                        </a>
+                      )}
                       {/* Delete — Admin only */}
                       {role === 'Admin' && (
-                        <button onClick={() => deleteBom(b.bom_id)} title="Delete"
+                        <button onClick={() => setDeleteBomId(b.bom_id)} title="Delete"
                           style={{ background: 'none', border: '1px solid var(--color-danger)', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--color-danger)' }}>
                           <i className="fa-solid fa-trash" />
                         </button>
@@ -679,9 +840,17 @@ export default function ReviewPage() {
                 <p style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 600, margin: 0 }}>{detailBomId}</p>
                 {detailData && <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: '2px 0 0' }}>{detailData.header?.date} · {detailData.header?.model}</p>}
               </div>
-              <button onClick={closeDetail} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 20 }}>
-                <i className="fa-solid fa-xmark" />
-              </button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {detailData && !detailLoading && (
+                  <button onClick={printDetail}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', border: '1px solid var(--border-strong)', borderRadius: 0, padding: '5px 12px', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', color: 'var(--text-primary)' }}>
+                    <i className="fa-solid fa-print" style={{ fontSize: 10 }} />Print
+                  </button>
+                )}
+                <button onClick={closeDetail} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 20 }}>
+                  <i className="fa-solid fa-xmark" />
+                </button>
+              </div>
             </div>
 
             <div style={{ padding: '1.5rem' }}>
@@ -691,12 +860,13 @@ export default function ReviewPage() {
                 </div>
               ) : detailData && (
                 <>
-                  {/* Images */}
+                  {/* Images — loaded via proxy for consistent display */}
                   {(detailData.header.img1 || detailData.header.img2 || detailData.header.img3) && (
                     <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
                       {[detailData.header.img1, detailData.header.img2, detailData.header.img3].filter(Boolean).map((url: string, i: number) => (
-                        <img key={i} src={url} alt={`img${i+1}`}
-                          style={{ width: 90, height: 90, objectFit: 'cover', border: '1px solid var(--border-base)' }} />
+                        <img key={i} src={detailImages[url] || url} alt={`img${i+1}`}
+                          onClick={() => setLightboxSrc(detailImages[url] || url)}
+                          style={{ width: 90, height: 90, objectFit: 'cover', border: '1px solid var(--border-base)', cursor: 'zoom-in' }} />
                       ))}
                     </div>
                   )}
@@ -722,6 +892,15 @@ export default function ReviewPage() {
                       <div style={{ gridColumn: 'span 2', borderBottom: '1px solid var(--border-light)', paddingBottom: 4 }}>
                         <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Note</span>
                         <span style={{ fontSize: 'var(--text-sm)' }}>{detailData.header.note}</span>
+                      </div>
+                    )}
+                    {detailData.header.folder_url && (
+                      <div style={{ gridColumn: 'span 2', borderBottom: '1px solid var(--border-light)', paddingBottom: 4 }}>
+                        <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Folder</span>
+                        <a href={detailData.header.folder_url} target="_blank" rel="noopener noreferrer"
+                          style={{ fontSize: 'var(--text-sm)', color: '#4A6B8C', wordBreak: 'break-all' }}>
+                          {detailData.header.folder_url}
+                        </a>
                       </div>
                     )}
                   </div>
@@ -757,7 +936,7 @@ export default function ReviewPage() {
                       <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)', minWidth: 500 }}>
                           <thead><tr>
-                            {['#', 'Group', 'Size', 'CTW/pc', 'Qty', 'TL Hột', ...(showCost ? ['Price'] : [])].map(h => (
+                            {['#', 'Group', 'Size', 'CTW/pc', 'Qty', 'TL Hột', ...(showCostTotal ? ['Price'] : [])].map(h => (
                               <th key={h} style={{ ...th, padding: '6px 8px' }}>{h}</th>
                             ))}
                           </tr></thead>
@@ -770,7 +949,7 @@ export default function ReviewPage() {
                                 <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{s.ctw1pc}</td>
                                 <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{s.qty}</td>
                                 <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{s.tl_hot?.toFixed(3)}</td>
-                                {showCost && <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{fmt$(s.gia_ban)}</td>}
+                                {showCostTotal && <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{fmt$(s.gia_ban)}</td>}
                               </tr>
                             ))}
                           </tbody>
@@ -780,7 +959,7 @@ export default function ReviewPage() {
                   )}
 
                   {/* Cost breakdown — Admin/Manager only */}
-                  {showCost && (
+                  {showCostTotal && (
                     <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-light)', padding: '1rem 1.25rem', borderRadius: 4 }}>
                       {[
                         ['Gold Cost', detailData.header.cost_gold],
@@ -800,13 +979,48 @@ export default function ReviewPage() {
                         <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400 }}>{fmt$(detailData.header.sell_price)}</span>
                       </div>
                       {detailData.header.discount_pct > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', color: 'var(--color-success)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)', color: 'var(--color-success)' }}>
                           <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                             Discount ({fmtPct(detailData.header.discount_pct)})
                           </span>
                           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)' }}>{fmt$(detailData.header.discount_price)}</span>
                         </div>
                       )}
+                      {(() => {
+                        const effectiveSell = detailData.header.discount_pct > 0
+                          ? detailData.header.discount_price : detailData.header.sell_price
+                        const costTotal = detailData.header.cost_total
+                        const ratio = costTotal > 0 ? effectiveSell / costTotal : 0
+                        const profit = effectiveSell - costTotal
+                        const isVNStore = String(detailData.header.store || '').toUpperCase().startsWith('VN')
+                        return (
+                          <>
+                            {costTotal > 0 && <>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)' }}>
+                                <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.08em' }}>Markup Ratio</span>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{ratio.toFixed(2)}×</span>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)' }}>
+                                <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.08em' }}>Gross Profit</span>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: profit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>{fmt$(profit)}</span>
+                              </div>
+                            </>}
+                            {isVNStore && vndRate > 0 && (
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', alignItems: 'center' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.08em', cursor: 'pointer' }}>
+                                  <input type="checkbox" checked={showDetailVnd} onChange={e => setShowDetailVnd(e.target.checked)} style={{ cursor: 'pointer' }} />
+                                  Est. VND
+                                </label>
+                                {showDetailVnd && (
+                                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                                    {(Math.ceil(effectiveSell * vndRate / 100000) * 100000).toLocaleString('vi-VN')} ₫
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        )
+                      })()}
                     </div>
                   )}
                 </>
@@ -835,22 +1049,37 @@ export default function ReviewPage() {
             </p>
 
             <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', marginBottom: 4 }}>
-                {t('labelDiscount')} % {role !== 'Admin' && <span style={{ color: 'var(--text-muted)' }}>({t('warnMaxDiscount')}: {getMaxDisc()}%)</span>}
-              </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input
-                  type="number" min="0" max={getMaxDisc()} step="0.5"
-                  style={{ border: '1px solid var(--border-base)', borderRadius: 0, padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-base)', color: 'var(--text-primary)', outline: 'none', width: 100 }}
-                  value={discountPct} onChange={e => setDiscountPct(e.target.value)} placeholder="0"
-                />
-                <span style={{ color: 'var(--text-secondary)' }}>%</span>
-                {discountPct && !isNaN(parseFloat(discountPct)) && (
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-success)', fontWeight: 500 }}>
-                    → {fmt$(discountBom.sell_price * (1 - parseFloat(discountPct) / 100))}
-                  </span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <label style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)' }}>
+                  {t('labelDiscount')}
+                </label>
+                {role !== 'Admin' && (
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Max: {getMaxDisc()}%</span>
                 )}
               </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="number" min="0" max={getMaxDisc()} step="0.5"
+                  style={{ border: '1px solid var(--border-base)', borderRadius: 0, padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-base)', color: 'var(--text-primary)', outline: 'none', width: 80 }}
+                  value={discountPct} onChange={e => handleDiscPctChange(e.target.value)} placeholder="0"
+                />
+                <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>%</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)', margin: '0 2px' }}>=</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>$</span>
+                <input
+                  type="number" min="0" step="0.01"
+                  style={{ border: '1px solid var(--border-base)', borderRadius: 0, padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-base)', color: 'var(--text-primary)', outline: 'none', width: 100 }}
+                  value={discountAmt} onChange={e => handleDiscAmtChange(e.target.value)} placeholder="0.00"
+                />
+              </div>
+              {discountPct && !isNaN(parseFloat(discountPct)) && parseFloat(discountPct) > 0 && (
+                <div style={{ marginTop: 8, padding: '7px 10px', background: 'var(--bg-base)', borderLeft: '2px solid var(--color-success)' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>Price after: </span>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--color-success)' }}>
+                    {fmt$(discountBom.sell_price * (1 - parseFloat(discountPct) / 100))}
+                  </span>
+                </div>
+              )}
             </div>
 
             {discountError && <div style={{ color: 'var(--color-danger)', fontSize: 'var(--text-sm)', marginBottom: 8 }}>{discountError}</div>}
@@ -867,6 +1096,60 @@ export default function ReviewPage() {
               <button onClick={closeDiscount} className="btn-outline" style={{ width: '100%', padding: '8px', justifyContent: 'center', display: 'flex' }}>{t('cancel')}</button>
             )}
           </div>
+        </div>
+      )}
+      {/* ── DELETE CONFIRM DIALOG ──────────────────────────── */}
+      {deleteBomId && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+            <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)' }}>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0, color: 'var(--text-primary)' }}>Xóa BOM</h3>
+            </div>
+            <div style={{ padding: '1.5rem' }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', margin: 0 }}>
+                Bạn có chắc muốn xóa BOM <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{deleteBomId}</span>? Thao tác này không thể hoàn tác.
+              </p>
+            </div>
+            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setDeleteBomId(null)}
+                style={{ background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-strong)', borderRadius: 0, padding: '7px 20px', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
+                Hủy
+              </button>
+              <button onClick={confirmDelete}
+                style={{ background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, padding: '7px 20px', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
+                Xóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── LIGHTBOX ───────────────────────────────────────── */}
+      {lightboxSrc && (
+        <div
+          onClick={() => setLightboxSrc(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9998,
+            background: 'rgba(26,24,20,0.88)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'zoom-out',
+          }}
+        >
+          <img
+            src={lightboxSrc}
+            alt="full preview"
+            style={{ maxWidth: '90vw', maxHeight: '90vh', objectFit: 'contain', boxShadow: '0 8px 40px rgba(0,0,0,0.5)' }}
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setLightboxSrc(null)}
+            style={{
+              position: 'absolute', top: 16, right: 16,
+              background: 'none', border: 'none',
+              color: '#fff', fontSize: 24, cursor: 'pointer', lineHeight: 1,
+            }}
+          >
+            <i className="fa-solid fa-xmark" />
+          </button>
         </div>
       )}
     </div>

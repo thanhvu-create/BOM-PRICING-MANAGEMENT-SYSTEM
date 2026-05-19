@@ -244,8 +244,24 @@ function DashboardContent({ user, children }: Props) {
               ))}
             </nav>
 
-            {/* Right controls: USD RATE | MANAGER DISCOUNT CAP | LANG */}
+            {/* Right controls: STORE BADGE | USD RATE | MANAGER DISCOUNT CAP | LANG */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', paddingBottom: '0.25rem' }}>
+
+              {/* Store badge — shown if user.store has value */}
+              {user.store && (
+                <span style={{
+                  border: '1px solid var(--border-base)',
+                  padding: '2px 8px',
+                  fontSize: 'var(--text-xs)',
+                  textTransform: 'uppercase',
+                  fontFamily: 'var(--font-mono)',
+                  letterSpacing: '0.08em',
+                  color: 'var(--text-secondary)',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {user.store}
+                </span>
+              )}
 
               {/* USD Rate */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

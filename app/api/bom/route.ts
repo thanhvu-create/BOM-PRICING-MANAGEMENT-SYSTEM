@@ -20,7 +20,7 @@ export async function GET() {
     const store = profile?.store || ''
 
     const db = createServiceClient()
-    let query = db.from('bom').select('*').order('timestamp', { ascending: false })
+    let query = db.from('bom').select('*').order('created_at', { ascending: false })
 
     // Filter theo store nếu không phải Admin/Manager
     if (store && !['Admin', 'Manager'].includes(role) && STORE_PRICE_MAP[store]) {
@@ -88,9 +88,8 @@ export async function POST(request: Request) {
       img3:            header.img3 || '',
       folder_url:      header.folderUrl || '',
       created_by:      username,
-      updated_by:      username,
       customer_name:   header.customerName || '',
-      discount_pct:    discountPct / 100,   // lưu dạng decimal (0.05 = 5%)
+      discount_pct:    discountPct / 100,   // stored as decimal (0.05 = 5%)
       discount_price:  discountPrice,
       sales_person:    header.salesPerson || '',
       store:           header.store || '',
@@ -117,7 +116,7 @@ export async function POST(request: Request) {
     // Insert BOM_Stone
     if ((stones || []).length > 0) {
       const stoneRows = (stones as any[])
-        .filter(s => s.groupCode && Number(s.qty) > 0)
+        .filter(s => String(s.groupCode || '').trim() !== '' || (Number(s.ctw1pc) || 0) > 0 || (Number(s.qty) || 0) > 0)
         .map((s: any, i: number) => ({
           bom_id:     bomId,
           idx:        i + 1,

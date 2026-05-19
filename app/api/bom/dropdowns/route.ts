@@ -21,20 +21,21 @@ export async function GET() {
     const db = createServiceClient()
 
     const [ptRes, pltRes, spRes, sgRes, spPersonRes, storeRes] = await Promise.all([
-      db.from('mk_product_type').select('product_type').order('sort_order'),
-      db.from('mk_price_list_type').select('price_list_type').order('sort_order'),
-      db.from('mk_type_definition').select('type_definition').order('sort_order'),
+      db.from('mk_product_type').select('product_type'),
+      db.from('mk_price_list_type').select('price_list_type'),
+      db.from('mk_type_definition').select('type_definition'),
       db.from('stone_material').select('group_code').order('group_code'),
       db.from('salesperson').select('salesperson_name').order('salesperson_name'),
-      db.from('store').select('store_name').order('store_name'),
+      db.from('stores').select('store_name').order('store_name'),
     ])
 
     const productTypes = [...new Set((ptRes.data || []).map((r: any) => r.product_type).filter(Boolean))]
     let priceListTypes = [...new Set((pltRes.data || []).map((r: any) => r.price_list_type).filter(Boolean))]
-    const spTypes = [...new Set((spRes.data || []).map((r: any) => r.type_definition).filter(Boolean))]
+    // TSTT là auto-lock khi có hột — KHÔNG hiện trong dropdown SP Type
+    const spTypes = [...new Set((spRes.data || []).map((r: any) => r.type_definition).filter(Boolean))].filter(t => t !== 'TSTT')
     const stoneGroupCodes = [...new Set((sgRes.data || []).map((r: any) => r.group_code).filter(Boolean))]
     const salesPersonNames = (spPersonRes.data || []).map((r: any) => r.salesperson_name).filter(Boolean)
-    const storeNames = (storeRes.data || []).map((r: any) => r.store_name).filter(Boolean)
+    const storeNames = [...new Set((storeRes.data || []).map((r: any) => r.store_name).filter(Boolean))]
 
     // Lọc priceListTypes theo store (trừ Admin/Manager thấy tất cả)
     if (store && !['Admin', 'Manager'].includes(role) && STORE_PRICE_MAP[store]) {

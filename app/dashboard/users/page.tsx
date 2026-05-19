@@ -52,6 +52,7 @@ export default function UsersPage() {
   const [editUser, setEditUser] = useState<AppUser | null>(null)
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
+  const [deleteUser, setDeleteUser] = useState<AppUser | null>(null)
 
   // Form fields
   const [fUsername, setFUsername] = useState('')
@@ -122,8 +123,12 @@ export default function UsersPage() {
     }
   }
 
-  async function handleDelete(u: AppUser) {
-    if (!window.confirm(`Xóa user "${u.username}"?`)) return
+  function handleDelete(u: AppUser) { setDeleteUser(u) }
+
+  async function doDelete() {
+    if (!deleteUser) return
+    const u = deleteUser
+    setDeleteUser(null)
     const tid = toast(`Deleting "${u.username}"...`, 'loading')
     try {
       const r = await fetch(`/api/users?id=${u.id}`, { method: 'DELETE' })
@@ -250,6 +255,22 @@ export default function UsersPage() {
           </tbody>
         </table>
       </div>
+
+      {/* ── DELETE CONFIRM ── */}
+      {deleteUser && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: 400, padding: '1.5rem' }}>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>Xác nhận xóa</h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
+              Xóa user <strong>{deleteUser.username}</strong>? Hành động này không thể hoàn tác.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button onClick={() => setDeleteUser(null)} className="btn-outline" style={{ padding: '8px 18px' }}>Hủy</button>
+              <button onClick={doDelete} style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── MODAL ─── */}
       {modal && (

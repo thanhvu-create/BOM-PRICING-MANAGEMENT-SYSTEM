@@ -110,6 +110,9 @@ export async function DELETE(request: Request) {
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
     const db = createServiceClient()
+    const { data: target } = await db.from('users').select('username').eq('id', id).single()
+    if (target?.username === 'admin123')
+      return NextResponse.json({ error: 'Cannot delete the super admin account.' }, { status: 403 })
     await db.from('users').delete().eq('id', id)
     await db.auth.admin.deleteUser(id)
 

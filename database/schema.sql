@@ -129,7 +129,7 @@ CREATE TABLE stone_material (
   selling_price   numeric(12,4),
   base_price      numeric(12,4),
   mkup            numeric(8,4),
-  full_name_vn    text,                          -- col[10] Full_Name_Vietnamese trong GAS
+  full_name_vi    text,                          -- col[10] Full_Name_Vietnamese trong GAS
   full_name_en    text,                          -- col[11] Full_Name_EN trong GAS
   synced_at       timestamptz DEFAULT now()
 );
@@ -157,7 +157,7 @@ CREATE TABLE dm_size (
   base_price          numeric(12,4),
   mk                  numeric(8,4) DEFAULT 0,
   diamond_price       numeric(12,4),              -- có thể để trống
-  vietnamese_name     text,
+  full_name_vi        text,
   full_name_en        text,                       -- col[17] trong GAS DM_Size sheet
   created_at          timestamptz DEFAULT now(),
   updated_at          timestamptz DEFAULT now()
@@ -229,8 +229,8 @@ CREATE TABLE mk_price_list_type (
 CREATE TABLE mk_product_type (
   id                      uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
   product_type            text NOT NULL,
-  product_type_details_en text,
-  product_type_details_vi text,
+  details_en              text,
+  details_vi              text,
   sort_order              int DEFAULT 0
 );
 
@@ -312,6 +312,7 @@ CREATE TABLE store (
 CREATE TABLE sys_config (
   key        text PRIMARY KEY,
   value      text NOT NULL,
+  description text,
   updated_at timestamptz DEFAULT now(),
   updated_by text
 );
@@ -456,7 +457,7 @@ BEGIN
   INSERT INTO stone_material (
     group_code, grade_id, display_name, unit, type_input,
     min_size, max_size, selling_price, base_price, mkup,
-    full_name_vn, full_name_en, synced_at
+    full_name_vi, full_name_en, synced_at
   )
   SELECT
     master_code,
@@ -469,7 +470,7 @@ BEGIN
     base_price * (1 + COALESCE(mk, 0)),
     base_price,
     mk,
-    COALESCE(vietnamese_name, display_name),
+    COALESCE(full_name_vi, display_name),
     COALESCE(full_name_en, ''),
     now()
   FROM dm_size

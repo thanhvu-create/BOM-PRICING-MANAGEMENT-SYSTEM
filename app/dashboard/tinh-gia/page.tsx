@@ -18,7 +18,7 @@ interface Dropdowns {
   storeNames: string[]
 }
 interface GoldRow  { id: number; goldType: string; color: string; weight: string; pricePerGr: number; cost: number }
-interface StoneRow { id: number; groupCode: string; size: string; ctw1pc: string; qty: string; tlHot: number; gradeId: string; giaBan: number; inputType: string }
+interface StoneRow { id: number; groupCode: string; size: string; ctw1pc: string; qty: string; tlHot: number; gradeId: string; giaBan: number; inputType: string; sellingPrice: number }
 interface PricingData {
   costGold: number; costStones: number; costLabor: number
   costSubtotal: number; costCif: number; costTotal: number; sellPrice: number
@@ -30,7 +30,7 @@ function nextId() { return ++_rowId }
 function today() { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }) }
 function fmt$(n: number) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
 function newGold(): GoldRow  { return { id: nextId(), goldType: '18K', color: 'Yellow', weight: '', pricePerGr: 0, cost: 0 } }
-function newStone(): StoneRow { return { id: nextId(), groupCode: '', size: '', ctw1pc: '', qty: '', tlHot: 0, gradeId: '', giaBan: 0, inputType: 'mm' } }
+function newStone(): StoneRow { return { id: nextId(), groupCode: '', size: '', ctw1pc: '', qty: '', tlHot: 0, gradeId: '', giaBan: 0, inputType: 'mm', sellingPrice: 0 } }
 
 /* ── STYLE CONSTANTS ───────────────────────────────────────── */
 const inputUnder: React.CSSProperties = {
@@ -76,6 +76,7 @@ export default function TinhGiaPage() {
   const [step, setStep] = useState(1)
   const [dropdowns, setDropdowns] = useState<Dropdowns | null>(null)
   const [vndRate, setVndRate] = useState(0)
+  const [managerMax, setManagerMax] = useState(20)   // MANAGER_MAX_DISCOUNT from sys_config
   const [loadingDD, setLoadingDD] = useState(true)
   const [showStoneTypes, setShowStoneTypes] = useState(false)
   const [stoneTypeList, setStoneTypeList] = useState<Array<{ code: string; viName: string; enName: string }>>([])
@@ -105,11 +106,15 @@ export default function TinhGiaPage() {
   // Step 3 — Stones
   const [stoneRows, setStoneRows] = useState<StoneRow[]>([newStone()])
 
+  // Stone group autocomplete dropdowns (open state per row id)
+  const [stoneDropdowns, setStoneDropdowns] = useState<Record<number, boolean>>({})
+
   // Step 4 — Results
   const [pricing, setPricing] = useState<PricingData | null>(null)
   const [calculating, setCalculating] = useState(false)
   const [calcError, setCalcError] = useState('')
   const [discountPct, setDiscountPct] = useState('')
+  const [discountAmt, setDiscountAmt] = useState('')
   const [saving, setSaving] = useState(false)
   const [savedBomId, setSavedBomId] = useState('')
   const [saveError, setSaveError] = useState('')
@@ -145,7 +150,6 @@ export default function TinhGiaPage() {
       setSoMo(h.so_mo || '')
       setModel(h.model || '')
       setPriceListType(h.price_list_type || '')
-      setSpType(h.sp_type || 'Basic')
       setLaborHours(String(h.labor_hours || 0))
       setSalesPerson(h.sales_person || '')
       setStore(h.store || '')
@@ -166,14 +170,38 @@ export default function TinhGiaPage() {
       }
 
       if (d.stones?.length > 0) {
-        setStoneRows(d.stones.map((s: any) => ({
-          id: nextId(), groupCode: s.group_code,
-          size: String(s.size || ''), ctw1pc: String(s.ctw1pc || ''),
-          qty: String(s.qty || ''), tlHot: s.tl_hot || 0,
-          gradeId: s.grade_id || '', giaBan: s.gia_ban || 0,
-          inputType: s.input_type || 'mm',
-        })))
+        setStoneRows(d.stones.map((s: any) => {
+          const ctw = Number(s.ctw1pc) || 0
+          const qty = Number(s.qty) || 0
+          const tlHot = s.tl_hot || ctw * qty
+          const giaBan = s.gia_ban || 0
+          // Back-compute sellingPrice from giaBan/tlHot for cache
+          const sellingPrice = tlHot > 0 ? giaBan / tlHot : 0
+          return {
+            id: nextId(), groupCode: s.group_code,
+            size: String(s.size || ''), ctw1pc: String(ctw || ''),
+            qty: String(qty || ''), tlHot,
+            gradeId: s.grade_id || '', giaBan, inputType: s.input_type || 'mm',
+            sellingPrice,
+          }
+        }))
       }
+
+      // Restore discount (stored as decimal in DB, e.g. 0.05 = 5%)
+      const rawPct = Number(h.discount_pct) || 0
+      if (rawPct > 0) {
+        const pct = rawPct <= 1 ? rawPct * 100 : rawPct
+        setDiscountPct(pct.toFixed(2))
+        const sellP = Number(h.sell_price) || 0
+        if (sellP > 0) setDiscountAmt((sellP * pct / 100).toFixed(2))
+      } else {
+        setDiscountPct('')
+        setDiscountAmt('')
+      }
+
+      // Normalize spType: 'TSTT' is only valid when hasStones; store the underlying type
+      const loadedSpType = h.sp_type || 'Basic'
+      setSpType(loadedSpType === 'TSTT' ? 'Basic' : loadedSpType)
 
       setStep(1)
     } catch (e) { console.error('loadForEdit failed', e) }
@@ -200,11 +228,13 @@ export default function TinhGiaPage() {
     Promise.all([
       fetch(`/api/bom/dropdowns${storeParam}`).then(r => r.json()),
       fetch('/api/config?key=VND_RATE').then(r => r.json()),
-    ]).then(([dd, cfg]) => {
+      fetch('/api/config?key=MANAGER_MAX_DISCOUNT').then(r => r.json()),
+    ]).then(([dd, cfg, mgrCfg]) => {
       setDropdowns(dd)
       if (dd.productTypes?.[0])   setProductType(dd.productTypes[0])
       if (dd.priceListTypes?.[0]) setPriceListType(dd.priceListTypes[0])
       if (cfg.rate) setVndRate(Number(cfg.rate))
+      if (mgrCfg.rate) setManagerMax(Number(mgrCfg.rate))
     }).catch(console.error).finally(() => setLoadingDD(false))
   }, [canSeeAll, userStore])
 
@@ -227,7 +257,7 @@ export default function TinhGiaPage() {
 
   /* ── Stone lookup ── */
   const lookupStone = useCallback(async (rowId: number, groupCode: string, size: string, ctw1pc: string) => {
-    if (!groupCode) return
+    if (!groupCode.trim()) return
     const sizeVal = parseFloat(size) || 0
     const ctwVal  = parseFloat(ctw1pc) || 0
     if (sizeVal === 0 && ctwVal === 0) return
@@ -240,11 +270,13 @@ export default function TinhGiaPage() {
           const ctw  = parseFloat(row.ctw1pc) || 0
           const qty  = parseFloat(row.qty) || 0
           const tlHot = ctw * qty
+          const sp = Number(d.selling_price) || 0
           return {
             ...row,
-            gradeId:   d.grade_id    || '',
-            inputType: d.type_input  || 'mm',
-            giaBan:    (d.selling_price || 0) * tlHot,
+            gradeId:      d.grade_id   || '',
+            inputType:    d.type_input || 'mm',
+            sellingPrice: sp,
+            giaBan:       sp * tlHot,
           }
         }))
       }
@@ -278,23 +310,36 @@ export default function TinhGiaPage() {
     setStoneRows(rows => rows.map(r => {
       if (r.id !== id) return r
       const updated: StoneRow = { ...r, [field]: val }
-      if (field === 'ctw1pc' || field === 'qty') {
-        const ctw = parseFloat(field === 'ctw1pc' ? val : r.ctw1pc) || 0
-        const qty = parseFloat(field === 'qty'   ? val : r.qty)    || 0
-        updated.tlHot  = ctw * qty
-        updated.giaBan = 0 // reset until re-lookup
+
+      if (field === 'ctw1pc') {
+        const ctw = parseFloat(val) || 0
+        const qty = parseFloat(r.qty) || 0
+        updated.tlHot = ctw * qty
+        if (r.inputType === 'mm' && r.sellingPrice > 0) {
+          // mm type: recalc giaBan from cached sellingPrice, no re-lookup
+          updated.giaBan = r.sellingPrice * updated.tlHot
+        } else {
+          // ct type: size to check is ctw — need re-lookup
+          updated.giaBan = 0
+          scheduleLookup(id, r.groupCode, r.size, val)
+        }
+      } else if (field === 'qty') {
+        const ctw = parseFloat(r.ctw1pc) || 0
+        const qty = parseFloat(val) || 0
+        updated.tlHot = ctw * qty
+        if (r.sellingPrice > 0) {
+          // Recalc giaBan from cached sellingPrice — no re-lookup
+          updated.giaBan = r.sellingPrice * updated.tlHot
+        } else if (r.gradeId) {
+          scheduleLookup(id, r.groupCode, r.size, r.ctw1pc)
+        }
+      } else if (field === 'groupCode' || field === 'size') {
+        const gc = field === 'groupCode' ? val : r.groupCode
+        const sz = field === 'size' ? val : r.size
+        updated.giaBan = 0
+        scheduleLookup(id, gc, sz, r.ctw1pc)
       }
-      // Trigger lookup when groupCode/size/ctw changes
-      if (field === 'groupCode' || field === 'size' || field === 'ctw1pc') {
-        const gc  = field === 'groupCode' ? val : r.groupCode
-        const sz  = field === 'size'  ? val : r.size
-        const ctw = field === 'ctw1pc' ? val : r.ctw1pc
-        scheduleLookup(id, gc, sz, ctw)
-      }
-      // After qty change, recalculate giaBan using existing grade price
-      if (field === 'qty' && r.gradeId) {
-        scheduleLookup(id, r.groupCode, r.size, r.ctw1pc)
-      }
+
       return updated
     }))
   }
@@ -328,6 +373,7 @@ export default function TinhGiaPage() {
       },
       golds: validGolds,
       stones: validStones,
+      calculatedCosts: pricing,
     }
   }
 
@@ -337,9 +383,10 @@ export default function TinhGiaPage() {
     const tid = toast('Calculating BOM cost...', 'loading')
     try {
       const payload = buildPayload()
-      if (payload.golds.length === 0) {
-        setCalcError('Cần ít nhất 1 dòng vàng hợp lệ')
-        update(tid, 'Cần ít nhất 1 dòng vàng hợp lệ', 'warning')
+      // GAS exact: reject only khi CẢ HAI đều rỗng
+      if (payload.golds.length === 0 && payload.stones.length === 0) {
+        setCalcError('Cần ít nhất 1 dòng vàng hoặc 1 dòng hột hợp lệ')
+        update(tid, 'Cần ít nhất 1 dòng vàng hoặc hột', 'warning')
         setCalculating(false); return
       }
       const r = await fetch('/api/bom/calculate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
@@ -361,7 +408,7 @@ export default function TinhGiaPage() {
     const isUpdate = editBomId && !saveAsNew
     const tid = toast(isUpdate ? 'Updating BOM...' : 'Saving BOM...', 'loading')
     try {
-      const pct = parseFloat(discountPct) || 0
+      const pct = clampedDiscPct  // use clamped value (already computed above)
       const payload = { ...buildPayload(), discountPct: pct }
       const r = await fetch(isUpdate ? `/api/bom/${editBomId}` : '/api/bom', {
         method: isUpdate ? 'PUT' : 'POST',
@@ -390,7 +437,7 @@ export default function TinhGiaPage() {
     setSalesPerson(''); setStore(''); setCustomerName(''); setNote('')
     setImg1(''); setImg2(''); setImg3(''); setFolderUrl('')
     setGoldRows([newGold()]); setStoneRows([newStone()])
-    setPricing(null); setDiscountPct(''); setSavedBomId(''); setSaveError('')
+    setPricing(null); setDiscountPct(''); setDiscountAmt(''); setSavedBomId(''); setSaveError('')
     setEditBomId(null); setSaveAsNew(false)
   }
 
@@ -402,9 +449,8 @@ export default function TinhGiaPage() {
 
   /* ── Step nav validation ── */
   function canGoNext() {
-    if (step === 1) return !!date && !!soMo && !!priceListType
-    if (step === 2) return goldRows.some(r => r.goldType && parseFloat(r.weight) > 0)
-    return true
+    if (step === 1) return !!date && !!soMo && !!productType
+    return true  // Step 2 → 3 and Step 3 → 4: always allowed (GAS exact)
   }
 
   /* ── Stone Type List ── */
@@ -413,15 +459,9 @@ export default function TinhGiaPage() {
     if (stoneTypeList.length > 0) return
     setStoneTypeLoading(true)
     try {
-      const r = await fetch('/api/master/stone?dedup=1')
+      const r = await fetch('/api/bom/stone-types')
       const d = await r.json()
-      const rows = (d.data || []).reduce((acc: any[], row: any) => {
-        if (!acc.find((x: any) => x.code === row.group_code)) {
-          acc.push({ code: row.group_code, viName: row.full_name_vi || '', enName: row.full_name_en || '' })
-        }
-        return acc
-      }, [])
-      setStoneTypeList(rows)
+      setStoneTypeList(d.data || [])
     } catch { } finally { setStoneTypeLoading(false) }
   }
 
@@ -430,8 +470,10 @@ export default function TinhGiaPage() {
     return !q || s.code.toLowerCase().includes(q) || s.viName.toLowerCase().includes(q) || s.enName.toLowerCase().includes(q)
   })
 
-  /* ── SP Type lock logic (CASE B → TSTT) ── */
-  const hasStones = stoneRows.some(r => r.groupCode && ((parseFloat(r.ctw1pc) || 0) > 0 || (parseFloat(r.qty) || 0) > 0))
+  /* ── SP Type lock logic (CASE B → TSTT) — exact GAS definition ── */
+  const hasStones = stoneRows.some(
+    r => String(r.groupCode || '').trim() !== '' && (Number(r.qty) || 0) > 0
+  )
   const effectiveSpType = hasStones ? 'TSTT' : spType
 
   /* ── Stone totals (dùng cho Step 3 footer + Step 4 summary) ── */
@@ -439,9 +481,13 @@ export default function TinhGiaPage() {
   const totalStoneTlVal  = stoneRows.reduce((s, r) => s + r.tlHot, 0)
   const totalStoneGiaVal = stoneRows.reduce((s, r) => s + r.giaBan, 0)
 
-  /* ── Discount calc ── */
-  const discountedPrice = pricing && parseFloat(discountPct) > 0
-    ? pricing.sellPrice * (1 - parseFloat(discountPct) / 100)
+  /* ── Discount cap (GAS exact) ── */
+  const maxDiscPct = isAdmin ? 100 : isManager ? managerMax : 20
+
+  /* ── Discount calc (use clamped pct) ── */
+  const clampedDiscPct = Math.min(Math.max(parseFloat(discountPct) || 0, 0), maxDiscPct)
+  const discountedPrice = pricing && clampedDiscPct > 0
+    ? pricing.sellPrice * (1 - clampedDiscPct / 100)
     : null
   const isVNStore = String(store || '').toUpperCase().startsWith('VN')
   const vndEst = pricing && vndRate > 0
@@ -623,10 +669,10 @@ export default function TinhGiaPage() {
               <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>{t('labelNote')}</label>
               <textarea style={{ ...inputUnder, resize: 'vertical', minHeight: 56 }} value={note} onChange={e => setNote(e.target.value)} placeholder="Ghi chú..." />
             </div>
-            {(!date || !soMo || !priceListType) && (
+            {(!date || !soMo || !productType) && (
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-warning)', marginTop: '0.5rem' }}>
                 <i className="fa-solid fa-triangle-exclamation" style={{ marginRight: 6 }} />
-                Bắt buộc: Date, SO/MO, Price List Type
+                Bắt buộc: Date, SO/MO, Product Type
               </p>
             )}
           </div>
@@ -792,12 +838,52 @@ export default function TinhGiaPage() {
                 {stoneRows.map((r, i) => (
                   <tr key={r.id}>
                     <td style={{ ...tdStyle, width: 28, textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>{i + 1}</td>
-                    <td style={{ ...tdStyle, minWidth: 130 }}>
-                      <select style={tdInput} value={r.groupCode}
-                        onChange={e => updateStone(r.id, 'groupCode', e.target.value)}>
-                        <option value="">— Select —</option>
-                        {dropdowns?.stoneGroupCodes.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
+                    <td style={{ ...tdStyle, minWidth: 140, position: 'relative' }}>
+                      <input
+                        type="text"
+                        style={tdInput}
+                        value={r.groupCode}
+                        placeholder="Group code..."
+                        autoComplete="off"
+                        onChange={e => {
+                          updateStone(r.id, 'groupCode', e.target.value)
+                          setStoneDropdowns(prev => ({ ...prev, [r.id]: true }))
+                        }}
+                        onFocus={() => setStoneDropdowns(prev => ({ ...prev, [r.id]: true }))}
+                        onBlur={() => setTimeout(() => setStoneDropdowns(prev => ({ ...prev, [r.id]: false })), 200)}
+                      />
+                      {stoneDropdowns[r.id] && (
+                        <div style={{
+                          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
+                          background: 'var(--bg-surface)', border: '1px solid var(--border-base)',
+                          maxHeight: 220, overflowY: 'auto',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                        }}>
+                          {(() => {
+                            const q = r.groupCode.trim().toUpperCase()
+                            const matches = (dropdowns?.stoneGroupCodes || [])
+                              .filter(c => !q || c.toUpperCase().includes(q))
+                              .slice(0, 80)
+                            if (matches.length === 0) return (
+                              <div style={{ padding: '8px 10px', color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>
+                                No matches
+                              </div>
+                            )
+                            return matches.map(c => (
+                              <div key={c}
+                                onMouseDown={() => {
+                                  updateStone(r.id, 'groupCode', c)
+                                  setStoneDropdowns(prev => ({ ...prev, [r.id]: false }))
+                                }}
+                                style={{ padding: '5px 10px', fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-mono)' }}
+                                onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                                onMouseLeave={e => (e.currentTarget.style.background = '')}>
+                                {c}
+                              </div>
+                            ))
+                          })()}
+                        </div>
+                      )}
                     </td>
                     <td style={{ ...tdStyle, width: 80 }}>
                       <input type="number" style={tdInput} value={r.size} min="0" step="0.01" placeholder="0.00"
@@ -1019,14 +1105,56 @@ export default function TinhGiaPage() {
                   {/* Inline Discount — Admin/Manager only */}
                   {canSeeAll && (
                     <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 10, marginTop: 4 }}>
-                      <label style={{ ...lbl, marginBottom: 6 }}>{t('labelDiscount')} %</label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <input type="number" min="0" max="100" step="0.5"
-                          style={{ width: 80, border: '1px solid var(--border-base)', borderRadius: 0, padding: '5px 8px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', outline: 'none', color: 'var(--text-primary)', background: 'var(--bg-surface)' }}
-                          value={discountPct} onChange={e => setDiscountPct(e.target.value)} placeholder="0" />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                        <label style={{ ...lbl, marginBottom: 0 }}>{t('labelDiscount')}</label>
+                        {!isAdmin && (
+                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                            Max: {maxDiscPct}%
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <input type="number" min="0" max={maxDiscPct} step="0.5"
+                          style={{ width: 72, border: '1px solid var(--border-base)', borderRadius: 0, padding: '5px 8px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', outline: 'none', color: 'var(--text-primary)', background: 'var(--bg-surface)' }}
+                          value={discountPct}
+                          onChange={e => {
+                            const raw = e.target.value
+                            setDiscountPct(raw)
+                            // Clamp for downstream calc but store raw so "2." doesn't lose decimal
+                            const p = Math.min(Math.max(parseFloat(raw) || 0, 0), maxDiscPct)
+                            if (pricing && p > 0) setDiscountAmt((pricing.sellPrice * p / 100).toFixed(2))
+                            else setDiscountAmt('')
+                          }}
+                          onBlur={e => {
+                            // Clamp display on blur (GAS behaviour)
+                            const p = Math.min(Math.max(parseFloat(e.target.value) || 0, 0), maxDiscPct)
+                            setDiscountPct(p > 0 ? String(p) : '')
+                          }}
+                          placeholder="0" />
                         <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>%</span>
-                        {discountedPrice && (
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-success)', fontWeight: 600 }}>
+                        <input type="number" min="0" step="0.01"
+                          style={{ width: 96, border: '1px solid var(--border-base)', borderRadius: 0, padding: '5px 8px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', outline: 'none', color: 'var(--text-primary)', background: 'var(--bg-surface)' }}
+                          value={discountAmt}
+                          onChange={e => {
+                            if (!pricing) return
+                            const raw = e.target.value
+                            setDiscountAmt(raw)
+                            const maxAmt = pricing.sellPrice * maxDiscPct / 100
+                            const a = Math.min(Math.max(parseFloat(raw) || 0, 0), maxAmt)
+                            if (pricing.sellPrice > 0 && a > 0)
+                              setDiscountPct((a / pricing.sellPrice * 100).toFixed(2))
+                            else setDiscountPct('')
+                          }}
+                          onBlur={e => {
+                            if (!pricing) return
+                            const maxAmt = pricing.sellPrice * maxDiscPct / 100
+                            const a = Math.min(Math.max(parseFloat(e.target.value) || 0, 0), maxAmt)
+                            setDiscountAmt(a > 0 ? String(a) : '')
+                          }}
+                          placeholder="0.00" />
+                        <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>$</span>
+                        {discountedPrice != null && (
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-warning)', fontWeight: 600 }}>
                             → {fmt$(discountedPrice)}
                           </span>
                         )}
