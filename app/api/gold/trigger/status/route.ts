@@ -8,14 +8,14 @@ export async function GET() {
     const { data } = await db
       .from('sys_config')
       .select('key, value')
-      .in('key', ['GOLD_TRIGGER_LF', 'GOLD_TRIGGER_HOUR', 'GOLD_TRIGGER_ENABLED'])
+      .in('key', ['GOLD_TRIGGER_LF', 'GOLD_TRIGGER_HOUR', 'GOLD_TRIGGER_ENABLED', 'GOLD_LOSS_FACTOR'])
 
     const cfg: Record<string, string> = {}
     for (const row of data || []) cfg[row.key] = row.value
 
     const enabled = cfg['GOLD_TRIGGER_ENABLED'] !== 'false' // default true
     const hour = parseInt(cfg['GOLD_TRIGGER_HOUR'] || '8')
-    const lf = cfg['GOLD_TRIGGER_LF'] || '1.06'
+    const lf = cfg['GOLD_TRIGGER_LF'] || cfg['GOLD_LOSS_FACTOR'] || '1.06'
 
     // Vercel Cron chạy theo UTC — VN là UTC+7
     const utcHour = (hour - 7 + 24) % 24

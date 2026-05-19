@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
     // Get config
     const { data: configs } = await db
       .from('sys_config').select('key, value')
-      .in('key', ['GOLD_TRIGGER_LF', 'GOLD_TRIGGER_HOUR', 'GOLD_TRIGGER_ENABLED'])
+      .in('key', ['GOLD_TRIGGER_LF', 'GOLD_TRIGGER_HOUR', 'GOLD_TRIGGER_ENABLED', 'GOLD_LOSS_FACTOR'])
     const cfgMap: Record<string, string> = {}
     for (const c of configs || []) cfgMap[c.key] = c.value
 
@@ -129,7 +129,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: 'Trigger đang tắt. Bật lại trong trang Gold.' })
     }
 
-    const lossFactor = parseFloat(cfgMap['GOLD_TRIGGER_LF'] || process.env.LOSS_FACTOR_DEFAULT || '1.06')
+    // GOLD_TRIGGER_LF (set qua Gold page UI) → fallback GOLD_LOSS_FACTOR (legacy key) → ENV → 1.06
+    const lossFactor = parseFloat(cfgMap['GOLD_TRIGGER_LF'] || cfgMap['GOLD_LOSS_FACTOR'] || process.env.LOSS_FACTOR_DEFAULT || '1.06')
 
     // Fetch metal prices
     const { goldOz, ptOz, agOz, source } = await fetchMetalPrices()

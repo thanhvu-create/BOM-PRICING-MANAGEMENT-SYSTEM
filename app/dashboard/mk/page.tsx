@@ -2,6 +2,62 @@
 
 import { useState, useEffect } from 'react'
 
+/* ── LOGO CELL (async Drive proxy) ──────────────────────────── */
+function extractDriveFileId(url: string): string | null {
+  if (!url) return null
+  const m =
+    url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+    url.match(/thumbnail\?id=([a-zA-Z0-9_-]+)/) ||
+    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+    url.match(/\/d\/([a-zA-Z0-9_-]+)/)
+  return m ? m[1] : null
+}
+
+function LogoCell({ url }: { url: string }) {
+  const [src, setSrc] = useState<string | null>(null)
+  const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
+  const fileId = extractDriveFileId(url)
+
+  useEffect(() => {
+    if (!fileId) return
+    let cancelled = false
+    setStatus('loading')
+    fetch(`/api/images/proxy?fileId=${fileId}`)
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled) return
+        if (d.base64 && d.contentType) {
+          setSrc(`data:${d.contentType};base64,${d.base64}`)
+          setStatus('ok')
+        } else {
+          setStatus('error')
+        }
+      })
+      .catch(() => { if (!cancelled) setStatus('error') })
+    return () => { cancelled = true }
+  }, [fileId])
+
+  if (!url) return <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>—</span>
+  if (!fileId) return (
+    <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }} title={url}>
+      <i className="fa-solid fa-link" style={{ marginRight: 3 }} />URL
+    </span>
+  )
+  if (status === 'loading' || status === 'idle') return (
+    <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>
+      <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 4 }} />Loading…
+    </span>
+  )
+  if (status === 'error' || !src) return (
+    <a href={url} target="_blank" rel="noreferrer"
+       style={{ fontSize: 'var(--text-xs)', color: 'var(--color-info)' }}
+       title={url}>
+      <i className="fa-solid fa-image" style={{ marginRight: 3 }} />View
+    </a>
+  )
+  return <img src={src} alt="logo" style={{ maxHeight: 32, maxWidth: 100, objectFit: 'contain', verticalAlign: 'middle' }} />
+}
+
 /* ── SHEET CONFIG ────────────────────────────────────────────── */
 type SheetKey = 'price_list_type' | 'product_type' | 'type_definition' | 'color' | 'process_fee' | 'cif_rate' | 'price_gram' | 'store_markup' | 'salesperson' | 'store'
 
@@ -17,21 +73,18 @@ const SHEETS: SheetDef[] = [
     { key: 'region', label: 'Region' },
     { key: 'store', label: 'Store' },
     { key: 'logo_url', label: 'Logo URL' },
-    { key: 'sort_order', label: 'Sort', type: 'number' },
   ]},
   { key: 'product_type', label: 'Product Type', columns: [
     { key: 'product_type', label: 'Product Type' },
-    { key: 'product_type_details_en', label: 'Details EN' },
-    { key: 'product_type_details_vi', label: 'Details VI' },
-    { key: 'sort_order', label: 'Sort', type: 'number' },
+    { key: 'details_en', label: 'Details EN' },
+    { key: 'details_vi', label: 'Details VI' },
   ]},
   { key: 'type_definition', label: 'Type Definition', columns: [
     { key: 'type_definition', label: 'Type Definition' },
-    { key: 'sort_order', label: 'Sort', type: 'number' },
+    { key: 'description', label: 'Description' },
   ]},
   { key: 'color', label: 'Color', columns: [
     { key: 'color', label: 'Color' },
-    { key: 'sort_order', label: 'Sort', type: 'number' },
   ]},
   { key: 'process_fee', label: 'Process Fee', columns: [
     { key: 'unit_name', label: 'Unit Name' },
@@ -96,16 +149,24 @@ export default function MKPage() {
 
   function openAdd() {
     const empty: Record<string, string> = {}
-    activeSheet.columns.forEach(c => { empty[c.key] = '' })
+    displayCols.forEach(c => { empty[c.key] = '' })
     setForm(empty); setFormError(''); setModal('add')
   }
 
   function openEdit(row: any) {
     setEditRow(row)
     const f: Record<string, string> = {}
-    // store_markup: include dynamic markup columns alongside base columns
-    const colsToFill = activeKey === 'store_markup' ? displayCols : activeSheet.columns
-    colsToFill.forEach(c => { f[c.key] = String(row[c.key] ?? '') })
+    const rowMarkups = row.markups
+      ? (typeof row.markups === 'string' ? JSON.parse(row.markups) : row.markups)
+      : {}
+    displayCols.forEach(c => {
+      if (c.key.startsWith(MARKUP_PFX)) {
+        const mk = c.key.slice(MARKUP_PFX.length)
+        f[c.key] = String(rowMarkups[mk] ?? '')
+      } else {
+        f[c.key] = String(row[c.key] ?? '')
+      }
+    })
     setForm(f); setFormError(''); setModal('edit')
   }
 
@@ -115,10 +176,24 @@ export default function MKPage() {
     setSaving(true); setFormError('')
     try {
       const body: any = {}
-      const colsToSave = activeKey === 'store_markup' ? displayCols : activeSheet.columns
-      colsToSave.forEach(c => {
-        body[c.key] = c.type === 'number' ? (parseFloat(form[c.key]) || 0) : (form[c.key] || '')
-      })
+
+      if (activeKey === 'store_markup') {
+        const markupsObj: Record<string, number> = {}
+        displayCols.forEach(c => {
+          if (c.key.startsWith(MARKUP_PFX)) {
+            const mk = c.key.slice(MARKUP_PFX.length)
+            markupsObj[mk] = parseFloat(form[c.key]) || 0
+          } else {
+            body[c.key] = c.type === 'number' ? (parseFloat(form[c.key]) || 0) : (form[c.key] || '')
+          }
+        })
+        body.markups = markupsObj
+      } else {
+        activeSheet.columns.forEach(c => {
+          body[c.key] = c.type === 'number' ? (parseFloat(form[c.key]) || 0) : (form[c.key] || '')
+        })
+      }
+
       if (modal === 'edit' && editRow?.id) body.id = editRow.id
 
       const r = await fetch(`/api/mk/${activeKey}`, {
@@ -149,14 +224,19 @@ export default function MKPage() {
 
   function showMsg(msg: string) { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000) }
 
-  // For store_markup: additional dynamic columns
-  const extraCols: string[] = activeKey === 'store_markup' && data.length > 0
-    ? Object.keys(data[0]).filter(k => !['id', 'value_from', 'value_to', 'sort_order'].includes(k))
+  // For store_markup: flatten markups JSONB object into individual columns
+  const MARKUP_PFX = 'mkp__'
+  const markupKeys: string[] = activeKey === 'store_markup' && data.length > 0 && data[0]?.markups
+    ? Object.keys(typeof data[0].markups === 'string' ? JSON.parse(data[0].markups) : data[0].markups)
     : []
 
   type ColDef = { key: string; label: string; type?: 'number' | 'text' }
   const displayCols: ColDef[] = (activeKey === 'store_markup'
-    ? [{ key: 'value_from', label: 'Value From', type: 'number' as const }, { key: 'value_to', label: 'Value To', type: 'number' as const }, ...extraCols.map(k => ({ key: k, label: k } as ColDef))]
+    ? [
+        { key: 'value_from', label: 'Value From', type: 'number' as const },
+        { key: 'value_to', label: 'Value To', type: 'number' as const },
+        ...markupKeys.map(k => ({ key: MARKUP_PFX + k, label: k, type: 'number' as const } as ColDef)),
+      ]
     : activeSheet.columns) as ColDef[]
 
   return (
@@ -221,9 +301,18 @@ export default function MKPage() {
                       fontSize: 'var(--text-sm)',
                       maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
-                      {c.key === 'logo_url' && row[c.key]
-                        ? <img src={row[c.key]} alt="logo" style={{ maxHeight: 28, maxWidth: 80, objectFit: 'contain', verticalAlign: 'middle' }} />
-                        : String(row[c.key] ?? '—')}
+                      {c.key === 'logo_url'
+                        ? <LogoCell url={row[c.key] || ''} />
+                        : c.key.startsWith(MARKUP_PFX)
+                          ? (() => {
+                              const mk = c.key.slice(MARKUP_PFX.length)
+                              const mObj = row.markups
+                                ? (typeof row.markups === 'string' ? JSON.parse(row.markups) : row.markups)
+                                : {}
+                              const v = mObj[mk]
+                              return v != null ? Number(v).toFixed(4) : '—'
+                            })()
+                          : String(row[c.key] ?? '—')}
                     </td>
                   ))}
                   <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--border-light)' }}>
@@ -263,37 +352,81 @@ export default function MKPage() {
       {modal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={e => e.target === e.currentTarget && closeModal()}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, padding: '1.5rem', width: 460, maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border-light)' }}>
+          <div style={{
+            background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4,
+            width: activeKey === 'store_markup' ? 'min(92vw, 720px)' : activeSheet.columns.length > 3 ? 'min(90vw, 560px)' : 'min(90vw, 460px)',
+            maxHeight: '88vh', display: 'flex', flexDirection: 'column',
+          }}>
+            {/* STICKY HEADER */}
+            <div style={{ padding: '1.1rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, background: 'var(--bg-base)', borderRadius: '4px 4px 0 0' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>
-                {modal === 'add' ? `Add to ${activeSheet.label}` : 'Edit Row'}
+                {modal === 'add' ? `Add — ${activeSheet.label}` : `Edit — ${activeSheet.label}`}
               </h3>
-              <button onClick={closeModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18 }}>
+              <button onClick={closeModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18, lineHeight: 1, padding: '2px 4px' }}>
                 <i className="fa-solid fa-xmark" />
               </button>
             </div>
 
-            {formError && <div style={{ borderLeft: '2px solid var(--color-danger)', padding: '8px 12px', marginBottom: '1rem', color: 'var(--color-danger)', fontSize: 'var(--text-sm)' }}>{formError}</div>}
+            {/* SCROLLABLE BODY */}
+            <div style={{ overflowY: 'auto', padding: '1.25rem 1.5rem', flex: 1 }}>
+              {formError && <div style={{ borderLeft: '2px solid var(--color-danger)', padding: '8px 12px', marginBottom: '1rem', color: 'var(--color-danger)', fontSize: 'var(--text-sm)' }}>{formError}</div>}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {(activeKey === 'store_markup' ? displayCols : activeSheet.columns).map((c, idx) => (
-                <div key={c.key}>
-                  <label style={lbl}>{c.label}</label>
-                  <input
-                    type={c.type === 'number' ? 'number' : 'text'}
-                    style={inputU}
-                    value={form[c.key] || ''}
-                    onChange={e => setForm(p => ({ ...p, [c.key]: e.target.value }))}
-                    step={c.type === 'number' ? '0.0001' : undefined}
-                    autoFocus={idx === 0}
-                  />
+              {activeKey === 'store_markup' ? (
+                // Store Markup: range row (2-col) + markup keys (3-col grid)
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem 1.5rem', marginBottom: '1.25rem' }}>
+                    {displayCols.filter(c => !c.key.startsWith(MARKUP_PFX)).map((c, idx) => (
+                      <div key={c.key}>
+                        <label style={lbl}>{c.label}</label>
+                        <input type="number" style={inputU} value={form[c.key] || ''} step="0.01" autoFocus={idx === 0}
+                          onChange={e => setForm(p => ({ ...p, [c.key]: e.target.value }))} />
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '1rem' }}>
+                    <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', margin: '0 0 0.85rem' }}>Markup Factor by Price List Type</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.85rem 1.25rem' }}>
+                      {displayCols.filter(c => c.key.startsWith(MARKUP_PFX)).map(c => (
+                        <div key={c.key}>
+                          <label style={{ ...lbl, fontSize: '0.6rem' }}>{c.label}</label>
+                          <input type="number" style={inputU} value={form[c.key] || ''} step="0.0001"
+                            onChange={e => setForm(p => ({ ...p, [c.key]: e.target.value }))} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : activeSheet.columns.length > 3 ? (
+                // Wide sheets (≥4 fields): 2-column grid
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem 1.5rem' }}>
+                  {activeSheet.columns.map((c, idx) => (
+                    <div key={c.key}>
+                      <label style={lbl}>{c.label}</label>
+                      <input type={c.type === 'number' ? 'number' : 'text'} style={inputU}
+                        value={form[c.key] || ''} step={c.type === 'number' ? '0.0001' : undefined} autoFocus={idx === 0}
+                        onChange={e => setForm(p => ({ ...p, [c.key]: e.target.value }))} />
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                // Narrow sheets (≤3 fields): single column
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {activeSheet.columns.map((c, idx) => (
+                    <div key={c.key}>
+                      <label style={lbl}>{c.label}</label>
+                      <input type={c.type === 'number' ? 'number' : 'text'} style={inputU}
+                        value={form[c.key] || ''} step={c.type === 'number' ? '0.0001' : undefined} autoFocus={idx === 0}
+                        onChange={e => setForm(p => ({ ...p, [c.key]: e.target.value }))} />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)' }}>
-              <button onClick={closeModal} className="btn-outline" style={{ padding: '8px 18px' }}>Cancel</button>
-              <button onClick={handleSave} className="btn-primary" style={{ padding: '8px 18px' }} disabled={saving}>
+            {/* STICKY FOOTER */}
+            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0, background: 'var(--bg-base)', borderRadius: '0 0 4px 4px' }}>
+              <button onClick={closeModal} className="btn-outline" style={{ padding: '8px 20px' }}>Cancel</button>
+              <button onClick={handleSave} className="btn-primary" style={{ padding: '8px 20px' }} disabled={saving}>
                 {saving ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 6 }} />Saving...</> : 'Save'}
               </button>
             </div>

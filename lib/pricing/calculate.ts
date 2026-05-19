@@ -80,10 +80,10 @@ export async function calculateBOMCost(payload: BOMPayload): Promise<PricingResu
       let feePerHour = 0
 
       fees?.forEach(f => {
-        const name = (f.unit_name || '').trim()
-        if (name === 'Nhận hột') {
+        const name = (f.unit_name || '').toLowerCase().trim()
+        if (name.includes('nhận hột') || name.includes('setting')) {
           feePerStone = Number(f.unit_price) || 0
-        } else if (name === 'Lắp ráp') {
+        } else if (name.includes('lắp ráp') || name.includes('assembl')) {
           feePerHour = Number(f.unit_price) || 0
         }
       })
@@ -153,14 +153,19 @@ export async function calculateBOMCost(payload: BOMPayload): Promise<PricingResu
         .limit(1)
 
       const sm = smRows?.[0]
-      let markup = sm?.markups?.[header.priceListType || '']
+      // markups may be stored as a serialized JSON string — parse if needed
+      let markupsObj: Record<string, number> = {}
+      if (sm?.markups) {
+        markupsObj = typeof sm.markups === 'string' ? JSON.parse(sm.markups) : sm.markups
+      }
+      let markup = markupsObj[header.priceListType || '']
       // Normalize fallback: strip leading prefix like "1)HPUS -P" → "HPUS -P"
-      if ((!markup || Number(markup) === 0) && sm?.markups && header.priceListType) {
+      if ((!markup || Number(markup) === 0) && header.priceListType) {
         const normalized = header.priceListType.replace(/^[\dB]+[\d.]*\)\s*/, '').trim()
-        const matchKey = Object.keys(sm.markups).find(k =>
+        const matchKey = Object.keys(markupsObj).find(k =>
           k.replace(/^[\dB]+[\d.]*\)\s*/, '').trim() === normalized
         )
-        if (matchKey) markup = sm.markups[matchKey]
+        if (matchKey) markup = markupsObj[matchKey]
       }
       if (markup && Number(markup) > 0) {
         sellPrice = costTotal * Number(markup)

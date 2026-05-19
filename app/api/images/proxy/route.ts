@@ -14,10 +14,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid fileId' }, { status: 400 })
     }
 
-    // Try direct download URL first, then export view URL
+    // Try multiple Drive URL formats — thumbnail works best for "anyone with link" files
     const urls = [
-      `https://drive.google.com/uc?export=download&id=${fileId}`,
+      `https://drive.google.com/thumbnail?id=${fileId}&sz=s200`,
       `https://drive.google.com/uc?export=view&id=${fileId}`,
+      `https://drive.google.com/uc?export=download&id=${fileId}`,
       `https://lh3.googleusercontent.com/d/${fileId}`,
     ]
 
