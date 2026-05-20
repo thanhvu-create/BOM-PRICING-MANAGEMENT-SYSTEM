@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import ClientProviders from '@/components/shared/ClientProviders'
 
 export const metadata: Metadata = {
   title: 'BOM Pricing | GSNB',
@@ -22,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Google Identity Services — for Drive image auth */}
         <script src="https://accounts.google.com/gsi/client" async />
       </head>
-      <body>{children}</body>
+      <body><ClientProviders>{children}</ClientProviders></body>
     </html>
   )
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useToast } from '@/components/shared/ToastContext'
 
 /* ── LOGO CELL (async Drive proxy) ──────────────────────────── */
 function extractDriveFileId(url: string): string | null {
@@ -130,8 +131,8 @@ export default function MKPage() {
   const [form, setForm] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
   const [deleteRow, setDeleteRow] = useState<any>(null)
+  const { toast } = useToast()
 
   const activeSheet = SHEETS.find(s => s.key === activeKey)!
 
@@ -201,7 +202,7 @@ export default function MKPage() {
       })
       const d = await r.json()
       if (!r.ok) { setFormError(d.error || 'Failed'); return }
-      closeModal(); showMsg('Saved'); load(activeKey)
+      closeModal(); toast('Row saved', 'success'); load(activeKey)
     } finally { setSaving(false) }
   }
 
@@ -217,12 +218,10 @@ export default function MKPage() {
     try {
       const r = await fetch(`/api/mk/${activeKey}?id=${row.id}`, { method: 'DELETE' })
       const d = await r.json()
-      if (!r.ok) { showMsg(d.error || 'Delete failed'); return }
-      showMsg('Deleted'); load(activeKey)
-    } catch { showMsg('Delete failed') }
+      if (!r.ok) { toast(d.error || 'Delete failed', 'danger'); return }
+      toast('Row deleted', 'success'); load(activeKey)
+    } catch { toast('Delete failed', 'danger') }
   }
-
-  function showMsg(msg: string) { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000) }
 
   // For store_markup: flatten markups JSONB object into individual columns
   const MARKUP_PFX = 'mkp__'
@@ -269,8 +268,6 @@ export default function MKPage() {
           {data.length} rows · {activeSheet.label}
         </span>
       </div>
-
-      {successMsg && <div style={{ borderLeft: '2px solid var(--color-success)', padding: '8px 12px', marginBottom: '1rem', background: '#F2F7F4', color: 'var(--color-success)', fontSize: 'var(--text-sm)' }}>{successMsg}</div>}
 
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>

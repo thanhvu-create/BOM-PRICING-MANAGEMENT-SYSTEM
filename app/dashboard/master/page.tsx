@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import React from 'react'
+import { useToast } from '@/components/shared/ToastContext'
 
 /* ── TYPES ─────────────────────────────────────────────────── */
 interface StoneRow {
@@ -51,8 +52,8 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange }: { 
   const [oldGradeId, setOldGradeId] = useState('')
   const [saving, setSaving] = useState(false)
   const [syncing, setSyncing] = useState(false)
-  const [successMsg, setSuccessMsg] = useState('')
   const [form, setForm] = useState<Partial<StoneRow>>({})
+  const { toast } = useToast()
   const [formError, setFormError] = useState('')
   const [search, setSearch] = useState('')
   const [deleteStoneRow, setDeleteStoneRow] = useState<StoneRow | null>(null)
@@ -138,7 +139,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange }: { 
       const r = await fetch('/api/master/stone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const d = await r.json()
       if (!r.ok) { setFormError(d.error || 'Failed'); return }
-      closeModal(); showMsg('Saved & synced'); load()
+      closeModal(); toast('Saved & synced', 'success'); load()
     } finally { setSaving(false) }
   }
 
@@ -151,20 +152,18 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange }: { 
     try {
       const r = await fetch(`/api/master/stone?gradeId=${encodeURIComponent(row.grade_id)}`, { method: 'DELETE' })
       const d = await r.json()
-      if (!r.ok) { showMsg(d.error || 'Failed'); return }
-      showMsg('Deleted & synced'); load()
-    } catch { showMsg('Delete failed') }
+      if (!r.ok) { toast(d.error || 'Failed', 'danger'); return }
+      toast('Deleted & synced', 'success'); load()
+    } catch { toast('Delete failed', 'danger') }
   }
 
   async function syncAll() {
     setSyncing(true); onSyncingChange?.(true)
     try {
       await fetch('/api/master/sync', { method: 'POST' })
-      showMsg('Sync complete')
+      toast('Sync complete', 'success')
     } finally { setSyncing(false); onSyncingChange?.(false) }
   }
-
-  function showMsg(msg: string) { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000) }
 
   return (
     <div>
@@ -176,8 +175,6 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange }: { 
           onChange={e => setSearch(e.target.value)}
         />
       </div>
-
-      {successMsg && <div style={{ borderLeft: '2px solid var(--color-success)', padding: '8px 12px', marginBottom: '1rem', background: '#F2F7F4', color: 'var(--color-success)', fontSize: 'var(--text-sm)' }}>{successMsg}</div>}
 
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
@@ -348,8 +345,8 @@ function DMCategoriesTab() {
   const [form, setForm] = useState<DMRow>({})
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
-  const [successMsg, setSuccessMsg] = useState('')
   const [deleteRow, setDeleteRow] = useState<DMRow | null>(null)
+  const { toast } = useToast()
 
   const isDef = activeSheet === 'Definition'
 
@@ -380,7 +377,7 @@ function DMCategoriesTab() {
       const r = await fetch(`/api/master/dm/${activeSheet}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const d = await r.json()
       if (!r.ok) { setFormError(d.error || 'Failed'); return }
-      closeModal(); showMsg('Saved'); load(activeSheet)
+      closeModal(); toast('Saved', 'success'); load(activeSheet)
     } finally { setSaving(false) }
   }
 
@@ -395,12 +392,10 @@ function DMCategoriesTab() {
       const param = isDef ? `enName=${encodeURIComponent(key!)}` : `code=${encodeURIComponent(key!)}`
       const r = await fetch(`/api/master/dm/${activeSheet}?${param}`, { method: 'DELETE' })
       const d = await r.json()
-      if (!r.ok) { showMsg(d.error || 'Failed'); return }
-      showMsg('Deleted'); load(activeSheet)
-    } catch { showMsg('Delete failed') }
+      if (!r.ok) { toast(d.error || 'Failed', 'danger'); return }
+      toast('Deleted', 'success'); load(activeSheet)
+    } catch { toast('Delete failed', 'danger') }
   }
-
-  function showMsg(msg: string) { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(''), 3000) }
 
   return (
     <div>
@@ -420,8 +415,6 @@ function DMCategoriesTab() {
           <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />Add
         </button>
       </div>
-
-      {successMsg && <div style={{ borderLeft: '2px solid var(--color-success)', padding: '8px 12px', marginBottom: '1rem', background: '#F2F7F4', color: 'var(--color-success)', fontSize: 'var(--text-sm)' }}>{successMsg}</div>}
 
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>

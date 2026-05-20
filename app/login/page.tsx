@@ -3,9 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/shared/ToastContext'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -25,7 +27,9 @@ export default function LoginPage() {
       })
 
       if (!lookupRes.ok) {
-        setError('Invalid username or password.')
+        const msg = 'Invalid username or password.'
+        setError(msg)
+        toast(msg, 'danger')
         setLoading(false)
         return
       }
@@ -37,15 +41,20 @@ export default function LoginPage() {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
 
       if (authError) {
-        setError('Invalid username or password.')
+        const msg = 'Invalid username or password.'
+        setError(msg)
+        toast(msg, 'danger')
         setLoading(false)
         return
       }
 
+      toast(`Welcome, ${username}!`, 'success')
       router.push('/dashboard')
       router.refresh()
     } catch {
-      setError('Connection error. Please try again.')
+      const msg = 'Connection error. Please try again.'
+      setError(msg)
+      toast(msg, 'danger')
       setLoading(false)
     }
   }
