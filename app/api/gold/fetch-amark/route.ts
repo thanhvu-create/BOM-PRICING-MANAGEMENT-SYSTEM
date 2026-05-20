@@ -23,27 +23,30 @@ async function fetchYahooPrice(symbol: string): Promise<number> {
 // ─── Amark.com via Cloudflare Worker proxy ────────────────────────────────
 // Worker fetches amark.com (no CF block) + parses HTML → returns JSON.
 // Set AMARK_PROXY_URL = Cloudflare Worker URL in Vercel env vars.
-async function scrapeAmark(): Promise<{ goldOz: number; ptOz: number; agOz: number } | null> {
-  try {
-    const proxyUrl = process.env.AMARK_PROXY_URL
-    if (!proxyUrl) return null  // No proxy configured → skip, use fallback
+async function scrapeAmark(): Promise<{ goldOz: number; ptOz: number; agOz: number; _debug?: string } | null> {
+  const proxyUrl = process.env.AMARK_PROXY_URL
+  if (!proxyUrl) return { goldOz: 0, ptOz: 0, agOz: 0, _debug: 'NO_ENV_VAR' }
 
+  try {
     const res = await fetch(proxyUrl, {
       headers: { 'Accept': 'application/json' },
       signal: AbortSignal.timeout(15000),
     })
-    if (!res.ok) return null
+    if (!res.ok) return { goldOz: 0, ptOz: 0, agOz: 0, _debug: `WORKER_HTTP_${res.status}` }
 
     const data = await res.json()
     const goldOz = Number(data.goldOz)
-    if (!goldOz || goldOz < 1000 || goldOz > 15000) return null
+    if (!goldOz || goldOz < 1000 || goldOz > 15000)
+      return { goldOz: 0, ptOz: 0, agOz: 0, _debug: `INVALID_GOLD_${goldOz}_raw:${JSON.stringify(data).slice(0,100)}` }
 
     return {
       goldOz,
       ptOz: Number(data.ptOz) || 0,
       agOz: Number(data.agOz) || 0,
     }
-  } catch { return null }
+  } catch (e: any) {
+    return { goldOz: 0, ptOz: 0, agOz: 0, _debug: `EXCEPTION:${e.message}` }
+  }
 }
 
 
@@ -62,8 +65,9 @@ export async function GET() {
     let goldOz = 0, ptOz = 0, agOz = 0, source = ''
     const errors: string[] = []
 
-    // Attempt 1: Amark.com scrape (works in local dev / when not Cloudflare-blocked)
+    // Attempt 1: Amark.com via Cloudflare Worker proxy
     const amark = await scrapeAmark()
+    if (amark?._debug) errors.push(`amark_debug:${amark._debug}`)
     if (amark?.goldOz) {
       goldOz = amark.goldOz; ptOz = amark.ptOz; agOz = amark.agOz
       source = 'amark.com'
@@ -110,7 +114,7 @@ export async function GET() {
     const lossFactor = parseFloat(cfg?.value || '1.06')
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
 
-    return NextResponse.json({ success: true, date: today, goldOz, ptOz, agOz, lossFactor, source })
+    return NextResponse.json({ success: true, date: today, goldOz, ptOz, agOz, lossFactor, source, _debug: errors })
   } catch (err: any) {
     return NextResponse.json({ success: false, message: err.message }, { status: 500 })
   }
