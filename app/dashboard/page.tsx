@@ -78,7 +78,7 @@ export default function DashboardPage() {
   )
 
   return (
-    <div className="fade-in">
+    <div>
 
       {/* ── Section header ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.5rem' }}>

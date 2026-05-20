@@ -160,7 +160,7 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="fade-in">
+    <div>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
         <div>

@@ -519,7 +519,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
 
 
   return (
-    <div className="fade-in">
+    <div>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

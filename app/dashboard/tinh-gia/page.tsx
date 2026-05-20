@@ -522,7 +522,7 @@ export default function TinhGiaPage() {
   ]
 
   return (
-    <div className="fade-in">
+    <div>
       {/* Step indicator bar + RESET button */}
       <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, marginBottom: '1.5rem', border: '1px solid var(--border-base)', background: 'var(--bg-base)' }}>
         {steps.map((s, i) => {

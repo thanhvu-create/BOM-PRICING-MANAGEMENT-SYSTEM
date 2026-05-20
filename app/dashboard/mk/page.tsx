@@ -240,7 +240,7 @@ export default function MKPage() {
     : activeSheet.columns) as ColDef[]
 
   return (
-    <div className="fade-in">
+    <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
         <div>
           <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-secondary)', margin: '0 0 4px' }}>MASTER DATA</p>
