@@ -129,6 +129,8 @@ export default function TinhGiaPage() {
 
   // Lookup debounce timers
   const lookupTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
+  // Prevents loadForEdit from re-running when editBomId is set programmatically after a save
+  const skipNextLoad = useRef(false)
 
   /* ── Read ?edit=BOMID from URL ── */
   useEffect(() => {
@@ -139,6 +141,7 @@ export default function TinhGiaPage() {
 
   /* ── Load BOM for editing ── */
   async function loadForEdit(bomId: string) {
+    if (skipNextLoad.current) { skipNextLoad.current = false; return }
     setFillLoading(true)
     try {
       const r = await fetch(`/api/bom/${bomId}`)
@@ -306,7 +309,7 @@ export default function TinhGiaPage() {
   function addGoldRow() {
     const row = newGold()
     setGoldRows(r => [...r, row])
-    if (date) fetchGoldPrice(row.id, date, row.goldType)
+    fetchGoldPrice(row.id, date, row.goldType)
   }
   function removeGoldRow(id: number) { setGoldRows(r => r.filter(x => x.id !== id)) }
 
@@ -352,7 +355,7 @@ export default function TinhGiaPage() {
   function removeStoneRow(id: number) { setStoneRows(r => r.filter(x => x.id !== id)) }
 
   /* ── Build payload ── */
-  function buildPayload() {
+  function buildPayload(overrideSpType?: string) {
     const validGolds = goldRows
       .filter(r => r.goldType && (parseFloat(r.weight) || 0) > 0)
       .map(r => ({ goldType: r.goldType, color: r.color, weight: parseFloat(r.weight) || 0 }))
@@ -371,7 +374,7 @@ export default function TinhGiaPage() {
     return {
       header: {
         date, productType, soMo, model, priceListType,
-        spType: effectiveSpType,
+        spType: overrideSpType !== undefined ? overrideSpType : effectiveSpType,
         laborHours: parseFloat(laborHours) || 0,
         salesPerson, store, customerName, note,
         img1, img2, img3, folderUrl,
@@ -383,11 +386,11 @@ export default function TinhGiaPage() {
   }
 
   /* ── Calculate ── */
-  async function calculate() {
+  async function calculate(overrideSpType?: string) {
     setCalcError(''); setCalculating(true)
     const tid = toast('Calculating BOM cost...', 'loading')
     try {
-      const payload = buildPayload()
+      const payload = buildPayload(overrideSpType)
       // GAS exact: reject only khi CẢ HAI đều rỗng
       if (payload.golds.length === 0 && payload.stones.length === 0) {
         setCalcError('Cần ít nhất 1 dòng vàng hoặc 1 dòng hột hợp lệ')
@@ -426,7 +429,10 @@ export default function TinhGiaPage() {
         update(tid, d.error || 'Save failed', 'danger'); return
       }
       const savedId = isUpdate ? editBomId! : (d.data?.bom_id || d.bomId || 'Saved')
-      setSavedBomId(savedId)
+      skipNextLoad.current = true   // don't reload form data — we already have it
+      setEditBomId(savedId)         // put form in edit mode for the saved BOM
+      setSaveAsNew(false)           // reset to overwrite mode by default
+      setSavedBomId(savedId)        // show inline success banner
       update(tid, `BOM ${savedId} ${isUpdate ? 'updated' : 'saved'}`, 'success')
     } catch (e: any) { setSaveError(e.message); update(tid, e.message, 'danger') }
     finally { setSaving(false) }
@@ -499,22 +505,7 @@ export default function TinhGiaPage() {
     ? Math.ceil((discountedPrice ?? pricing.sellPrice) * vndRate / 100000) * 100000
     : null
 
-  /* ── SAVED STATE ── */
-  if (savedBomId) return (
-    <div className="fade-in" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-      <i className="fa-solid fa-circle-check" style={{ fontSize: 48, color: 'var(--color-success)', marginBottom: '1rem', display: 'block' }} />
-      <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, marginBottom: 8 }}>BOM Đã Lưu</h2>
-      <p style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-lg)', color: 'var(--text-secondary)', marginBottom: '2rem' }}>{savedBomId}</p>
-      <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-        <button onClick={resetAll} className="btn-primary" style={{ padding: '10px 24px' }}>
-          <i className="fa-solid fa-plus" style={{ marginRight: 8, fontSize: 11 }} />BOM Mới
-        </button>
-        <a href="/dashboard/review" className="btn-outline" style={{ padding: '10px 24px', display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
-          <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: 11 }} />Lịch Sử
-        </a>
-      </div>
-    </div>
-  )
+  /* ── (savedBomId now shown as inline banner in Step 4, not a full-page screen) ── */
 
   if (loadingDD) return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', padding: '3rem 0' }}>
@@ -524,10 +515,10 @@ export default function TinhGiaPage() {
   )
 
   const steps = [
-    { label: t('step1'), icon: 'fa-regular fa-file' },
-    { label: t('step2'), icon: 'fa-solid fa-coins' },
-    { label: t('step3'), icon: 'fa-solid fa-gem' },
-    { label: t('step4'), icon: 'fa-solid fa-calculator' },
+    { label: '1. INFO (HEADER)', icon: 'fa-regular fa-file' },
+    { label: '2. GOLD', icon: 'fa-solid fa-coins' },
+    { label: '3. STONES', icon: 'fa-solid fa-gem' },
+    { label: '4. SUMMARY', icon: 'fa-solid fa-calculator' },
   ]
 
   return (
@@ -690,7 +681,7 @@ export default function TinhGiaPage() {
         <div style={card}>
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <p style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <i className="fa-solid fa-coins" style={{ color: 'var(--text-secondary)', fontSize: 14 }} />Dữ liệu Vàng
+              <i className="fa-solid fa-coins" style={{ color: 'var(--text-secondary)', fontSize: 14 }} />Gold Materials
             </p>
             <button onClick={addGoldRow} style={{
               padding: '5px 14px', fontSize: 'var(--text-xs)', fontWeight: 500,
@@ -699,18 +690,18 @@ export default function TinhGiaPage() {
               background: 'transparent', borderRadius: 0, cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-body)',
             }}>
-              <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />Thêm Dòng Vàng
+              <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />ADD GOLD ROW
             </button>
           </div>
           <div style={{ padding: '1.5rem', overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
               <thead>
                 <tr>
-                  {['#', 'Gold Type', 'Color', 'Weight (gr)',
-                    ...(canSeeAll ? ['Giá/gr', 'Giá Mỗi Loại'] : []),
-                    'Xóa'
+                  {['#', 'GOLD TYPE', 'COLOR', 'WEIGHT (GR)',
+                    ...(canSeeAll ? ['PRICE/GR', 'SUBTOTAL'] : []),
+                    'DELETE'
                   ].map(h => (
-                    <th key={h} style={{ ...thStyle, textAlign: h === 'Giá/gr' || h === 'Giá Mỗi Loại' ? 'right' : 'left' }}>{h}</th>
+                    <th key={h} style={{ ...thStyle, textAlign: h === 'PRICE/GR' || h === 'SUBTOTAL' ? 'right' : 'left' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -750,10 +741,11 @@ export default function TinhGiaPage() {
                       {goldRows.length > 1 ? (
                         <button onClick={() => removeGoldRow(r.id)} style={{
                           background: 'none', border: '1px solid var(--color-danger)',
-                          borderRadius: 0, padding: '3px 8px',
+                          borderRadius: 0, padding: '4px 9px',
                           cursor: 'pointer', color: 'var(--color-danger)',
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                         }}>
-                          <i className="fa-solid fa-trash-can" style={{ fontSize: 11 }} />
+                          <i className="fa-solid fa-trash-can" style={{ fontSize: 13, lineHeight: 1 }} />
                         </button>
                       ) : <span />}
                     </td>
@@ -787,26 +779,8 @@ export default function TinhGiaPage() {
             </table>
           </div>
 
-          {/* SP Type — chỉ cho CASE A */}
-          <div style={{ padding: '0.75rem 1.5rem 1rem', borderTop: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: 24 }}>
-            <div>
-              <label style={{ ...lbl, marginBottom: 4 }}>SP Type (Kiểu SP trơn)</label>
-              {hasStones ? (
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
-                  TSTT <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)' }}>(tự động khi có hột)</span>
-                </span>
-              ) : (
-                <select style={{ ...selectBox, width: 160 }} value={spType} onChange={e => setSpType(e.target.value)}>
-                  {(dropdowns?.spTypes?.length ? dropdowns.spTypes : ['Basic', 'Fancy']).map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-          </div>
-
           <StepNav canNext={canGoNext()} onPrev={() => setStep(1)} onNext={() => setStep(3)}
-            prevLabel="← Quay Lại" nextLabel="Tiếp Tục →" />
+            prevLabel="← BACK" nextLabel="NEXT →" />
         </div>
       )}
 
@@ -818,32 +792,50 @@ export default function TinhGiaPage() {
               <i className="fa-solid fa-gem" style={{ color: 'var(--text-secondary)', fontSize: 13 }} />Stone Materials
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={openStoneTypeList} className="btn-outline" style={{ padding: '5px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                <i className="fa-regular fa-gem" style={{ fontSize: 10 }} />{t('stoneTypeListTitle')}
+              <button onClick={openStoneTypeList} className="btn-outline" style={{ padding: '5px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-body)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                <i className="fa-regular fa-gem" style={{ fontSize: 10 }} />STONE TYPES
               </button>
-              <button onClick={addStoneRow} className="btn-outline" style={{ padding: '5px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />Thêm dòng
+              <button onClick={addStoneRow} style={{
+                padding: '5px 14px', fontSize: 'var(--text-xs)', fontWeight: 500,
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+                border: '1px solid var(--color-success)', color: 'var(--color-success)',
+                background: 'transparent', borderRadius: 0, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'var(--font-body)',
+              }}>
+                <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />ADD STONE ROW
               </button>
             </div>
           </div>
-          <div style={{ padding: '1.5rem', overflowX: 'auto' }}>
+          <div style={{ padding: '1.5rem', overflow: 'visible' }}>
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 8 }}>
               Để trống nếu chỉ tính vàng. Group Code tự động tra giá khi nhập.
             </p>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 680 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+              <colgroup>
+                <col style={{ width: 28 }} />
+                <col style={{ width: 160 }} />
+                <col style={{ width: 84 }} />
+                <col style={{ width: 90 }} />
+                <col style={{ width: 70 }} />
+                <col style={{ width: 90 }} />
+                <col style={{ width: 90 }} />
+                <col style={{ width: 120 }} />
+                {canSeeAll && <col style={{ width: 100 }} />}
+                <col style={{ width: 44 }} />
+              </colgroup>
               <thead>
                 <tr>
-                  {['#', t('labelStoneGroup'), t('labelMmSize'), t('labelCtw'), t('labelQty'), t('labelTlHot'), 'Input', t('labelGradeId'),
-                    ...(canSeeAll ? [t('labelStonePrice')] : []),
-                    ''
-                  ].map((h, i) => <th key={`sh-${i}`} style={thStyle}>{h}</th>)}
+                  {['#', 'STONE TYPE (MASTER)', 'MM SIZE', 'CTW/1PC', 'QTY', 'CTW TOTAL', 'INPUT TYPE', 'GRADE ID',
+                    ...(canSeeAll ? ['SELL PRICE'] : []),
+                    'DELETE'
+                  ].map((h, i) => <th key={`sh-${i}`} style={{ ...thStyle, textAlign: h === 'SELL PRICE' || h === 'CTW TOTAL' ? 'right' : h === 'DELETE' || h === '#' ? 'center' : 'left' }}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {stoneRows.map((r, i) => (
                   <tr key={r.id}>
-                    <td style={{ ...tdStyle, width: 28, textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>{i + 1}</td>
-                    <td style={{ ...tdStyle, minWidth: 140, position: 'relative' }}>
+                    <td style={{ ...tdStyle, textAlign: 'center', color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>{i + 1}</td>
+                    <td style={{ ...tdStyle, position: 'relative' }}>
                       <input
                         type="text"
                         style={tdInput}
@@ -917,12 +909,17 @@ export default function TinhGiaPage() {
                         {r.giaBan > 0 ? fmt$(r.giaBan) : '—'}
                       </td>
                     )}
-                    <td style={{ ...tdStyle, width: 36, textAlign: 'center' }}>
-                      {stoneRows.length > 1 && (
-                        <button onClick={() => removeStoneRow(r.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-danger)', fontSize: 13 }}>
-                          <i className="fa-solid fa-trash-can" />
+                    <td style={{ ...tdStyle, width: 44, textAlign: 'center' }}>
+                      {stoneRows.length > 1 ? (
+                        <button onClick={() => removeStoneRow(r.id)} style={{
+                          background: 'none', border: '1px solid var(--color-danger)',
+                          borderRadius: 0, padding: '4px 9px',
+                          cursor: 'pointer', color: 'var(--color-danger)',
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <i className="fa-solid fa-trash-can" style={{ fontSize: 13, lineHeight: 1 }} />
                         </button>
-                      )}
+                      ) : <span />}
                     </td>
                   </tr>
                 ))}
@@ -953,7 +950,7 @@ export default function TinhGiaPage() {
               )}
             </table>
           </div>
-          <StepNav canNext={true} onPrev={() => setStep(2)} onNext={() => { setStep(4); calculate() }} prevLabel="← Quay Lại" nextLabel="Tính Giá →" />
+          <StepNav canNext={true} onPrev={() => setStep(2)} onNext={() => { setStep(4); calculate() }} prevLabel="← BACK" nextLabel="CALCULATE →" />
         </div>
       )}
 
@@ -978,30 +975,30 @@ export default function TinhGiaPage() {
               {/* ── LEFT: BOM Info + Labor + SP Type ── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div style={{ ...card, padding: '1.25rem 1.5rem', height: '100%' }}>
-                  <h6 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, margin: '0 0 1rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-light)' }}>
-                    Thông số Sản Xuất
+                  <h6 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, margin: '0 0 1rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-light)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Production Specs
                   </h6>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Tổng số hột:</span>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Total Stones:</span>
                     <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>{totalStoneQtyVal}</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Tổng lượng hột (CTW):</span>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Total CTW:</span>
                     <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>{totalStoneTlVal.toFixed(3)}</strong>
                   </div>
-                  
+
                   <hr style={{ border: 'none', borderTop: '1px solid var(--border-light)', margin: '1rem 0' }} />
 
                   {/* Labor Hours (CASE B) */}
                   {hasStones && (
                     <div style={{ marginBottom: '1rem' }}>
                       <label style={{ ...lbl, marginBottom: 8 }}>
-                        {t('labelLaborHours')} <span style={{ color: 'var(--color-danger)' }}>*</span>
+                        EST. LABOR HOURS <span style={{ color: 'var(--color-danger)' }}>*</span>
                       </label>
                       <input
                         type="number" min="0" step="0.5" placeholder="0"
-                        style={{ ...tdInput }}
+                        style={{ ...tdInput, width: '100%' }}
                         value={laborHours}
                         onChange={e => { setLaborHours(e.target.value); calculate() }}
                         onBlur={calculate}
@@ -1011,13 +1008,13 @@ export default function TinhGiaPage() {
 
                   {/* SP Type */}
                   <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ ...lbl, marginBottom: 8 }}>SP Type</label>
+                    <label style={{ ...lbl, marginBottom: 8 }}>SP TYPE</label>
                     {hasStones ? (
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-muted)', display: 'block', padding: '4px 0' }}>
-                        TSTT <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)' }}>(tự động)</span>
-                      </span>
+                      <div style={{ ...tdInput, background: 'var(--bg-muted)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', cursor: 'not-allowed' }}>
+                        TSTT
+                      </div>
                     ) : (
-                      <select style={{ ...selectBox }} value={spType} onChange={e => { setSpType(e.target.value); calculate() }}>
+                      <select style={{ ...selectBox }} value={spType} onChange={e => { const v = e.target.value; setSpType(v); calculate(v) }}>
                         {(dropdowns?.spTypes?.length ? dropdowns.spTypes : ['Basic', 'Fancy']).map(st => (
                           <option key={st} value={st}>{st}</option>
                         ))}
@@ -1030,8 +1027,8 @@ export default function TinhGiaPage() {
               {/* ── RIGHT: Pricing Breakdown ── */}
               <div style={card}>
                 <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)' }}>
-                  <h6 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, margin: 0, paddingBottom: '0.5rem' }} className={canSeeAll ? "" : "cost-restricted"}>
-                    Báo Cáo Chi Phí (Cost)
+                  <h6 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, margin: 0, paddingBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.08em' }} className={canSeeAll ? "" : "cost-restricted"}>
+                    Cost Report
                   </h6>
                 </div>
                 <div style={{ padding: '1rem 1.5rem' }}>
@@ -1040,22 +1037,22 @@ export default function TinhGiaPage() {
                   {canSeeAll && pricing && (
                     <div style={{ marginBottom: 8 }}>
                       {[
-                        ['Chi phí Vàng',     pricing.costGold],
-                        ['Chi phí Hột',   pricing.costStones],
-                        ['Chi phí Công',    pricing.costLabor],
-                        ['CIF (Thuế/Phí)',          pricing.costCif],
+                        ['Gold Cost',         pricing.costGold],
+                        ['Stone Cost',        pricing.costStones],
+                        ['Labor Cost (Labor)', pricing.costLabor],
+                        ['CIF (Tax/Fee)',      pricing.costCif],
                       ].map(([l, v]) => (
                         <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', marginBottom: '0.5rem' }}>
                           <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>{l as string}:</span>
                           <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--color-danger)' }}>{fmt$(Number(v))}</strong>
                         </div>
                       ))}
-                      
+
                       <hr style={{ border: 'none', borderTop: '1px solid var(--border-light)', margin: '0.5rem 0 1rem' }} />
 
-                      {/* TỔNG COST — prominently red */}
+                      {/* TOTAL COST — prominently red */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 0 1rem' }}>
-                        <span style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)' }}>TỔNG COST:</span>
+                        <span style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>TOTAL COST:</span>
                         <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-danger)' }}>{fmt$(pricing.costTotal)}</strong>
                       </div>
                     </div>
@@ -1066,7 +1063,7 @@ export default function TinhGiaPage() {
                     <div style={{ marginBottom: '1rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--bg-base)', border: '1px solid var(--border-light)', borderRadius: 4 }}>
                         <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', flexShrink: 0 }}>
-                          Discount
+                          DISCOUNT
                         </span>
                         <input type="number" min="0" max={maxDiscPct} step="0.5"
                           style={{ width: 60, border: 'none', borderBottom: '1px solid var(--border-base)', borderRadius: 0, padding: '2px 4px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', outline: 'none', color: 'var(--text-primary)', background: 'transparent', textAlign: 'center' }}
@@ -1115,11 +1112,11 @@ export default function TinhGiaPage() {
                     </div>
                   )}
 
-                  {/* GIÁ BÁN LẺ DỰ KIẾN */}
+                  {/* EST. RETAIL PRICE */}
                   {pricing && (
                     <div style={{ background: '#F2F7F4', border: '1px solid #C3E6CB', borderRadius: 4, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                        GIÁ BÁN LẺ DỰ KIẾN:
+                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        EST. RETAIL PRICE:
                       </span>
                       <div style={{ textAlign: 'right' }}>
                         <strong style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--text-primary)' }}>
@@ -1138,13 +1135,13 @@ export default function TinhGiaPage() {
                   {canSeeAll && pricing && (
                     <div style={{ fontSize: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border-light)', color: 'var(--text-secondary)' }}>
-                        <span>÷ Tổng Cost (Tỷ lệ markup)</span>
+                        <span>÷ Total Cost (Markup x)</span>
                         <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 500 }}>
-                          {pricing.costTotal > 0 ? ((discountedPrice ?? pricing.sellPrice) / pricing.costTotal).toFixed(2) : '—'}
+                          {pricing.costTotal > 0 ? ((discountedPrice ?? pricing.sellPrice) / pricing.costTotal).toFixed(2) + 'x' : '—'}
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', color: 'var(--text-secondary)' }}>
-                        <span>− Tổng Cost (Lợi nhuận)</span>
+                        <span>− Total Cost (Profit)</span>
                         <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 500, color: 'var(--color-success)' }}>
                           {pricing.costTotal > 0 ? fmt$((discountedPrice ?? pricing.sellPrice) - pricing.costTotal) : '—'}
                         </span>
@@ -1153,6 +1150,24 @@ export default function TinhGiaPage() {
                   )}
 
                 </div>
+
+                {/* Inline success banner — shown after save, stays in Step 4 so user can save again */}
+                {savedBomId && (
+                  <div className="fade-in" style={{ margin: '0 1.5rem 1rem', padding: '10px 14px', borderLeft: '2px solid var(--color-success)', background: '#F2F7F4', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <span style={{ color: 'var(--color-success)', fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <i className="fa-solid fa-circle-check" />
+                      BOM Đã Lưu:&nbsp;<strong style={{ fontFamily: 'var(--font-mono)' }}>{savedBomId}</strong>
+                    </span>
+                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                      <button onClick={doReset} className="btn-outline" style={{ padding: '4px 12px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                        BOM Mới
+                      </button>
+                      <a href="/dashboard/review" className="btn-outline" style={{ padding: '4px 12px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+                        Lịch Sử
+                      </a>
+                    </div>
+                  </div>
+                )}
 
                 {/* Save error */}
                 {saveError && (
@@ -1163,8 +1178,8 @@ export default function TinhGiaPage() {
 
                 {/* Bottom action bar */}
                 <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-base)' }}>
-                  <button onClick={() => setStep(3)} className="btn-outline" style={{ padding: '8px 18px', flexShrink: 0 }}>
-                    ← Quay lại
+                  <button onClick={() => setStep(3)} className="btn-outline" style={{ padding: '8px 18px', flexShrink: 0, fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                    ← BACK
                   </button>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     {editBomId && (
@@ -1172,18 +1187,20 @@ export default function TinhGiaPage() {
                         <input type="checkbox" id="chkSaveAsNew" checked={saveAsNew} onChange={e => setSaveAsNew(e.target.checked)}
                           style={{ accentColor: 'var(--btn-dark-bg)', width: 14, height: 14, margin: 0 }} />
                         <label htmlFor="chkSaveAsNew" style={{ fontSize: 'var(--text-xs)', cursor: 'pointer', color: 'var(--text-primary)', fontWeight: 600, margin: 0 }}>
-                          Lưu thành BOM mới
+                          Save as new entry (no overwrite)
                         </label>
                       </div>
                     )}
                     <button onClick={saveBOM} className="btn-primary"
-                      style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}
+                      style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}
                       disabled={saving || fillLoading || !pricing}>
                       {saving
-                        ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 12 }} />Đang lưu</>
+                        ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 12 }} />SAVING...</>
                         : fillLoading
-                          ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 12 }} />Loading</>
-                          : <><i className="fa-solid fa-save" style={{ fontSize: 12 }} />LƯU BOM</>
+                          ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 12 }} />LOADING</>
+                          : editBomId && !saveAsNew
+                            ? <><i className="fa-solid fa-pen-to-square" style={{ fontSize: 12 }} />UPDATE BOM</>
+                            : <><i className="fa-solid fa-save" style={{ fontSize: 12 }} />SAVE BOM</>
                       }
                     </button>
                   </div>

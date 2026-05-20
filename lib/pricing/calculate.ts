@@ -176,14 +176,6 @@ export async function calculateBOMCost(payload: BOMPayload): Promise<PricingResu
       }
     }
 
-    // ── DEBUG ────────────────────────────────────────────────
-    const dbgFees = await db.from('mk_process_fee').select('unit_name, unit_price')
-    const dbgCif  = await db.from('mk_cif_rate').select('price_list_type, cif_rate')
-    const dbgSM   = await db.from('mk_store_markup').select('value_from, value_to, markups')
-      .lte('value_from', costTotal)
-      .gte('value_to', costTotal)
-      .limit(3)
-
     return {
       success: true,
       data: {
@@ -196,15 +188,6 @@ export async function calculateBOMCost(payload: BOMPayload): Promise<PricingResu
         costCif,
         costTotal,
         sellPrice,
-        debug: {
-          hasStones,
-          totalStoneQty,
-          laborHoursInput: header.laborHours,
-          priceListType: header.priceListType,
-          processFeeRows: dbgFees.data,
-          cifRateRows: dbgCif.data,
-          markupRowsForCost: dbgSM.data,
-        },
       },
     }
   } catch (error: any) {

@@ -16,7 +16,7 @@ interface Props {
 
 const NAV_ITEMS = [
   { key: 'dashboard', i18nKey: 'home',    icon: 'fa-house',             href: '/dashboard',           roles: ['Admin','Manager','Sales Supervisor','Sales','Order'] },
-  { key: 'tinh-gia',  i18nKey: 'tinhgia', icon: 'fa-calculator',        href: '/dashboard/tinh-gia',  roles: ['Admin','Manager','Sales Supervisor','Sales','Order'] },
+  { key: 'tinh-gia',  i18nKey: 'tinhgia', icon: 'fa-calculator',        href: '/dashboard/tinh-gia',  roles: ['Admin','Manager','Order'] },
   { key: 'review',    i18nKey: 'review',  icon: 'fa-clock-rotate-left', href: '/dashboard/review',    roles: ['Admin','Manager','Sales Supervisor','Sales','Order'] },
   { key: 'gold',      i18nKey: 'gold',    icon: 'fa-coins',             href: '/dashboard/gold',      roles: ['Admin','Manager'] },
   { key: 'mk',        i18nKey: 'mk',      icon: 'fa-tags',              href: '/dashboard/mk',        roles: ['Admin','Manager'] },
@@ -384,7 +384,7 @@ function DashboardContent({ user, children }: Props) {
         )}
 
         {/* ── CONTENT ────────────────────────────────────── */}
-        <main style={{ padding: '1.5rem' }} className="fade-in">
+        <main style={{ padding: '1.5rem' }}>
           {children}
         </main>
 
@@ -396,9 +396,7 @@ function DashboardContent({ user, children }: Props) {
           @media (min-width: 768px) {
             .show-mobile { display: none !important; }
           }
-          .fade-in { animation: fadeIn 0.15s ease forwards; }
-          @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
-        `}</style>
+`}</style>
       </div>
     </UserProvider>
   )

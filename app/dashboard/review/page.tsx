@@ -112,6 +112,22 @@ export default function ReviewPage() {
     loadBoms()
   }, [])
 
+  // Hide sticky header when any modal is open
+  useEffect(() => {
+    const anyOpen = !!(quotBomId || detailBomId || discountBom || deleteBomId || lightboxSrc)
+    if (anyOpen) {
+      document.body.classList.add('modal-open')
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.classList.remove('modal-open')
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.classList.remove('modal-open')
+      document.body.style.overflow = ''
+    }
+  }, [quotBomId, detailBomId, discountBom, deleteBomId, lightboxSrc])
+
   async function loadBoms() {
     setLoading(true)
     const tid = toast('Loading BOM history...', 'loading')
@@ -551,7 +567,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
             <thead>
               <tr>
                 {[
-                  '', t('colBomId'), t('colDate'), t('colSoMo'), t('colModel'), t('colProductType'), t('colStones'),
+                  '', t('colDate'), t('colSoMo'), t('colModel'), t('colProductType'),
                   ...(showCostTotal ? [t('colCost')] : []),
                   ...(showSellPrice ? [t('colSell'), t('colDisc'), t('colAfterDisc')] : []),
                   t('colSalesperson'), t('colStore'), t('colActions')
@@ -560,11 +576,11 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7 + (showCostTotal ? 1 : 0) + (showSellPrice ? 3 : 0) + 3} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                <tr><td colSpan={5 + (showCostTotal ? 1 : 0) + (showSellPrice ? 3 : 0) + 3} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                   <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
                 </td></tr>
               ) : paged.length === 0 ? (
-                <tr><td colSpan={7 + (showCostTotal ? 1 : 0) + (showSellPrice ? 3 : 0) + 3} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>{t('noData')}</td></tr>
+                <tr><td colSpan={5 + (showCostTotal ? 1 : 0) + (showSellPrice ? 3 : 0) + 3} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>{t('noData')}</td></tr>
               ) : paged.map(b => (
                 <tr key={b.bom_id}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
@@ -579,28 +595,11 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                         : null
                     }
                   </td>
-                  {/* BOM ID */}
-                  <td style={{ ...td, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
-                    <button onClick={() => openDetail(b.bom_id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                      <span style={{
-                        background: 'var(--text-primary)', color: 'var(--text-inverse)',
-                        fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)',
-                        padding: '2px 8px', letterSpacing: '0.04em', whiteSpace: 'nowrap',
-                        display: 'inline-block',
-                      }}>
-                        {b.bom_id}
-                      </span>
-                    </button>
-                  </td>
                   <td style={{ ...td, color: 'var(--text-secondary)', fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{b.date}</td>
                   <td style={{ ...td, fontSize: 'var(--text-xs)' }}>{b.so_mo || '—'}</td>
                   <td style={td}>{b.model || '—'}</td>
                   {/* Product Type */}
                   <td style={{ ...td, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{b.product_type || '—'}</td>
-                  <td style={{ ...td, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', textAlign: 'right' }}>
-                    {b.total_stone_qty > 0 ? b.total_stone_qty : '—'}
-                  </td>
                   {showCostTotal && (
                     <td style={{ ...td, fontFamily: 'var(--font-mono)', textAlign: 'right', color: '#9B4040' }}>{fmt$(b.cost_total)}</td>
                   )}
@@ -856,202 +855,263 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
       {detailBomId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={e => e.target === e.currentTarget && closeDetail()}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 740, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-              <div>
-                <p style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 600, margin: 0 }}>{detailBomId}</p>
-                {detailData && <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', margin: '2px 0 0' }}>{detailData.header?.date} · {detailData.header?.model}</p>}
-              </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                {detailData && !detailLoading && (
-                  <button onClick={printDetail}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', border: '1px solid var(--border-strong)', borderRadius: 0, padding: '5px 12px', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', color: 'var(--text-primary)' }}>
-                    <i className="fa-solid fa-print" style={{ fontSize: 10 }} />Print
-                  </button>
-                )}
-                <button onClick={closeDetail} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 20 }}>
-                  <i className="fa-solid fa-xmark" />
-                </button>
-              </div>
-            </div>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 860, maxHeight: '90vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
 
+            {/* Close button — floating top-right */}
+            <button onClick={closeDetail} style={{ position: 'absolute', top: 10, right: 12, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 20, zIndex: 1, lineHeight: 1 }}>
+              <i className="fa-solid fa-xmark" />
+            </button>
+
+            {/* Body */}
             <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto' }}>
               {detailLoading ? (
                 <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                   <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
                 </div>
-              ) : detailData && (
-                <>
-                  {/* Images — loaded via proxy for consistent display */}
-                  {(detailData.header.img1 || detailData.header.img2 || detailData.header.img3) && (
-                    <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
-                      {[detailData.header.img1, detailData.header.img2, detailData.header.img3].filter(Boolean).map((url: string, i: number) => (
-                        detailImages[url]
-                          ? <img key={i} src={detailImages[url]} alt={`img${i+1}`}
-                              onClick={() => setLightboxSrc(detailImages[url])}
-                              style={{ width: 90, height: 90, objectFit: 'cover', border: '1px solid var(--border-base)', cursor: 'zoom-in' }} />
-                          : <div key={i} style={{ width: 90, height: 90, border: '1px solid var(--border-base)', background: 'var(--bg-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                              <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 16 }} />
-                            </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Info grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem 1.5rem', marginBottom: '1.5rem' }}>
-                    {[
-                      ['Product Type', detailData.header.product_type],
-                      ['SO-MO', detailData.header.so_mo],
-                      ['Price List', detailData.header.price_list_type],
-                      ['SP Type', detailData.header.sp_type],
-                      ['Salesperson', detailData.header.sales_person],
-                      ['Store', detailData.header.store],
-                      ['Customer', detailData.header.customer_name],
-                      ['Labor Hrs', detailData.header.labor_hours],
-                    ].filter(([, v]) => v).map(([l, v]) => (
-                      <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)' }}>
-                        <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>{l}</span>
-                        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>{String(v)}</span>
-                      </div>
-                    ))}
-                    {detailData.header.note && (
-                      <div style={{ gridColumn: 'span 2', borderBottom: '1px solid var(--border-light)', paddingBottom: 4 }}>
-                        <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Note</span>
-                        <span style={{ fontSize: 'var(--text-sm)' }}>{detailData.header.note}</span>
-                      </div>
-                    )}
-                    {detailData.header.folder_url && (
-                      <div style={{ gridColumn: 'span 2', borderBottom: '1px solid var(--border-light)', paddingBottom: 4 }}>
-                        <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', display: 'block', marginBottom: 2 }}>Folder</span>
-                        <a href={detailData.header.folder_url} target="_blank" rel="noopener noreferrer"
-                          style={{ fontSize: 'var(--text-sm)', color: '#4A6B8C', wordBreak: 'break-all' }}>
-                          {detailData.header.folder_url}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Gold table */}
-                  {detailData.golds?.length > 0 && (
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-secondary)', marginBottom: 8 }}>
-                        <i className="fa-solid fa-coins" style={{ marginRight: 6, fontSize: 10 }} />Vàng
-                      </p>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
-                        <thead><tr>{['#', 'Type', 'Color', 'Weight (gr)'].map(h => <th key={h} style={{ ...th, padding: '6px 8px' }}>{h}</th>)}</tr></thead>
-                        <tbody>
-                          {detailData.golds.map(g => (
-                            <tr key={g.idx}>
-                              <td style={{ ...td, color: 'var(--text-muted)', fontSize: 'var(--text-xs)', padding: '6px 8px' }}>{g.idx}</td>
-                              <td style={{ ...td, padding: '6px 8px' }}>{g.gold_type}</td>
-                              <td style={{ ...td, padding: '6px 8px' }}>{g.color}</td>
-                              <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{g.weight}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-
-                  {/* Stone table — hidden for Sales/Supervisor */}
-                  {showStones && detailData.stones?.length > 0 && (
-                    <div style={{ marginBottom: '1.5rem' }}>
-                      <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-secondary)', marginBottom: 8 }}>
-                        <i className="fa-regular fa-gem" style={{ marginRight: 6, fontSize: 10 }} />Hột đá
-                      </p>
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)', minWidth: 500 }}>
-                          <thead><tr>
-                            {['#', 'Group', 'Size', 'CTW/pc', 'Qty', 'TL Hột', ...(showCostTotal ? ['Price'] : [])].map(h => (
-                              <th key={h} style={{ ...th, padding: '6px 8px' }}>{h}</th>
-                            ))}
-                          </tr></thead>
+              ) : detailData && (() => {
+                const h = detailData.header
+                const effectiveSell = h.discount_pct > 0 ? h.discount_price : h.sell_price
+                const isVNStore = String(h.store || '').toUpperCase().startsWith('VN')
+                const vndAmt = (isVNStore && vndRate > 0 && showDetailVnd)
+                  ? Math.ceil(effectiveSell * vndRate / 100000) * 100000
+                  : null
+                const iL: React.CSSProperties = { padding: '5px 10px 5px 0', borderBottom: '1px solid var(--border-light)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', whiteSpace: 'nowrap', width: 1 }
+                const iV: React.CSSProperties = { padding: '5px 16px 5px 6px', borderBottom: '1px solid var(--border-light)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }
+                return (
+                  <>
+                    {/* Info table + thumbnails */}
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                           <tbody>
-                            {detailData.stones.map(s => (
-                              <tr key={s.idx}>
-                                <td style={{ ...td, color: 'var(--text-muted)', fontSize: 'var(--text-xs)', padding: '6px 8px' }}>{s.idx}</td>
-                                <td style={{ ...td, padding: '6px 8px' }}><span title={s.en_name}>{s.group_code}</span></td>
-                                <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{s.size}</td>
-                                <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{s.ctw1pc}</td>
-                                <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{s.qty}</td>
-                                <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{s.tl_hot?.toFixed(3)}</td>
-                                {showCostTotal && <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{fmt$(s.gia_ban)}</td>}
+                            <tr>
+                              <td style={iL}>BOM ID</td>
+                              <td style={iV}>
+                                <span style={{ background: 'var(--text-primary)', color: 'var(--text-inverse)', padding: '2px 8px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', letterSpacing: '0.05em' }}>{detailBomId}</span>
+                              </td>
+                              <td style={iL}>Date</td>
+                              <td style={{ ...iV, paddingRight: 0 }}>{h.date}</td>
+                            </tr>
+                            <tr>
+                              <td style={iL}>Product Type</td>
+                              <td style={iV}>{h.product_type || '—'}</td>
+                              <td style={iL}>SO / MO</td>
+                              <td style={{ ...iV, fontWeight: 600, paddingRight: 0 }}>{h.so_mo || '—'}</td>
+                            </tr>
+                            <tr>
+                              <td style={iL}>Model</td>
+                              <td style={iV}>{h.model || '—'}</td>
+                              <td style={iL}>Customer</td>
+                              <td style={{ ...iV, paddingRight: 0 }}>{h.customer_name || '—'}</td>
+                            </tr>
+                            <tr>
+                              <td style={iL}>Salesperson</td>
+                              <td style={iV}>{h.sales_person || '—'}</td>
+                              <td style={iL}>Store</td>
+                              <td style={{ ...iV, paddingRight: 0 }}>{h.store || '—'}</td>
+                            </tr>
+                            <tr>
+                              <td style={iL}>Price List</td>
+                              <td style={iV}>{h.price_list_type || '—'}</td>
+                              <td style={iL}>SP Type</td>
+                              <td style={{ ...iV, paddingRight: 0 }}>{h.sp_type || '—'}</td>
+                            </tr>
+                            <tr>
+                              <td style={iL}>Labor Hrs</td>
+                              <td style={iV}>{h.labor_hours ?? '—'}</td>
+                              <td style={iL}>Note</td>
+                              <td style={{ ...iV, paddingRight: 0 }}>{h.note || '—'}</td>
+                            </tr>
+                            <tr>
+                              <td style={{ ...iL, borderBottom: 'none' }}>Folder</td>
+                              <td style={{ ...iV, borderBottom: 'none', paddingRight: 0 }} colSpan={3}>
+                                {h.folder_url
+                                  ? <a href={h.folder_url} target="_blank" rel="noopener noreferrer" style={{ color: '#4A6B8C', fontSize: 'var(--text-xs)', wordBreak: 'break-all' }}>{h.folder_url}</a>
+                                  : '—'}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Thumbnails — top right of info block */}
+                      {(h.img1 || h.img2 || h.img3) && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
+                          {[h.img1, h.img2, h.img3].filter(Boolean).map((url: string, i: number) => (
+                            detailImages[url]
+                              ? <img key={i} src={detailImages[url]} alt={`img${i+1}`}
+                                  onClick={() => setLightboxSrc(detailImages[url])}
+                                  style={{ width: 72, height: 72, objectFit: 'cover', border: '1px solid var(--border-base)', cursor: 'zoom-in', borderRadius: 2 }} />
+                              : <div key={i} style={{ width: 72, height: 72, border: '1px solid var(--border-base)', background: 'var(--bg-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                                  <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 14 }} />
+                                </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Gold table */}
+                    {detailData.golds?.length > 0 && (
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#B8860B', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, margin: '0 0 8px' }}>
+                          <span>🪙</span><span>Gold</span>
+                        </p>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+                          <thead><tr>{['#', 'Type', 'Color', 'Weight (gr)'].map(h => <th key={h} style={{ ...th, padding: '6px 8px' }}>{h}</th>)}</tr></thead>
+                          <tbody>
+                            {detailData.golds.map(g => (
+                              <tr key={g.idx}>
+                                <td style={{ ...td, color: 'var(--text-muted)', fontSize: 'var(--text-xs)', padding: '6px 8px' }}>{g.idx}</td>
+                                <td style={{ ...td, padding: '6px 8px' }}>{g.gold_type}</td>
+                                <td style={{ ...td, padding: '6px 8px' }}>{g.color}</td>
+                                <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{g.weight}</td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Cost breakdown — Admin/Manager only */}
-                  {showCostTotal && (
-                    <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-light)', padding: '1rem 1.25rem', borderRadius: 4 }}>
-                      {[
-                        ['Gold Cost', detailData.header.cost_gold],
-                        ['Stone Cost', detailData.header.cost_stones],
-                        ['Labor Cost', detailData.header.cost_labor],
-                        ['Subtotal', detailData.header.cost_subtotal],
-                        ['CIF', detailData.header.cost_cif],
-                        ['Total Cost', detailData.header.cost_total],
-                      ].map(([l, v]) => (
-                        <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)' }}>
-                          <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.08em' }}>{l}</span>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)' }}>{fmt$(Number(v))}</span>
+                    {/* Stone table — hidden for Sales/Supervisor */}
+                    {showStones && detailData.stones?.length > 0 && (
+                      <div style={{ marginBottom: '1.5rem' }}>
+                        <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-secondary)', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <i className="fa-regular fa-gem" style={{ fontSize: 10 }} /><span>Hột đá</span>
+                        </p>
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)', minWidth: 500 }}>
+                            <thead><tr>
+                              {['#', 'Group', 'Size', 'CTW/pc', 'Qty', 'TL Hột', ...(showCostTotal ? ['Price'] : [])].map(h => (
+                                <th key={h} style={{ ...th, padding: '6px 8px' }}>{h}</th>
+                              ))}
+                            </tr></thead>
+                            <tbody>
+                              {detailData.stones.map(s => (
+                                <tr key={s.idx}>
+                                  <td style={{ ...td, color: 'var(--text-muted)', fontSize: 'var(--text-xs)', padding: '6px 8px' }}>{s.idx}</td>
+                                  <td style={{ ...td, padding: '6px 8px' }}><span title={s.en_name}>{s.group_code}</span></td>
+                                  <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{s.size}</td>
+                                  <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{s.ctw1pc}</td>
+                                  <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{s.qty}</td>
+                                  <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{s.tl_hot?.toFixed(3)}</td>
+                                  {showCostTotal && <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{fmt$(s.gia_ban)}</td>}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
-                      ))}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 4px', borderTop: '1px solid var(--border-strong)', marginTop: 4 }}>
-                        <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, textTransform: 'uppercase' }}>Sell Price</span>
-                        <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400 }}>{fmt$(detailData.header.sell_price)}</span>
                       </div>
-                      {detailData.header.discount_pct > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)', color: 'var(--color-success)' }}>
-                          <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                            Discount ({fmtPct(detailData.header.discount_pct)})
-                          </span>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)' }}>{fmt$(detailData.header.discount_price)}</span>
-                        </div>
-                      )}
-                      {(() => {
-                        const effectiveSell = detailData.header.discount_pct > 0
-                          ? detailData.header.discount_price : detailData.header.sell_price
-                        const costTotal = detailData.header.cost_total
-                        const ratio = costTotal > 0 ? effectiveSell / costTotal : 0
-                        const profit = effectiveSell - costTotal
-                        const isVNStore = String(detailData.header.store || '').toUpperCase().startsWith('VN')
-                        return (
-                          <>
-                            {costTotal > 0 && <>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)' }}>
+                    )}
+
+                    {/* Cost breakdown — Admin/Manager only */}
+                    {showCostTotal && (
+                      <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-light)', padding: '0.875rem 1.25rem', borderRadius: 4, marginBottom: '1rem' }}>
+                        {[
+                          ['Gold Cost', h.cost_gold],
+                          ['Stone Cost', h.cost_stones],
+                          ['Labor Cost', h.cost_labor],
+                          ['Subtotal', h.cost_subtotal],
+                          ['CIF', h.cost_cif],
+                          ['Total Cost', h.cost_total],
+                        ].map(([l, v]) => (
+                          <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid var(--border-light)' }}>
+                            <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.08em' }}>{l}</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)' }}>{fmt$(Number(v))}</span>
+                          </div>
+                        ))}
+                        {(() => {
+                          const costTotal = h.cost_total
+                          if (costTotal <= 0) return null
+                          const ratio = effectiveSell / costTotal
+                          const profit = effectiveSell - costTotal
+                          return (
+                            <>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid var(--border-light)' }}>
                                 <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.08em' }}>Markup Ratio</span>
                                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{ratio.toFixed(2)}×</span>
                               </div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid var(--border-light)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
                                 <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.08em' }}>Gross Profit</span>
                                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: profit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>{fmt$(profit)}</span>
                               </div>
-                            </>}
-                            {isVNStore && vndRate > 0 && (
-                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', alignItems: 'center' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-xs)', textTransform: 'uppercase', color: 'var(--text-secondary)', letterSpacing: '0.08em', cursor: 'pointer' }}>
-                                  <input type="checkbox" checked={showDetailVnd} onChange={e => setShowDetailVnd(e.target.checked)} style={{ cursor: 'pointer' }} />
-                                  Est. VND
-                                </label>
-                                {showDetailVnd && (
-                                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                                    {(Math.ceil(effectiveSell * vndRate / 100000) * 100000).toLocaleString('vi-VN')} ₫
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </>
-                        )
-                      })()}
-                    </div>
-                  )}
-                </>
-              )}
+                            </>
+                          )
+                        })()}
+                      </div>
+                    )}
+
+                    {/* Sell Price panel — visible to all except Order */}
+                    {showSellPrice && (
+                      <div style={{ border: '1px solid var(--border-light)', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1.25rem', background: 'var(--bg-surface)' }}>
+                          <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                            {h.discount_pct > 0 ? 'After Discount' : 'Sell Price'}
+                          </span>
+                          <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', color: 'var(--color-success)', fontWeight: 400 }}>
+                            {fmt$(effectiveSell)}
+                          </span>
+                        </div>
+                        {h.discount_pct > 0 && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 1.25rem', background: 'var(--bg-base)', borderTop: '1px solid var(--border-light)' }}>
+                            <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>
+                              Original · Discount {fmtPct(h.discount_pct)}
+                            </span>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>{fmt$(h.sell_price)}</span>
+                          </div>
+                        )}
+                        {vndAmt !== null && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 1.25rem', background: '#F5EDD8', borderTop: '1px solid var(--border-light)' }}>
+                            <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-warning)', fontWeight: 500 }}>
+                              Est. VND Price
+                            </span>
+                            <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-lg)', color: 'var(--color-warning)', fontWeight: 400 }}>
+                              {vndAmt.toLocaleString('vi-VN')} ₫
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
             </div>
+
+            {/* Footer */}
+            <div style={{ padding: '0.875rem 1.5rem', borderTop: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+              {/* VND toggle — only shown for VN store BOMs with a VND rate set */}
+              {detailData && (() => {
+                const isVN = String(detailData.header.store || '').toUpperCase().startsWith('VN')
+                if (!isVN || vndRate <= 0) return <div />
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {/* CSS toggle switch */}
+                    <div onClick={() => setShowDetailVnd(v => !v)}
+                      style={{ width: 36, height: 20, borderRadius: 10, background: showDetailVnd ? '#4A6B8C' : 'var(--border-base)', position: 'relative', transition: 'background 0.2s', cursor: 'pointer', flexShrink: 0 }}>
+                      <div style={{ position: 'absolute', top: 2, left: showDetailVnd ? 18 : 2, width: 16, height: 16, borderRadius: 8, background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+                    </div>
+                    <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', cursor: 'default' }}>Show VND price</span>
+                    <span style={{ background: 'var(--bg-muted)', border: '1px solid var(--border-base)', padding: '1px 10px', borderRadius: 10, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+                      $1 = {vndRate.toLocaleString('vi-VN')} ₫
+                    </span>
+                  </div>
+                )
+              })()}
+              {!detailData && <div />}
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                {detailData && !detailLoading && (
+                  <button onClick={printDetail}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--btn-dark-bg)', color: 'var(--text-inverse)', border: '1px solid var(--btn-dark-bg)', borderRadius: 0, padding: '7px 16px', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
+                    <i className="fa-solid fa-print" style={{ fontSize: 11 }} /> PRINT / PDF
+                  </button>
+                )}
+                <button onClick={closeDetail}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-strong)', borderRadius: 0, padding: '7px 16px', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
+                  CLOSE
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}

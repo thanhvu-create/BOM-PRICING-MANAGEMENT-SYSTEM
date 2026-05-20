@@ -59,6 +59,11 @@ body {
   font-size: var(--text-base);
 }
 
+/* When any modal is open, push header behind the backdrop */
+body.modal-open header {
+  z-index: 1 !important;
+}
+
 /* ── Typography ── */
 .heading-display {
   font-family: var(--font-heading);
