@@ -449,24 +449,27 @@ export default function GoldPage() {
                     <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 4 }}>Vercel Cron: chỉnh trong <code>vercel.json</code></p>
                   </div>
 
-                  {/* Run Now — scrape amark.com từ browser (browser IP không bị Cloudflare block như Vercel server) */}
+                  {/* Run Now — fetch giá qua server API (Yahoo Finance / Amark fallback) */}
                   <button
                     onClick={async () => {
                       setTriggerRunning(true)
-                      const tid = toast('Đang fetch Amark.com...', 'loading')
+                      const tid = toast('Đang fetch giá vàng...', 'loading')
                       try {
-                        const { goldOz, ptOz, agOz } = await scrapeAmarkBrowser()
-                        const save = await fetch('/api/gold/trigger/run', {
+                        const r = await fetch('/api/gold/fetch-amark')
+                        const d = await r.json()
+                        if (!d.success) throw new Error(d.message || 'Fetch failed')
+                        const { goldOz, ptOz, agOz, date } = d
+                        const save = await fetch('/api/gold', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ goldOz, ptOz, agOz, lf: triggerLF }),
+                          body: JSON.stringify({ date, goldOz, ptOz, agOz, lossFactor: Number(triggerLF), overwriteIfSameDate: false }),
                         })
                         const sd = await save.json()
                         if (sd.success) {
-                          update(tid, `✓ Amark.com — Gold $${goldOz.toFixed(2)}/oz đã lưu`, 'success')
+                          update(tid, `✓ Gold $${Number(goldOz).toFixed(2)}/oz đã lưu (${d.source})`, 'success')
                           load(); setShowTriggerPanel(false)
                         } else {
-                          update(tid, `❌ Save failed: ${sd.error}`, 'danger')
+                          update(tid, `❌ Save failed: ${sd.error || sd.message}`, 'danger')
                         }
                       } catch (e: any) { update(tid, `❌ ${e.message}`, 'danger') }
                       finally { setTriggerRunning(false) }
