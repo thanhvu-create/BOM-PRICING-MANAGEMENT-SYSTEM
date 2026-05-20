@@ -186,7 +186,7 @@ export default function DriveImageInput({ label, value, onChange, inputStyle, la
         <div
           onClick={() => setLightbox(false)}
           style={{
-            position: 'fixed', inset: 0, zIndex: 9998,
+            position: 'fixed', inset: 0, zIndex: 10001,
             background: 'rgba(26,24,20,0.88)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'zoom-out',
