@@ -89,61 +89,23 @@ export default function GoldPage() {
 
   useEffect(() => { load() }, [])
 
-  // Shared helper: scrape Amark.com từ browser (browser IP không bị Cloudflare block)
-  async function scrapeAmarkBrowser(): Promise<{ goldOz: number; ptOz: number; agOz: number }> {
-    const AMARK = 'https://www.amark.com'
-    const PROXIES = [
-      `https://corsproxy.io/?${encodeURIComponent(AMARK)}`,
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(AMARK)}`,
-    ]
-
-    let html = ''
-    for (const proxy of PROXIES) {
-      try {
-        const r = await fetch(proxy, { signal: AbortSignal.timeout(20000) })
-        if (!r.ok) continue
-        const text = await r.text()
-        if (text.includes('spotprice') || text.includes('data-material') || text.includes('amark')) {
-          html = text; break
-        }
-      } catch { /* thử proxy tiếp */ }
-    }
-    if (!html) throw new Error('Không kết nối được Amark.com qua CORS proxy')
-
-    // Parse ASK (số sau dấu /): "$4,533.93 / 4,549.29" → 4549.29
-    function extractAsk(metal: string, min: number, max: number): number {
-      const re1 = new RegExp(`data-material=["']${metal}["'][\\s\\S]{0,600}?\\$[\\d,]+\\.\\d+\\s*/\\s*([\\d,]+\\.\\d+)`, 'i')
-      const m1 = html.match(re1)
-      if (m1) { const v = parseFloat(m1[1].replace(/,/g, '')); if (v >= min && v <= max) return v }
-      const re2 = new RegExp(`${metal}[\\s\\S]{0,400}?\\$[\\d,]+\\.\\d+\\s*/\\s*([\\d,]+\\.\\d+)`, 'i')
-      const m2 = html.match(re2)
-      if (m2) { const v = parseFloat(m2[1].replace(/,/g, '')); if (v >= min && v <= max) return v }
-      return 0
-    }
-
-    const goldOz = extractAsk('Gold', 1000, 15000)
-    const agOz   = extractAsk('Silver', 10, 500)
-    const ptOz   = extractAsk('Platinum', 400, 8000)
-    if (!goldOz) throw new Error('Không parse được giá Gold từ Amark.com')
-    return { goldOz, ptOz, agOz }
-  }
-
   async function handleFetchAmark() {
     setFetching(true)
-    const tid = toast('Đang fetch Amark.com...', 'loading')
+    const tid = toast('Đang fetch giá vàng...', 'loading')
     try {
-      const { goldOz, ptOz, agOz } = await scrapeAmarkBrowser()
-      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
+      const r = await fetch('/api/gold/fetch-amark')
+      const d = await r.json()
+      if (!d.success) throw new Error(d.message || 'Fetch failed')
 
-      // Pre-fill Add modal — user review trước khi Save (không auto-save)
-      setFDate(today)
+      const { goldOz, ptOz, agOz, date, source } = d
+      setFDate(date)
       setFGoldOz(String(goldOz))
       setFPtOz(String(ptOz))
       setFAgOz(String(agOz))
       setFOverwrite(false)
       setFormError('')
       setModal('add')
-      update(tid, `Amark.com: Gold $${goldOz.toFixed(2)}/oz — kiểm tra rồi Save`, 'success')
+      update(tid, `Gold $${Number(goldOz).toFixed(2)}/oz (${source}) — kiểm tra rồi Save`, 'success')
     } catch (e: any) {
       update(tid, `❌ ${e.message}`, 'danger')
       setError(e.message)
