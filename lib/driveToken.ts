@@ -101,15 +101,13 @@ function requestToken(prompt: '' | 'consent'): Promise<string | null> {
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Returns cached token or attempts a silent refresh.
- * Never shows a popup. Returns null if no valid token is available.
+ * Returns cached token only. Never triggers any OAuth popup.
+ * Returns null if no valid token is cached — caller should show a "connect" hint.
  */
 export function getTokenSilent(): Promise<string | null> {
   if (!_token) loadCachedToken()
   if (_token && Date.now() < _tokenExpiry) return Promise.resolve(_token)
-  if (!clientIdOk()) return Promise.resolve(null)
-  // prompt: '' → silent re-issue if already consented, no popup if not
-  return requestToken('')
+  return Promise.resolve(null)
 }
 
 /**
