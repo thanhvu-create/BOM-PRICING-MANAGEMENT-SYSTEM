@@ -1001,7 +1001,7 @@ export default function TinhGiaPage() {
                         style={{ ...tdInput, width: '100%' }}
                         value={laborHours}
                         onChange={e => { setLaborHours(e.target.value); calculate() }}
-                        onBlur={calculate}
+                        onBlur={() => calculate()}
                       />
                     </div>
                   )}
@@ -1286,7 +1286,7 @@ export default function TinhGiaPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
                   <thead>
                     <tr>
-                      {['Group Code', t('colViName'), 'Full Name (EN)', 'Type', 'Unit'].map(h => (
+                      {['Group Code', t('colViName'), 'Full Name (EN)'].map(h => (
                         <th key={h} style={{ ...thStyle, position: 'sticky', top: 0 }}>{h}</th>
                       ))}
                     </tr>
@@ -1299,16 +1299,6 @@ export default function TinhGiaPage() {
                         <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '6px 6px' }}>{s.code}</td>
                         <td style={{ ...tdStyle, padding: '6px 6px' }}>{s.viName || '—'}</td>
                         <td style={{ ...tdStyle, color: 'var(--text-secondary)', padding: '6px 6px' }}>{s.enName || '—'}</td>
-                        <td style={{ ...tdStyle, padding: '6px 6px', textAlign: 'center' }}>
-                          <span style={{ display: 'inline-block', padding: '1px 7px', border: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            {s.typeInput || 'mm'}
-                          </span>
-                        </td>
-                        <td style={{ ...tdStyle, padding: '6px 6px', textAlign: 'center' }}>
-                          <span style={{ display: 'inline-block', padding: '1px 7px', border: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.05em', background: s.unit === 'pc' ? 'var(--bg-muted)' : 'transparent' }}>
-                            {s.unit || 'ct'}
-                          </span>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
