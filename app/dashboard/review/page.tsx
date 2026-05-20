@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useUser } from '@/components/shared/UserContext'
 import { useLang } from '@/components/shared/I18nContext'
 import { useToast } from '@/components/shared/ToastContext'
+import { fetchDriveDataUri, onTokenChange } from '@/lib/driveToken'
 
 /* ── TYPES ─────────────────────────────────────────────────── */
 interface BomRow {
@@ -187,6 +188,9 @@ export default function ReviewPage() {
       setDetailImages(results)
     }
     load()
+    // Re-load images when Drive token becomes available
+    return onTokenChange(load)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detailData])
 
   /* ── Quotation images async load ─── */
@@ -204,16 +208,28 @@ export default function ReviewPage() {
       setQuotImages(results)
     }
     load()
+    // Re-load images when Drive token becomes available
+    return onTokenChange(load)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quotData])
 
   /* ── Thumbnail async load for table rows (GAS exact: async after render, 📷 placeholder) ── */
   useEffect(() => {
     const rows = paged.filter(b => b.img1 && !thumbUrls[b.bom_id])
     if (rows.length === 0) return
+    const loadThumbs = () => {
+      // Re-fetch all visible rows (including already-loaded ones) when token changes
+      paged.filter(b => b.img1).forEach(async b => {
+        const uri = await fetchDataUri(b.img1)
+        if (uri) setThumbUrls(prev => ({ ...prev, [b.bom_id]: uri }))
+      })
+    }
     rows.forEach(async b => {
       const uri = await fetchDataUri(b.img1)
       if (uri) setThumbUrls(prev => ({ ...prev, [b.bom_id]: uri }))
     })
+    // Re-load thumbnails when Drive token becomes available
+    return onTokenChange(loadThumbs)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paged])
 
@@ -318,6 +334,10 @@ export default function ReviewPage() {
     if (!url) return ''
     const fileId = extractDriveId(url)
     if (!fileId) return ''
+    // Try client-side Drive API first (works for private files when user is authenticated)
+    const driveUri = await fetchDriveDataUri(fileId)
+    if (driveUri) return driveUri
+    // Fall back to server proxy (works for public "Anyone with link" files)
     try {
       const r = await fetch(`/api/images/proxy?fileId=${fileId}`)
       const d = await r.json()

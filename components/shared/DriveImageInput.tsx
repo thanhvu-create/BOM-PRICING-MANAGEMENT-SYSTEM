@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { getTokenSilent, clearToken, onTokenChange, isAuthenticated } from '@/lib/driveToken'
 
 interface Props {
   label: string
@@ -25,108 +26,21 @@ function extractFileId(url: string): string | null {
   return null
 }
 
-// ── Token cache ──────────────────────────────────────────────────────────────
-// 1. In-memory (survives re-renders within page)
-// 2. localStorage (survives page reload — reuse until expiry ~55 min)
-// After first consent, Google silently re-issues token → no popup ever again.
-const LS_KEY = 'bom_gdrive_token'
-const LS_EXP = 'bom_gdrive_token_exp'
-
-let _token: string | null = null
-let _tokenExpiry = 0
-
-function loadCachedToken() {
-  try {
-    const t = localStorage.getItem(LS_KEY)
-    const exp = Number(localStorage.getItem(LS_EXP) ?? 0)
-    if (t && exp > Date.now()) {
-      _token = t
-      _tokenExpiry = exp
-    }
-  } catch {}
-}
-
-function saveToken(token: string, expiresIn: number) {
-  _token = token
-  _tokenExpiry = Date.now() + (expiresIn - 300) * 1000  // 5-min buffer
-  try {
-    localStorage.setItem(LS_KEY, token)
-    localStorage.setItem(LS_EXP, String(_tokenExpiry))
-  } catch {}
-}
-
-function clearToken() {
-  _token = null
-  _tokenExpiry = 0
-  try {
-    localStorage.removeItem(LS_KEY)
-    localStorage.removeItem(LS_EXP)
-  } catch {}
-}
-
-function getToken(): Promise<string | null> {
-  // Try loading from localStorage first (page reload case)
-  if (!_token) loadCachedToken()
-
-  // In-memory hit
-  if (_token && Date.now() < _tokenExpiry) return Promise.resolve(_token)
-
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
-  const g = (window as any).google
-
-  if (!clientId || clientId.includes('your-google') || !g?.accounts?.oauth2) {
-    return Promise.resolve(null)
-  }
-
-  return new Promise((resolve) => {
-    const client = g.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: 'https://www.googleapis.com/auth/drive.readonly',
-      callback: (res: any) => {
-        if (res?.access_token) {
-          saveToken(res.access_token, res.expires_in ?? 3600)
-          resolve(res.access_token)
-        } else {
-          clearToken()
-          resolve(null)
-        }
-      },
-      error_callback: () => { clearToken(); resolve(null) },
-    })
-    // prompt: '' → silent when already consented (no popup after first time)
-    client.requestAccessToken({ prompt: '' })
-  })
-}
-
-async function fetchWithToken(fileId: string, token: string): Promise<string | null> {
-  const res = await fetch(
-    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  )
-  if (res.status === 401) { clearToken(); return null }
-  if (!res.ok) return null
-  const blob = await res.blob()
-  return URL.createObjectURL(blob)
-}
-
 async function loadImage(fileId: string): Promise<string | null> {
-  const token = await getToken()
+  const token = await getTokenSilent()
   if (!token) return null
-
   try {
-    const src = await fetchWithToken(fileId, token)
-    if (src) return src
-
-    // 401 path: token was stale, clearToken() already called → get fresh one
-    const fresh = await getToken()
-    if (!fresh) return null
-    return await fetchWithToken(fileId, fresh)
-  } catch {
-    return null
-  }
+    const res = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    )
+    if (res.status === 401) { clearToken(); return null }
+    if (!res.ok) return null
+    return URL.createObjectURL(await res.blob())
+  } catch { return null }
 }
 
-type Status = 'idle' | 'loading' | 'ok' | 'no-client-id' | 'error'
+type Status = 'idle' | 'loading' | 'ok' | 'no-auth' | 'error'
 
 export default function DriveImageInput({ label, value, onChange, inputStyle, labelStyle }: Props) {
   const [status, setStatus] = useState<Status>('idle')
@@ -147,18 +61,13 @@ export default function DriveImageInput({ label, value, onChange, inputStyle, la
     setStatus('loading')
     setImg(null)
 
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
-    if (!clientId || clientId.includes('your-google')) {
-      setStatus('no-client-id')
-      return
-    }
-
     const src = await loadImage(fid)
     if (src) {
       setImg(src)
       setStatus('ok')
     } else {
-      setStatus('error')
+      // If not authenticated, show auth hint so user knows to connect Drive
+      setStatus(isAuthenticated() ? 'error' : 'no-auth')
     }
   }
 
@@ -174,7 +83,20 @@ export default function DriveImageInput({ label, value, onChange, inputStyle, la
       setStatus('idle')
       lastApplied.current = ''
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value])
+
+  // Auto-retry when Drive token becomes available (user clicks DriveAuthButton)
+  useEffect(() => {
+    return onTokenChange(() => {
+      const fid = extractFileId(value)
+      if (fid && status !== 'ok' && status !== 'loading') {
+        lastApplied.current = fid
+        preview(fid)
+      }
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, status])
 
   function triggerPreview() {
     const fid = extractFileId(value)
@@ -243,11 +165,11 @@ export default function DriveImageInput({ label, value, onChange, inputStyle, la
         </p>
       )}
 
-      {/* No client ID configured */}
-      {status === 'no-client-id' && (
-        <p style={{ margin: '4px 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-warning)', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: 10 }} />
-          NEXT_PUBLIC_GOOGLE_CLIENT_ID not configured
+      {/* Not authenticated — prompt to connect Drive */}
+      {status === 'no-auth' && value && (
+        <p style={{ margin: '4px 0 0', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <i className="fa-solid fa-triangle-exclamation" style={{ fontSize: 10, color: 'var(--color-warning)' }} />
+          Connect Google Drive (topbar button) to preview images
         </p>
       )}
 

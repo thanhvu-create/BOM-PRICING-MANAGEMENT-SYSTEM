@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { UserProvider } from './UserContext'
 import { I18nProvider, useLang } from './I18nContext'
 import { ToastProvider } from './ToastContext'
+import DriveAuthButton from './DriveAuthButton'
 import type { Role } from '@/types'
 
 interface Props {
@@ -294,6 +295,9 @@ function DashboardContent({ user, children }: Props) {
                   <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontWeight: 500 }}>%</span>
                 </div>
               )}
+
+              {/* Drive auth button */}
+              <DriveAuthButton />
 
               {/* Lang toggle */}
               <button
