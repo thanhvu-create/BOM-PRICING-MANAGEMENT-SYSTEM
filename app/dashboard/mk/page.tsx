@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useToast } from '@/components/shared/ToastContext'
 
 /* ── LOGO CELL (async Drive proxy) ──────────────────────────── */
@@ -134,16 +134,22 @@ export default function MKPage() {
   const [regionNames, setRegionNames] = useState<string[]>([])
   const [storeRegionMap, setStoreRegionMap] = useState<Record<string, string>>({})
   const { toast } = useToast()
+  const cache = useRef<Partial<Record<SheetKey, any[]>>>({})
 
   const activeSheet = SHEETS.find(s => s.key === activeKey)!
 
-  async function load(key: SheetKey) {
+  async function load(key: SheetKey, force = false) {
+    if (!force && cache.current[key]) {
+      setData(cache.current[key]!)
+      return
+    }
     setLoading(true)
     setData([])
     try {
       const r = await fetch(`/api/mk/${key}`)
       const d = await r.json()
-      setData(d.data || [])
+      cache.current[key] = d.data || []
+      setData(cache.current[key]!)
     } catch {} finally { setLoading(false) }
   }
 
@@ -225,7 +231,7 @@ export default function MKPage() {
       })
       const d = await r.json()
       if (!r.ok) { setFormError(d.error || 'Failed'); return }
-      closeModal(); toast('Row saved', 'success'); load(activeKey)
+      closeModal(); toast('Row saved', 'success'); load(activeKey, true)
     } finally { setSaving(false) }
   }
 
@@ -242,7 +248,7 @@ export default function MKPage() {
       const r = await fetch(`/api/mk/${activeKey}?id=${row.id}`, { method: 'DELETE' })
       const d = await r.json()
       if (!r.ok) { toast(d.error || 'Delete failed', 'danger'); return }
-      toast('Row deleted', 'success'); load(activeKey)
+      toast('Row deleted', 'success'); load(activeKey, true)
     } catch { toast('Delete failed', 'danger') }
   }
 

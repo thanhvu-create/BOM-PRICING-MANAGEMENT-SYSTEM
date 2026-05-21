@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import React from 'react'
 import { useToast } from '@/components/shared/ToastContext'
 import { useUser } from '@/components/shared/UserContext'
@@ -389,14 +389,20 @@ function DMCategoriesTab() {
   const { toast } = useToast()
 
   const isDef = activeSheet === 'Definition'
+  const cache = useRef<Partial<Record<DMSheet, DMRow[]>>>({})
 
-  async function load(sheet: DMSheet) {
+  async function load(sheet: DMSheet, force = false) {
+    if (!force && cache.current[sheet]) {
+      setData(cache.current[sheet]!)
+      return
+    }
     setLoading(true)
     setData([])
     try {
       const r = await fetch(`/api/master/dm/${sheet}`)
       const d = await r.json()
-      setData(d.data || [])
+      cache.current[sheet] = d.data || []
+      setData(cache.current[sheet]!)
     } catch {} finally { setLoading(false) }
   }
 
@@ -417,7 +423,7 @@ function DMCategoriesTab() {
       const r = await fetch(`/api/master/dm/${activeSheet}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const d = await r.json()
       if (!r.ok) { setFormError(d.error || 'Failed'); return }
-      closeModal(); toast('Saved', 'success'); load(activeSheet)
+      closeModal(); toast('Saved', 'success'); load(activeSheet, true)
     } finally { setSaving(false) }
   }
 
@@ -433,7 +439,7 @@ function DMCategoriesTab() {
       const r = await fetch(`/api/master/dm/${activeSheet}?${param}`, { method: 'DELETE' })
       const d = await r.json()
       if (!r.ok) { toast(d.error || 'Failed', 'danger'); return }
-      toast('Deleted', 'success'); load(activeSheet)
+      toast('Deleted', 'success'); load(activeSheet, true)
     } catch { toast('Delete failed', 'danger') }
   }
 
@@ -581,9 +587,12 @@ export default function MasterPage() {
         ))}
       </div>
 
-      {activeTab === 'stone'
-        ? <StoneMasterTab triggerAdd={triggerAdd} triggerSync={triggerSync} onSyncingChange={setSyncing} role={userRole} />
-        : <DMCategoriesTab />}
+      <div style={{ display: activeTab === 'stone' ? 'block' : 'none' }}>
+        <StoneMasterTab triggerAdd={triggerAdd} triggerSync={triggerSync} onSyncingChange={setSyncing} role={userRole} />
+      </div>
+      <div style={{ display: activeTab === 'dm' ? 'block' : 'none' }}>
+        <DMCategoriesTab />
+      </div>
     </div>
   )
 }
