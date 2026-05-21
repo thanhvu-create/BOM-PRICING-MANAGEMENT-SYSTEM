@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useUser } from '@/components/shared/UserContext'
 import { useLang } from '@/components/shared/I18nContext'
 import { useToast } from '@/components/shared/ToastContext'
@@ -104,6 +104,9 @@ export default function ReviewPage() {
   // Lightbox
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
 
+  // Client-side cache: tránh re-fetch khi mở lại cùng BOM
+  const detailCache = useRef<Map<string, BomDetail>>(new Map())
+
   // Table row thumbnails (async load after render)
   const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({})
 
@@ -193,10 +196,15 @@ export default function ReviewPage() {
 
   /* ── Detail modal ─── */
   async function openDetail(bomId: string) {
-    setDetailBomId(bomId); setDetailData(null); setDetailLoading(true)
+    setDetailBomId(bomId); setDetailLoading(true)
+    // Serve from cache instantly if available
+    const cached = detailCache.current.get(bomId)
+    if (cached) { setDetailData(cached); setDetailLoading(false); return }
+    setDetailData(null)
     const tid = toast(`Loading BOM data ${bomId}...`, 'loading')
     try {
       const d = await fetch(`/api/bom/${bomId}`).then(r => r.json())
+      detailCache.current.set(bomId, d)
       setDetailData(d)
       dismiss(tid)
     } catch { update(tid, 'Failed to load BOM detail', 'danger') }
@@ -265,10 +273,15 @@ export default function ReviewPage() {
 
   /* ── Quotation modal ─── */
   async function openQuotation(bomId: string) {
-    setQuotBomId(bomId); setQuotData(null); setQuotLoading(true)
+    setQuotBomId(bomId); setQuotLoading(true)
+    // Serve from cache instantly if available (shared with detail cache)
+    const cached = detailCache.current.get(bomId)
+    if (cached) { setQuotData(cached); setQuotLoading(false); return }
+    setQuotData(null)
     const tid = toast(`Loading quotation ${bomId}...`, 'loading')
     try {
       const d = await fetch(`/api/bom/${bomId}`).then(r => r.json())
+      detailCache.current.set(bomId, d)
       setQuotData(d)
       dismiss(tid)
     } catch { update(tid, 'Failed to load quotation', 'danger') }
@@ -332,6 +345,7 @@ export default function ReviewPage() {
       if (!r.ok) { setDiscountError(d.error || 'Failed'); update(tid, d.error || 'Discount failed', 'danger'); return }
       setDiscountSuccess(`Applied. Price after discount: ${fmt$(newSellPrice)}`)
       update(tid, `Discount applied — ${fmt$(newSellPrice)} after ${pct}%`, 'success')
+      detailCache.current.delete(discountBom.bom_id)
       loadBoms()
     } catch (e: any) { setDiscountError(e.message); update(tid, e.message, 'danger') }
     finally { setDiscountSaving(false) }
@@ -348,6 +362,7 @@ export default function ReviewPage() {
       const d = await r.json()
       if (!r.ok) { update(tid, d.error || 'Delete failed', 'danger'); return }
       update(tid, `BOM ${bomId} deleted`, 'success')
+      detailCache.current.delete(bomId)
       loadBoms()
     } catch { update(tid, 'Delete failed', 'danger') }
   }

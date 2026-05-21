@@ -48,7 +48,9 @@ export async function GET(req: NextRequest) {
     }
 
     const base64 = imgBuffer.toString('base64')
-    return NextResponse.json({ success: true, base64, contentType })
+    return NextResponse.json({ success: true, base64, contentType }, {
+      headers: { 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' },
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

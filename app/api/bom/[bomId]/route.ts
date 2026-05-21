@@ -15,49 +15,41 @@ export async function GET(
     const { bomId } = await params
     const db = createServiceClient()
 
-    // Header
-    const { data: bomRow, error: bomErr } = await db
-      .from('bom').select('*').eq('bom_id', bomId).single()
+    // Parallel: header + golds + stones + logo (stones needed before enName lookup)
+    const [
+      { data: bomRow, error: bomErr },
+      { data: golds },
+      { data: stones },
+    ] = await Promise.all([
+      db.from('bom').select('*').eq('bom_id', bomId).single(),
+      db.from('bom_gold').select('*').eq('bom_id', bomId).order('idx'),
+      db.from('bom_stone').select('*').eq('bom_id', bomId).order('idx'),
+    ])
+
     if (bomErr || !bomRow) return NextResponse.json({ error: 'BOM not found' }, { status: 404 })
 
-    // Golds
-    const { data: golds } = await db
-      .from('bom_gold').select('*').eq('bom_id', bomId).order('idx')
-
-    // Stones + enName
-    const { data: stones } = await db
-      .from('bom_stone').select('*').eq('bom_id', bomId).order('idx')
-
-    // Build enName map từ stone_material
+    // Parallel: enName lookup + logo (now that we have stones + bomRow)
     const groupCodes = [...new Set((stones || []).map((s: any) => s.group_code).filter(Boolean))]
-    let enNameMap: Record<string, string> = {}
-    if (groupCodes.length > 0) {
-      const { data: smRows } = await db
-        .from('stone_material')
-        .select('group_code, full_name_en')
-        .in('group_code', groupCodes)
-      ;(smRows || []).forEach((r: any) => {
-        if (r.group_code && !enNameMap[r.group_code]) {
-          enNameMap[r.group_code] = r.full_name_en || ''
-        }
-      })
-    }
+    const [smResult, logoResult] = await Promise.all([
+      groupCodes.length > 0
+        ? db.from('stone_material').select('group_code, full_name_en').in('group_code', groupCodes)
+        : Promise.resolve({ data: [] }),
+      bomRow.price_list_type
+        ? db.from('mk_price_list_type').select('logo_url').eq('price_list_type', bomRow.price_list_type).single()
+        : Promise.resolve({ data: null }),
+    ])
+
+    const enNameMap: Record<string, string> = {}
+    ;(smResult.data || []).forEach((r: any) => {
+      if (r.group_code && !enNameMap[r.group_code]) enNameMap[r.group_code] = r.full_name_en || ''
+    })
 
     const stonesWithName = (stones || []).map((s: any) => ({
       ...s,
       en_name: enNameMap[s.group_code] || '',
     }))
 
-    // Logo từ mk_price_list_type
-    let logoUrl = ''
-    if (bomRow.price_list_type) {
-      const { data: pltRow } = await db
-        .from('mk_price_list_type')
-        .select('logo_url')
-        .eq('price_list_type', bomRow.price_list_type)
-        .single()
-      logoUrl = pltRow?.logo_url || ''
-    }
+    const logoUrl = (logoResult as any).data?.logo_url || ''
 
     return NextResponse.json({
       header: { ...bomRow, logoUrl },
