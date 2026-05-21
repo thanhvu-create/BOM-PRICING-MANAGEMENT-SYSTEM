@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import React from 'react'
 import { useToast } from '@/components/shared/ToastContext'
+import { useUser } from '@/components/shared/UserContext'
 
 /* ── TYPES ─────────────────────────────────────────────────── */
 interface StoneRow {
@@ -44,7 +45,8 @@ function Modal({ title, onClose, children, width = 520 }: { title: string; onClo
 }
 
 /* ── STONE MASTER TAB ────────────────────────────────────────── */
-function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange }: { triggerAdd?: number; triggerSync?: number; onSyncingChange?: (v: boolean) => void }) {
+function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role = '' }: { triggerAdd?: number; triggerSync?: number; onSyncingChange?: (v: boolean) => void; role?: string }) {
+  const isOrderView = role === 'Order'
   const [rows, setRows] = useState<StoneRow[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<'add' | 'edit' | null>(null)
@@ -178,15 +180,17 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange }: { 
 
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: isOrderView ? 600 : 800 }}>
             <thead>
               <tr>
-                {['#', 'MASTER_CODE', 'GRADE_ID', 'DISPLAY NAME (VN)', 'UNIT', 'TYPE', 'MIN', 'MAX', 'BASE ($)', 'MK', 'SELL ($)', 'ACTIONS'].map(h => <th key={h} style={{ ...th, textAlign: h === '#' ? 'center' : 'left' }}>{h}</th>)}
+                {(['#', 'MASTER_CODE', 'GRADE_ID', 'DISPLAY NAME (VN)', 'UNIT', 'TYPE', 'MIN', 'MAX'] as string[])
+                  .concat(isOrderView ? [] : ['BASE ($)', 'MK', 'SELL ($)', 'ACTIONS'])
+                  .map(h => <th key={h} style={{ ...th, textAlign: h === '#' ? 'center' : 'left' }}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
-              {loading ? <tr><td colSpan={12} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />Loading...</td></tr>
-                : filtered.length === 0 ? <tr><td colSpan={12} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No data</td></tr>
+              {loading ? <tr><td colSpan={isOrderView ? 8 : 12} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />Loading...</td></tr>
+                : filtered.length === 0 ? <tr><td colSpan={isOrderView ? 8 : 12} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No data</td></tr>
                 : filtered.map((r, i) => (
                   <tr key={i}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
@@ -203,15 +207,17 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange }: { 
                     <td style={tdc}>{r.measurement_type}</td>
                     <td style={{ ...tdc, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{r.min_size}</td>
                     <td style={{ ...tdc, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{r.max_size}</td>
-                    <td style={{ ...tdc, fontFamily: 'var(--font-mono)', color: 'var(--color-danger)' }}>${r.base_price}</td>
-                    <td style={{ ...tdc, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{r.mk}%</td>
-                    <td style={{ ...tdc, fontFamily: 'var(--font-mono)', color: 'var(--color-success)' }}>${r.selling_price}</td>
-                    <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--border-light)' }}>
-                      <div style={{ display: 'flex', gap: 5 }}>
-                        <button onClick={() => openEdit(r)} style={{ background: 'transparent', border: '1px solid #B8860B', borderRadius: 0, padding: '4px 8px', cursor: 'pointer', fontSize: 'var(--text-xs)', color: '#B8860B' }}><i className="fa-solid fa-pencil" style={{ fontSize: 9 }} /></button>
-                        <button onClick={() => handleDelete(r)} style={{ background: 'transparent', border: '1px solid var(--color-danger)', borderRadius: 0, padding: '4px 8px', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--color-danger)' }}><i className="fa-solid fa-trash-can" style={{ fontSize: 9 }} /></button>
-                      </div>
-                    </td>
+                    {!isOrderView && <>
+                      <td style={{ ...tdc, fontFamily: 'var(--font-mono)', color: 'var(--color-danger)' }}>${r.base_price}</td>
+                      <td style={{ ...tdc, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{r.mk}%</td>
+                      <td style={{ ...tdc, fontFamily: 'var(--font-mono)', color: 'var(--color-success)' }}>${r.selling_price}</td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--border-light)' }}>
+                        <div style={{ display: 'flex', gap: 5 }}>
+                          <button onClick={() => openEdit(r)} style={{ background: 'transparent', border: '1px solid #B8860B', borderRadius: 0, padding: '4px 8px', cursor: 'pointer', fontSize: 'var(--text-xs)', color: '#B8860B' }}><i className="fa-solid fa-pencil" style={{ fontSize: 9 }} /></button>
+                          <button onClick={() => handleDelete(r)} style={{ background: 'transparent', border: '1px solid var(--color-danger)', borderRadius: 0, padding: '4px 8px', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--color-danger)' }}><i className="fa-solid fa-trash-can" style={{ fontSize: 9 }} /></button>
+                        </div>
+                      </td>
+                    </>}
                   </tr>
                 ))}
             </tbody>
@@ -497,6 +503,9 @@ export default function MasterPage() {
   const [triggerAdd, setTriggerAdd] = useState(0)
   const [triggerSync, setTriggerSync] = useState(0)
   const [syncing, setSyncing] = useState(false)
+  const { role: userRole } = useUser()
+
+  const isOrderRole = userRole === 'Order'
 
   return (
     <div>
@@ -507,24 +516,30 @@ export default function MasterPage() {
           <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', letterSpacing: '0.04em', margin: 0 }}>Stone catalog — auto-sync to Stone_Material</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn-outline" style={{ padding: '6px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}
-            onClick={() => setTriggerSync(t => t + 1)} disabled={syncing}>
-            <i className={`fa-solid ${syncing ? 'fa-circle-notch fa-spin' : 'fa-rotate'}`} style={{ fontSize: 10 }} />{syncing ? 'Syncing...' : 'Sync All'}
-          </button>
-          <button className="btn-outline" style={{ padding: '6px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}
-            onClick={() => setActiveTab('dm')}>
-            <i className="fa-solid fa-tags" style={{ fontSize: 10 }} />Categories
-          </button>
-          <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}
-            onClick={() => { setActiveTab('stone'); setTriggerAdd(t => t + 1) }}>
-            <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />+ Add New
-          </button>
+          {!isOrderRole && (
+            <button className="btn-outline" style={{ padding: '6px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}
+              onClick={() => setTriggerSync(t => t + 1)} disabled={syncing}>
+              <i className={`fa-solid ${syncing ? 'fa-circle-notch fa-spin' : 'fa-rotate'}`} style={{ fontSize: 10 }} />{syncing ? 'Syncing...' : 'Sync All'}
+            </button>
+          )}
+          {!isOrderRole && (
+            <button className="btn-outline" style={{ padding: '6px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}
+              onClick={() => setActiveTab('dm')}>
+              <i className="fa-solid fa-tags" style={{ fontSize: 10 }} />Categories
+            </button>
+          )}
+          {!isOrderRole && (
+            <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}
+              onClick={() => { setActiveTab('stone'); setTriggerAdd(t => t + 1) }}>
+              <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />+ Add New
+            </button>
+          )}
         </div>
       </div>
 
       {/* Main tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-base)', marginBottom: '1.5rem' }}>
-        {[['stone', 'Stone Master', 'fa-layer-group'], ['dm', 'DM Categories', 'fa-list']].map(([k, l, ic]) => (
+        {[['stone', 'Stone Master', 'fa-layer-group'], ...(isOrderRole ? [] : [['dm', 'DM Categories', 'fa-list']])].map(([k, l, ic]) => (
           <button key={k} onClick={() => setActiveTab(k as any)}
             style={{ padding: '10px 20px', fontSize: 'var(--text-xs)', fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'none', border: 'none', cursor: 'pointer', borderBottom: activeTab === k ? '2px solid var(--border-strong)' : '2px solid transparent', color: activeTab === k ? 'var(--text-primary)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <i className={`fa-solid ${ic}`} style={{ fontSize: 10 }} />{l}
@@ -533,7 +548,7 @@ export default function MasterPage() {
       </div>
 
       {activeTab === 'stone'
-        ? <StoneMasterTab triggerAdd={triggerAdd} triggerSync={triggerSync} onSyncingChange={setSyncing} />
+        ? <StoneMasterTab triggerAdd={triggerAdd} triggerSync={triggerSync} onSyncingChange={setSyncing} role={userRole} />
         : <DMCategoriesTab />}
     </div>
   )

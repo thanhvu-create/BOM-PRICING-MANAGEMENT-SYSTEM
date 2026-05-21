@@ -64,11 +64,15 @@ const tdInput: React.CSSProperties = {
 }
 const card: React.CSSProperties = { background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4 }
 
+/* ── PERSISTENCE KEYS ──────────────────────────────────────── */
+const DRAFT_KEY = 'bom_draft_v1'
+const PREFS_KEY = 'bom_prefs'
+
 /* ── COMPONENT ─────────────────────────────────────────────── */
 export default function TinhGiaPage() {
   const { role, store: userStore } = useUser()
   const { t } = useLang()
-  const { toast, update } = useToast()
+  const { toast, update, dismiss } = useToast()
   const isAdmin    = role === 'Admin'
   const isManager  = role === 'Manager'
   const canSeeAll  = isAdmin || isManager
@@ -123,6 +127,7 @@ export default function TinhGiaPage() {
   const [editBomId, setEditBomId] = useState<string | null>(null)
   const [saveAsNew, setSaveAsNew] = useState(false)
   const [fillLoading, setFillLoading] = useState(false)
+  const [templateBomId, setTemplateBomId] = useState<string | null>(null)
 
   // Custom confirm dialog (KHÔNG dùng window.confirm)
   const [confirmVisible, setConfirmVisible] = useState(false)
@@ -132,11 +137,13 @@ export default function TinhGiaPage() {
   // Prevents loadForEdit from re-running when editBomId is set programmatically after a save
   const skipNextLoad = useRef(false)
 
-  /* ── Read ?edit=BOMID from URL ── */
+  /* ── Read ?edit=BOMID or ?template=BOMID from URL ── */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const bomId = params.get('edit')
-    if (bomId) setEditBomId(bomId)
+    if (bomId) { setEditBomId(bomId); return }
+    const tplId = params.get('template')
+    if (tplId) setTemplateBomId(tplId)
   }, [])
 
   /* ── Load BOM for editing ── */
@@ -214,11 +221,81 @@ export default function TinhGiaPage() {
     finally { setFillLoading(false) }
   }
 
+  /* ── Load BOM as template: copy all fields except date/SO/customer — saves as new BOM ── */
+  async function loadForTemplate(bomId: string) {
+    setFillLoading(true)
+    const tid = toast(`Copying BOM ${bomId} as template...`, 'loading')
+    try {
+      const r = await fetch(`/api/bom/${bomId}`)
+      const d = await r.json()
+      if (!d.header) { update(tid, 'Template not found', 'danger'); return }
+      const h = d.header
+      setDate(today())        // always use today for new BOM
+      setProductType(h.product_type || '')
+      setSoMo('')             // clear — user must enter new order number
+      setModel(h.model || '')
+      setPriceListType(h.price_list_type || '')
+      setLaborHours(String(h.labor_hours || 0))
+      setSalesPerson(h.sales_person || '')
+      setStore(h.store || '')
+      setCustomerName('')     // clear customer
+      setNote(h.note || '')
+      setImg1(h.img1 || '')
+      setImg2(h.img2 || '')
+      setImg3(h.img3 || '')
+      setFolderUrl(h.folder_url || '')
+
+      if (d.golds?.length > 0) {
+        const filled: GoldRow[] = d.golds.map((g: any) => ({
+          id: nextId(), goldType: g.gold_type, color: g.color,
+          weight: String(g.weight), pricePerGr: 0, cost: 0,
+        }))
+        setGoldRows(filled)
+        const todayStr = today()
+        filled.forEach(row => fetchGoldPrice(row.id, todayStr, row.goldType))
+      }
+
+      if (d.stones?.length > 0) {
+        const filledStones: StoneRow[] = d.stones.map((s: any) => {
+          const ctw = Number(s.ctw1pc) || 0
+          const qty = Number(s.qty) || 0
+          return {
+            id: nextId(), groupCode: s.group_code,
+            size: String(s.size || ''), ctw1pc: String(ctw || ''),
+            qty: String(qty || ''), tlHot: s.tl_hot || ctw * qty,
+            gradeId: s.grade_id || '', giaBan: s.gia_ban || 0,
+            inputType: s.input_type || 'mm', sellingPrice: 0, pricingUnit: 'ct',
+          }
+        })
+        setStoneRows(filledStones)
+        filledStones.forEach(row => {
+          if (row.groupCode) scheduleLookup(row.id, row.groupCode, row.size, row.ctw1pc)
+        })
+      }
+
+      const loadedSpType = h.sp_type || 'Basic'
+      setSpType(loadedSpType === 'TSTT' ? 'Basic' : loadedSpType)
+      setDiscountPct(''); setDiscountAmt('')
+      // NOT setting editBomId — will save as a new BOM
+      setEditBomId(null); setSaveAsNew(false)
+      setStep(1)
+      dismiss(tid)
+      toast(`Template from ${bomId} loaded — fill in SO/MO and save as new BOM.`, 'info')
+    } catch (e) { update(tid, 'Failed to load template', 'danger') }
+    finally { setFillLoading(false) }
+  }
+
   /* ── Trigger load when editBomId is set AND dropdowns are ready ── */
   useEffect(() => {
     if (editBomId && !loadingDD) loadForEdit(editBomId)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editBomId, loadingDD])
+
+  /* ── Load BOM as template (copy) when ?template= param is set ── */
+  useEffect(() => {
+    if (templateBomId && !loadingDD) loadForTemplate(templateBomId)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateBomId, loadingDD])
 
   /* ── Auto-fetch gold prices on initial load (no edit mode) ── */
   useEffect(() => {
@@ -227,6 +304,82 @@ export default function TinhGiaPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadingDD])
+
+  /* ── Restore draft / prefs after dropdowns load ── */
+  useEffect(() => {
+    if (loadingDD) return
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+    if (params?.has('edit') || params?.has('template')) return
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY)
+      if (saved) {
+        const draft = JSON.parse(saved)
+        // Only restore if draft has meaningful content
+        if (draft.soMo || draft.model || draft.goldRows?.some((r: any) => r.weight)) {
+          if (draft.date) setDate(draft.date)
+          if (draft.productType) setProductType(draft.productType)
+          if (draft.soMo) setSoMo(draft.soMo)
+          if (draft.model) setModel(draft.model)
+          if (draft.priceListType) setPriceListType(draft.priceListType)
+          if (draft.spType) setSpType(draft.spType)
+          if (draft.laborHours !== undefined) setLaborHours(String(draft.laborHours))
+          if (draft.salesPerson) setSalesPerson(draft.salesPerson)
+          if (draft.store) setStore(draft.store)
+          if (draft.customerName) setCustomerName(draft.customerName)
+          if (draft.note) setNote(draft.note)
+          if (draft.img1) setImg1(draft.img1)
+          if (draft.img2) setImg2(draft.img2)
+          if (draft.img3) setImg3(draft.img3)
+          if (draft.folderUrl) setFolderUrl(draft.folderUrl)
+          if (draft.goldRows?.length > 0) setGoldRows(draft.goldRows.map((r: any) => ({ ...r, id: nextId() })))
+          if (draft.stoneRows?.length > 0) setStoneRows(draft.stoneRows.map((r: any) => ({ ...r, id: nextId() })))
+          toast('Bản nháp đã được khôi phục.', 'info')
+          return
+        }
+      }
+      // No draft — apply saved prefs (productType, priceListType, salesPerson)
+      const prefs: Record<string, string> = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}')
+      if (prefs.salesPerson) setSalesPerson(prefs.salesPerson)
+    } catch { /* ignore parse errors */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingDD])
+
+  /* ── Auto-save draft to localStorage (debounced 1s, non-edit mode) ── */
+  useEffect(() => {
+    if (loadingDD || editBomId) return
+    const timer = setTimeout(() => {
+      const draft = {
+        date, productType, soMo, model, priceListType, spType,
+        laborHours, salesPerson, store, customerName, note,
+        img1, img2, img3, folderUrl, goldRows, stoneRows,
+      }
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [date, productType, soMo, model, priceListType, spType, laborHours, salesPerson, store,
+      customerName, note, img1, img2, img3, folderUrl, goldRows, stoneRows, loadingDD, editBomId])
+
+  /* ── Ctrl+S → save BOM (step 4 only, when pricing is ready) ── */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        if (step === 4 && pricing && !saving) saveBOM()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, pricing, saving])
+
+  /* ── Warn before leaving when form has unsaved data ── */
+  useEffect(() => {
+    const dirty = soMo || model || goldRows.some(r => r.weight) || stoneRows.some(r => r.groupCode)
+    if (!dirty || savedBomId) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault() }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [soMo, model, goldRows, stoneRows, savedBomId])
 
   /* ── Load dropdowns ── */
   useEffect(() => {
@@ -434,6 +587,12 @@ export default function TinhGiaPage() {
       setSaveAsNew(false)           // reset to overwrite mode by default
       setSavedBomId(savedId)        // show inline success banner
       update(tid, `BOM ${savedId} ${isUpdate ? 'updated' : 'saved'}`, 'success')
+      // Save prefs for next BOM + clear draft + signal review page to refresh
+      try {
+        localStorage.setItem(PREFS_KEY, JSON.stringify({ productType, priceListType, salesPerson }))
+        localStorage.removeItem(DRAFT_KEY)
+        localStorage.setItem('bom_last_saved', savedId)
+      } catch { /* ignore storage errors */ }
     } catch (e: any) { setSaveError(e.message); update(tid, e.message, 'danger') }
     finally { setSaving(false) }
   }
@@ -442,10 +601,21 @@ export default function TinhGiaPage() {
   function resetAll() { setConfirmVisible(true) }
   function doReset() {
     setConfirmVisible(false)
-    setStep(1); setDate(today()); setProductType(dropdowns?.productTypes?.[0] || '')
-    setSoMo(''); setModel(''); setPriceListType(dropdowns?.priceListTypes?.[0] || '')
+    localStorage.removeItem(DRAFT_KEY)
+    let prefs: Record<string, string> = {}
+    try { prefs = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}') } catch { /* ignore */ }
+    setStep(1); setDate(today())
+    setProductType(
+      (prefs.productType && dropdowns?.productTypes?.includes(prefs.productType))
+        ? prefs.productType : (dropdowns?.productTypes?.[0] || '')
+    )
+    setSoMo(''); setModel('')
+    setPriceListType(
+      (prefs.priceListType && dropdowns?.priceListTypes?.includes(prefs.priceListType))
+        ? prefs.priceListType : (dropdowns?.priceListTypes?.[0] || '')
+    )
     setSpType('Basic'); setLaborHours('0')
-    setSalesPerson(''); setStore(''); setCustomerName(''); setNote('')
+    setSalesPerson(prefs.salesPerson || ''); setStore(''); setCustomerName(''); setNote('')
     setImg1(''); setImg2(''); setImg3(''); setFolderUrl('')
     setGoldRows([newGold()]); setStoneRows([newStone()])
     setPricing(null); setDiscountPct(''); setDiscountAmt(''); setSavedBomId(''); setSaveError('')

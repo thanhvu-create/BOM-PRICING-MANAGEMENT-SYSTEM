@@ -9,6 +9,7 @@ const dict: Record<string, Record<Lang, string>> = {
   mk:             { vi: 'MK DATA',      en: 'MK DATA' },
   master:         { vi: 'STONE DATA',   en: 'STONE DATA' },
   users:          { vi: 'NGƯỜI DÙNG',   en: 'USER MGMT' },
+  audit:          { vi: 'NHẬT KÝ',      en: 'AUDIT LOG' },
 
   // Page headings (title case — used in topbar serif heading)
   pageTitleHome:    { vi: 'Trang Chủ',    en: 'Dashboard' },
@@ -18,6 +19,7 @@ const dict: Record<string, Record<Lang, string>> = {
   pageTitleMk:      { vi: 'MK Data',      en: 'MK Data' },
   pageTitleMaster:  { vi: 'Stone Data',   en: 'Stone Data' },
   pageTitleUsers:   { vi: 'Người Dùng',   en: 'User Mgmt' },
+  pageTitleAudit:   { vi: 'Nhật Ký Hoạt Động', en: 'Audit Log' },
 
   // Topbar
   signOut:        { vi: 'Đăng Xuất',    en: 'Sign Out' },

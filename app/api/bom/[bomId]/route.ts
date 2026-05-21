@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { logAction } from '@/lib/audit'
 
 // GET /api/bom/[bomId] — lấy chi tiết BOM
 export async function GET(
@@ -79,7 +80,7 @@ export async function DELETE(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: profile } = await supabase
-      .from('users').select('role').eq('id', user.id).single()
+      .from('users').select('username, role').eq('id', user.id).single()
     if (profile?.role !== 'Admin') {
       return NextResponse.json({ error: 'Admin only' }, { status: 403 })
     }
@@ -87,9 +88,22 @@ export async function DELETE(
     const { bomId } = await params
     const db = createServiceClient()
 
+    // Fetch before delete for audit
+    const { data: oldBom } = await db.from('bom').select('bom_id, so_mo, model, sell_price').eq('bom_id', bomId).single()
+
     // Cascade delete via FK (bom_gold + bom_stone auto-deleted)
     const { error } = await db.from('bom').delete().eq('bom_id', bomId)
     if (error) throw error
+
+    logAction({
+      actor:    profile?.username || user.email || '',
+      role:     profile?.role,
+      action:   'DELETE',
+      entity:   'bom',
+      entityId: bomId,
+      summary:  `Xóa BOM ${bomId} — SO/MO: ${oldBom?.so_mo || ''}`,
+      diff:     { before: { bom_id: bomId, so_mo: oldBom?.so_mo, model: oldBom?.model, sell_price: oldBom?.sell_price } },
+    })
 
     return NextResponse.json({ success: true })
   } catch (err: any) {
@@ -108,7 +122,7 @@ export async function PUT(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: profile } = await supabase
-      .from('users').select('username').eq('id', user.id).single()
+      .from('users').select('username, role').eq('id', user.id).single()
     const username = profile?.username || user.email || ''
 
     const { bomId } = await params
@@ -118,8 +132,8 @@ export async function PUT(
 
     const db = createServiceClient()
 
-    // Verify BOM exists
-    await db.from('bom').select('bom_id').eq('bom_id', bomId).single()
+    // Fetch before update for audit diff
+    const { data: oldBom } = await db.from('bom').select('sell_price, discount_pct, so_mo, model').eq('bom_id', bomId).single()
 
     const discountPct = Number(payload.discountPct) || 0
     const discountPrice = discountPct > 0
@@ -179,6 +193,19 @@ export async function PUT(
         input_type: s.inputType || 'mm', gia_ban: Number(s.giaBan) || 0,
       }))
     if (stoneRows.length > 0) await db.from('bom_stone').insert(stoneRows)
+
+    logAction({
+      actor:    username,
+      role:     profile?.role,
+      action:   'UPDATE',
+      entity:   'bom',
+      entityId: bomId,
+      summary:  `Cập nhật BOM ${bomId} — SO/MO: ${header.soMo || ''}`,
+      diff: {
+        before: { sell_price: oldBom?.sell_price, so_mo: oldBom?.so_mo, model: oldBom?.model },
+        after:  { sell_price: costs.sellPrice, so_mo: header.soMo, model: header.model },
+      },
+    })
 
     return NextResponse.json({ bomId })
   } catch (err: any) {

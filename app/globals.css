@@ -99,7 +99,7 @@ body.modal-open header {
   cursor: pointer;
   transition: var(--transition-base);
 }
-.btn-primary:hover { background: var(--btn-dark-hover); border-color: var(--btn-dark-hover); }
+.btn-primary:hover  { background: var(--btn-dark-hover); border-color: var(--btn-dark-hover); }
 
 .btn-outline {
   display: inline-flex;
@@ -118,7 +118,7 @@ body.modal-open header {
   cursor: pointer;
   transition: var(--transition-base);
 }
-.btn-outline:hover { background: var(--bg-hover); }
+.btn-outline:hover  { background: var(--bg-hover); }
 
 .btn-danger {
   background: var(--color-danger);

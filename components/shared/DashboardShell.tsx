@@ -20,8 +20,9 @@ const NAV_ITEMS = [
   { key: 'review',    i18nKey: 'review',  icon: 'fa-clock-rotate-left', href: '/dashboard/review',    roles: ['Admin','Manager','Sales Supervisor','Sales','Order'] },
   { key: 'gold',      i18nKey: 'gold',    icon: 'fa-coins',             href: '/dashboard/gold',      roles: ['Admin','Manager'] },
   { key: 'mk',        i18nKey: 'mk',      icon: 'fa-tags',              href: '/dashboard/mk',        roles: ['Admin','Manager'] },
-  { key: 'master',    i18nKey: 'master',  icon: 'fa-gem',               href: '/dashboard/master',    roles: ['Admin','Manager'] },
+  { key: 'master',    i18nKey: 'master',  icon: 'fa-gem',               href: '/dashboard/master',    roles: ['Admin','Manager','Order'] },
   { key: 'users',     i18nKey: 'users',   icon: 'fa-users',             href: '/dashboard/users',     roles: ['Admin'] },
+  { key: 'audit',     i18nKey: 'audit',   icon: 'fa-shield-halved',     href: '/dashboard/audit',     roles: ['Admin'] },
 ]
 
 const PAGE_TITLE_KEYS: Record<string, string> = {
@@ -32,6 +33,7 @@ const PAGE_TITLE_KEYS: Record<string, string> = {
   '/dashboard/mk':         'pageTitleMk',
   '/dashboard/master':     'pageTitleMaster',
   '/dashboard/users':      'pageTitleUsers',
+  '/dashboard/audit':      'pageTitleAudit',
 }
 
 export default function DashboardShell({ user, children }: Props) {

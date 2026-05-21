@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { logAction } from '@/lib/audit'
 
 // GET /api/config/discount-caps
 export async function GET() {
@@ -22,11 +23,15 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+    const db = createServiceClient()
+    const { data: profile } = await db.from('users').select('username, role').eq('id', user.id).single()
     if (profile?.role !== 'Admin') return NextResponse.json({ error: 'Admin only' }, { status: 403 })
 
     const { managerMax } = await request.json()
-    const db = createServiceClient()
+
+    // Fetch old value for diff
+    const { data: oldCfg } = await db.from('sys_config').select('value').eq('key', 'MANAGER_MAX_DISCOUNT').single()
+
     const { error } = await db.from('sys_config').upsert({
       key: 'MANAGER_MAX_DISCOUNT',
       value: String(managerMax),
@@ -34,6 +39,20 @@ export async function POST(request: Request) {
     })
 
     if (error) throw error
+
+    logAction({
+      actor:    profile?.username || user.email || '',
+      role:     'Admin',
+      action:   'UPDATE',
+      entity:   'config',
+      entityId: 'MANAGER_MAX_DISCOUNT',
+      summary:  `Cập nhật Manager Max Discount: ${oldCfg?.value ?? '?'}% → ${managerMax}%`,
+      diff: {
+        before: { MANAGER_MAX_DISCOUNT: oldCfg?.value },
+        after:  { MANAGER_MAX_DISCOUNT: String(managerMax) },
+      },
+    })
+
     return NextResponse.json({ success: true })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })

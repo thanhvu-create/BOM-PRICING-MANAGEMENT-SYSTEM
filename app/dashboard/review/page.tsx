@@ -107,11 +107,41 @@ export default function ReviewPage() {
   // Table row thumbnails (async load after render)
   const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({})
 
+  // Highlight newly saved/edited BOM row
+  const [highlightedBomId, setHighlightedBomId] = useState<string | null>(null)
+
   useEffect(() => {
     fetch('/api/config?key=VND_RATE').then(r => r.json()).then(d => { if (d.rate) setVndRate(Number(d.rate)) }).catch(() => {})
     fetch('/api/config?key=MANAGER_MAX_DISCOUNT').then(r => r.json()).then(d => { if (d.rate) setMgrDiscCap(Number(d.rate)) }).catch(() => {})
+
+    // Check if tinh-gia just saved a BOM (same tab)
+    try {
+      const lastSaved = localStorage.getItem('bom_last_saved')
+      if (lastSaved) {
+        setHighlightedBomId(lastSaved)
+        localStorage.removeItem('bom_last_saved')
+      }
+    } catch { /* ignore */ }
+
     loadBoms()
+
+    // Listen for cross-tab save events
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'bom_last_saved' && e.newValue) {
+        setHighlightedBomId(e.newValue)
+        loadBoms()
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
   }, [])
+
+  // Auto-clear highlight after 4 seconds
+  useEffect(() => {
+    if (!highlightedBomId) return
+    const timer = setTimeout(() => setHighlightedBomId(null), 4000)
+    return () => clearTimeout(timer)
+  }, [highlightedBomId])
 
   // Hide sticky header when any modal is open
   useEffect(() => {
@@ -603,8 +633,12 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                 <tr><td colSpan={5 + (showCostTotal ? 1 : 0) + (showSellPrice ? 3 : 0) + 3} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>{t('noData')}</td></tr>
               ) : paged.map(b => (
                 <tr key={b.bom_id}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = '')}>
+                  style={{
+                    background: b.bom_id === highlightedBomId ? '#F5EDD8' : '',
+                    transition: 'background 1.5s ease',
+                  }}
+                  onMouseEnter={e => { if (b.bom_id !== highlightedBomId) e.currentTarget.style.background = 'var(--bg-hover)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = b.bom_id === highlightedBomId ? '#F5EDD8' : '' }}>
                   {/* Thumbnail */}
                   <td style={{ ...td, width: 48, padding: '4px 6px', textAlign: 'center' }}>
                     {thumbUrls[b.bom_id]
@@ -652,6 +686,13 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                         style={{ background: 'none', border: '1px solid var(--border-base)', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--text-secondary)' }}>
                         <i className="fa-solid fa-eye" />
                       </button>
+                      {/* Copy as Template — roles that can access tinh-gia */}
+                      {role !== 'Sales' && role !== 'Sales Supervisor' && (
+                        <a href={`/dashboard/tinh-gia?template=${b.bom_id}`} title="Copy as Template"
+                          style={{ display: 'inline-flex', alignItems: 'center', background: 'none', border: '1px solid #4A6B8C', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: '#4A6B8C', textDecoration: 'none' }}>
+                          <i className="fa-solid fa-copy" />
+                        </a>
+                      )}
                       {/* Discount — Admin + Manager only */}
                       {canDiscount && (
                         <button onClick={() => openDiscount(b)}

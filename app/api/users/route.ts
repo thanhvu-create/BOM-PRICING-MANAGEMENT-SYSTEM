@@ -1,5 +1,6 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { logAction } from '@/lib/audit'
 
 // GET — danh sách users (Admin only)
 export async function GET() {
@@ -28,14 +29,13 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await createServiceClient().from('users').select('role').eq('id', user.id).single()
-    if (profile?.role !== 'Admin')
+    const db = createServiceClient()
+    const { data: actorProfile } = await db.from('users').select('username, role').eq('id', user.id).single()
+    if (actorProfile?.role !== 'Admin')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { username, password, role, store } = await request.json()
     if (!username || !password) return NextResponse.json({ error: 'username và password bắt buộc' }, { status: 400 })
-
-    const db = createServiceClient()
 
     // Tạo auth user với email = username@bom.internal
     const email = `${username.toLowerCase().trim()}@bom.internal`
@@ -59,6 +59,16 @@ export async function POST(request: Request) {
       throw profileErr
     }
 
+    logAction({
+      actor:    actorProfile?.username || user.email || '',
+      role:     'Admin',
+      action:   'CREATE',
+      entity:   'user',
+      entityId: username.trim(),
+      summary:  `Tạo user "${username.trim()}" — Role: ${role || 'Sales'}, Store: ${store || 'All'}`,
+      diff:     { after: { username: username.trim(), role: role || 'Sales', store: store || '' } },
+    })
+
     return NextResponse.json({ success: true })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
@@ -72,14 +82,17 @@ export async function PUT(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await createServiceClient().from('users').select('role').eq('id', user.id).single()
-    if (profile?.role !== 'Admin')
+    const db = createServiceClient()
+    const { data: actorProfile } = await db.from('users').select('username, role').eq('id', user.id).single()
+    if (actorProfile?.role !== 'Admin')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { id, role, store, newPassword } = await request.json()
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-    const db = createServiceClient()
+    // Fetch old values for diff
+    const { data: oldUser } = await db.from('users').select('username, role, store').eq('id', id).single()
+
     const { error: updateErr } = await db.from('users').update({ role, store }).eq('id', id)
     if (updateErr) throw updateErr
 
@@ -87,6 +100,19 @@ export async function PUT(request: Request) {
       const { error: pwErr } = await db.auth.admin.updateUserById(id, { password: newPassword.trim() })
       if (pwErr) throw pwErr
     }
+
+    logAction({
+      actor:    actorProfile?.username || user.email || '',
+      role:     'Admin',
+      action:   'UPDATE',
+      entity:   'user',
+      entityId: oldUser?.username || id,
+      summary:  `Cập nhật user "${oldUser?.username || id}" — Role: ${oldUser?.role} → ${role}`,
+      diff: {
+        before: { role: oldUser?.role, store: oldUser?.store },
+        after:  { role, store, passwordChanged: !!(newPassword && newPassword.trim()) },
+      },
+    })
 
     return NextResponse.json({ success: true })
   } catch (err: any) {
@@ -101,20 +127,31 @@ export async function DELETE(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await createServiceClient().from('users').select('role').eq('id', user.id).single()
-    if (profile?.role !== 'Admin')
+    const db = createServiceClient()
+    const { data: actorProfile } = await db.from('users').select('username, role').eq('id', user.id).single()
+    if (actorProfile?.role !== 'Admin')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-    const db = createServiceClient()
-    const { data: target } = await db.from('users').select('username').eq('id', id).single()
+    const { data: target } = await db.from('users').select('username, role, store').eq('id', id).single()
     if (target?.username === 'admin123')
       return NextResponse.json({ error: 'Cannot delete the super admin account.' }, { status: 403 })
+
     await db.from('users').delete().eq('id', id)
     await db.auth.admin.deleteUser(id)
+
+    logAction({
+      actor:    actorProfile?.username || user.email || '',
+      role:     'Admin',
+      action:   'DELETE',
+      entity:   'user',
+      entityId: target?.username || id,
+      summary:  `Xóa user "${target?.username || id}" — Role: ${target?.role}`,
+      diff:     { before: { username: target?.username, role: target?.role, store: target?.store } },
+    })
 
     return NextResponse.json({ success: true })
   } catch (err: any) {

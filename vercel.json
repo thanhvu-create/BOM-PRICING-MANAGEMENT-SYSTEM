@@ -3,6 +3,10 @@
     {
       "path": "/api/gold/trigger",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/audit/cleanup",
+      "schedule": "0 2 * * *"
     }
   ]
 }

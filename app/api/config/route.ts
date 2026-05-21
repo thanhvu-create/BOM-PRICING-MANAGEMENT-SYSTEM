@@ -4,7 +4,8 @@
  * Body: { key: string, value: string }
  */
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { logAction } from '@/lib/audit'
 
 export async function GET(request: Request) {
   const supabase = await createClient()
@@ -26,10 +27,29 @@ export async function POST(request: Request) {
   const body = await request.json()
   const { key = 'VND_RATE', value } = body
 
+  // Fetch old value for diff
+  const db = createServiceClient()
+  const { data: oldCfg } = await db.from('sys_config').select('value').eq('key', key).single()
+
   const { error } = await supabase
     .from('sys_config')
     .upsert({ key, value: String(value), updated_at: new Date().toISOString() })
 
   if (error) return NextResponse.json({ success: false, message: error.message })
+
+  const { data: profile } = await db.from('users').select('username, role').eq('id', user.id).single()
+  logAction({
+    actor:    profile?.username || user.email || '',
+    role:     profile?.role,
+    action:   'UPDATE',
+    entity:   'config',
+    entityId: key,
+    summary:  `Cập nhật ${key}: ${oldCfg?.value ?? '?'} → ${value}`,
+    diff: {
+      before: { [key]: oldCfg?.value },
+      after:  { [key]: String(value) },
+    },
+  })
+
   return NextResponse.json({ success: true })
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { logAction } from '@/lib/audit'
 
 // POST /api/bom/[bomId]/discount — áp dụng chiết khấu
 export async function POST(
@@ -34,6 +35,9 @@ export async function POST(
       }
     }
 
+    // Fetch original sell_price for audit diff
+    const { data: oldBom } = await db.from('bom').select('sell_price, discount_pct').eq('bom_id', bomId).single()
+
     const { error } = await db.from('bom').update({
       discount_pct:   pct / 100,          // lưu dạng decimal
       discount_price: Number(newSellPrice) || 0,
@@ -43,6 +47,20 @@ export async function POST(
     }).eq('bom_id', bomId)
 
     if (error) throw error
+
+    logAction({
+      actor:    username,
+      role,
+      action:   'DISCOUNT',
+      entity:   'bom',
+      entityId: bomId,
+      summary:  `Chiết khấu BOM ${bomId}: ${pct.toFixed(1)}% → $${(Number(newSellPrice) || 0).toFixed(2)}`,
+      diff: {
+        before: { sell_price: oldBom?.sell_price, discount_pct: (oldBom?.discount_pct || 0) * 100 },
+        after:  { discount_pct: pct, discount_price: Number(newSellPrice) || 0 },
+      },
+    })
+
     return NextResponse.json({ success: true })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })

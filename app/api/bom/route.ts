@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { logAction } from '@/lib/audit'
 
 const STORE_PRICE_MAP: Record<string, string[]> = {
   VN:  ['B1)HPVN -P', 'B2)AGVN-P'],
@@ -43,8 +44,9 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { data: profile } = await supabase
-      .from('users').select('username').eq('id', user.id).single()
+      .from('users').select('username, role').eq('id', user.id).single()
     const username = profile?.username || user.email || ''
+    const role = profile?.role || ''
 
     const payload = await request.json()
     const { header, golds, stones, calculatedCosts } = payload
@@ -134,6 +136,16 @@ export async function POST(request: Request) {
         if (sErr) throw sErr
       }
     }
+
+    logAction({
+      actor:    username,
+      role,
+      action:   'CREATE',
+      entity:   'bom',
+      entityId: bomId,
+      summary:  `Tạo BOM ${bomId} — SO/MO: ${header.soMo || ''}`,
+      diff:     { after: { bom_id: bomId, so_mo: header.soMo, model: header.model, sell_price: costs.sellPrice } },
+    })
 
     return NextResponse.json({ bomId })
   } catch (err: any) {
