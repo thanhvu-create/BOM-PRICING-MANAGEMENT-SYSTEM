@@ -5,7 +5,6 @@ const SHEET_TABLE: Record<string, string> = {
   'price_list_type': 'mk_price_list_type',
   'product_type':    'mk_product_type',
   'type_definition': 'mk_type_definition',
-  'color':           'mk_color',
   'process_fee':     'mk_process_fee',
   'cif_rate':        'mk_cif_rate',
   'price_gram':      'mk_price_gram',

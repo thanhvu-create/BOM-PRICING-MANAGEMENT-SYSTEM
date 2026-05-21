@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { UserProvider } from './UserContext'
 import { I18nProvider, useLang } from './I18nContext'
+import { useToast } from './ToastContext'
 import DriveAuthButton from './DriveAuthButton'
 import type { Role } from '@/types'
 
@@ -54,6 +55,7 @@ function DashboardContent({ user, children }: Props) {
   const mgrDiscTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const vndTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const { toast } = useToast()
   const role = user.role as Role
   const visibleNav = NAV_ITEMS.filter(n => n.roles.includes(role))
   const canEditRate = role === 'Admin' || role === 'Manager'
@@ -84,11 +86,16 @@ function DashboardContent({ user, children }: Props) {
     setVndRate(n)
     if (vndTimer.current) clearTimeout(vndTimer.current)
     vndTimer.current = setTimeout(async () => {
-      await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'VND_RATE', value: n }),
-      }).catch(() => {})
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'VND_RATE', value: n }),
+        })
+        if (res.ok) {
+          toast(`USD RATE đã cập nhật: ${n > 0 ? n.toLocaleString('vi-VN') + ' VND' : '—'}`, 'success')
+        }
+      } catch {}
     }, 800)
   }
 
@@ -97,11 +104,16 @@ function DashboardContent({ user, children }: Props) {
     setMgrDiscCap(n)
     if (mgrDiscTimer.current) clearTimeout(mgrDiscTimer.current)
     mgrDiscTimer.current = setTimeout(async () => {
-      await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'MANAGER_MAX_DISCOUNT', value: n }),
-      }).catch(() => {})
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'MANAGER_MAX_DISCOUNT', value: n }),
+        })
+        if (res.ok) {
+          toast(`Max Discount Cap đã cập nhật: ${n}%`, 'success')
+        }
+      } catch {}
     }, 800)
   }
 

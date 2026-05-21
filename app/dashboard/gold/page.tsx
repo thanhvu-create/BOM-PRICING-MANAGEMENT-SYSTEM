@@ -289,7 +289,7 @@ export default function GoldPage() {
             {fetching ? 'Fetching...' : 'Fetch Today (Amark)'}
           </button>
           <button onClick={openAdd} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
-            <i className="fa-solid fa-plus" style={{ fontSize: 11 }} />+ Add Manual
+            <i className="fa-solid fa-plus" style={{ fontSize: 11 }} /> Add Manual
           </button>
           <div style={{ position: 'relative' }}>
             <button onClick={() => setShowKaratPanel(v => !v)} className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)' }}>

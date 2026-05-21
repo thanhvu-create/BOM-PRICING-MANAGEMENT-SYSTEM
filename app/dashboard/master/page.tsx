@@ -11,7 +11,7 @@ interface StoneRow {
   pricing_unit: string; measurement_type: string
   min_size: number|string; max_size: number|string
   selling_price: number|string; base_price: number|string; mk: number|string
-  vietnamese_name?: string; full_name_en?: string
+  full_name_vi?: string; full_name_en?: string
   category?: string; type?: string; shape_code?: string; color?: string; quality?: string
   diamond_price?: number|string
 }
@@ -58,13 +58,14 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
   const { toast } = useToast()
   const [formError, setFormError] = useState('')
   const [search, setSearch] = useState('')
+  const [nameLang, setNameLang] = useState<'vi' | 'en'>('vi')
   const [deleteStoneRow, setDeleteStoneRow] = useState<StoneRow | null>(null)
   const [dd, setDd] = useState<{ categories: DDOption[]; types: DDOption[]; shapes: DDOption[]; colors: DDOption[]; qualities: DDOption[]; definitions: { en_name: string; vn_name: string }[] } | null>(null)
 
   const filtered = rows.filter(r => {
     if (!search) return true
     const q = search.toLowerCase()
-    return r.master_code?.toLowerCase().includes(q) || r.grade_id?.toLowerCase().includes(q) || r.display_name?.toLowerCase().includes(q) || r.vietnamese_name?.toLowerCase().includes(q)
+    return r.master_code?.toLowerCase().includes(q) || r.grade_id?.toLowerCase().includes(q) || r.display_name?.toLowerCase().includes(q) || r.full_name_vi?.toLowerCase().includes(q)
   })
 
   async function load() {
@@ -81,7 +82,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
   useEffect(() => { if (triggerSync > 0) syncAll() }, [triggerSync])
 
   function defaultForm(): Partial<StoneRow> {
-    return { category: '', type: '', shape_code: '', color: '', quality: '', pricing_unit: 'ct', measurement_type: 'mm', min_size: 0, max_size: 99, base_price: 0, mk: 0, selling_price: 0, display_name: '', vietnamese_name: '', full_name_en: '' }
+    return { category: '', type: '', shape_code: '', color: '', quality: '', pricing_unit: 'ct', measurement_type: 'mm', min_size: 0, max_size: 99, base_price: 0, mk: 0, selling_price: 0, display_name: '', full_name_vi: '', full_name_en: '' }
   }
 
   function openAdd() { setForm(defaultForm()); setOldGradeId(''); setFormError(''); setModal('add') }
@@ -121,13 +122,13 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
       // Vietnamese Name from definitions lookup
       if (dd?.definitions) {
         const vnParts = [next.category, next.type, next.shape_code, next.color, next.quality].filter(Boolean).map(v => dd.definitions.find(d => d.en_name?.toLowerCase() === v?.toLowerCase())?.vn_name || '').filter(Boolean)
-        next.vietnamese_name = vnParts.join(' ')
+        next.full_name_vi = vnParts.join(' ')
       }
 
-      // Selling Price = base × (1 + mk/100)
+      // Selling Price = base × (1 + mk), mk stored as decimal (0.3 = 30%)
       const bp = parseFloat(String(next.base_price)) || 0
       const mk = parseFloat(String(next.mk)) || 0
-      next.selling_price = Math.round(bp * (1 + mk / 100) * 10000) / 10000
+      next.selling_price = Math.round(bp * (1 + mk) * 10000) / 10000
 
       return next
     })
@@ -135,6 +136,8 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
 
   async function handleSave() {
     if (!form.grade_id) { setFormError('Grade ID là bắt buộc'); return }
+    const mkVal = parseFloat(String(form.mk ?? '0'))
+    if (mkVal >= 1) { setFormError('Markup phải là số thập phân < 1 (VD: 0.30 = 30%)'); return }
     setSaving(true); setFormError('')
     try {
       const body = { ...form, old_grade_id: oldGradeId || form.grade_id }
@@ -183,9 +186,26 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: isOrderView ? 600 : 800 }}>
             <thead>
               <tr>
-                {(['#', 'MASTER_CODE', 'GRADE_ID', 'DISPLAY NAME (VN)', 'UNIT', 'TYPE', 'MIN', 'MAX'] as string[])
-                  .concat(isOrderView ? [] : ['BASE ($)', 'MK', 'SELL ($)', 'ACTIONS'])
-                  .map(h => <th key={h} style={{ ...th, textAlign: h === '#' ? 'center' : 'left' }}>{h}</th>)}
+                <th style={{ ...th, textAlign: 'center' }}>#</th>
+                <th style={th}>MASTER_CODE</th>
+                <th style={th}>GRADE_ID</th>
+                <th style={{ ...th, whiteSpace: 'nowrap' }}>
+                  DISPLAY NAME ({nameLang.toUpperCase()})
+                  <button
+                    onClick={() => setNameLang(l => l === 'vi' ? 'en' : 'vi')}
+                    style={{ marginLeft: 6, padding: '1px 5px', fontSize: 9, border: '1px solid var(--border-base)', borderRadius: 0, background: 'var(--bg-hover)', cursor: 'pointer', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', fontWeight: 600 }}
+                  >{nameLang === 'vi' ? 'EN' : 'VI'}</button>
+                </th>
+                <th style={th}>UNIT</th>
+                <th style={th}>TYPE</th>
+                <th style={th}>MIN</th>
+                <th style={th}>MAX</th>
+                {!isOrderView && <>
+                  <th style={th}>BASE ($)</th>
+                  <th style={th}>MK</th>
+                  <th style={th}>SELL ($)</th>
+                  <th style={th}>ACTIONS</th>
+                </>}
               </tr>
             </thead>
             <tbody>
@@ -202,7 +222,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
                     <td style={tdc}>
                       <span style={{ color: '#2E8B8B', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{r.grade_id}</span>
                     </td>
-                    <td style={{ ...tdc, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.vietnamese_name}</td>
+                    <td style={{ ...tdc, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameLang === 'vi' ? r.full_name_vi : r.full_name_en}</td>
                     <td style={tdc}>{r.pricing_unit}</td>
                     <td style={tdc}>{r.measurement_type}</td>
                     <td style={{ ...tdc, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{r.min_size}</td>
@@ -210,7 +230,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
                     {!isOrderView && <>
                       <td style={{ ...tdc, fontFamily: 'var(--font-mono)', color: 'var(--color-danger)' }}>${r.base_price}</td>
                       <td style={{ ...tdc, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{r.mk}%</td>
-                      <td style={{ ...tdc, fontFamily: 'var(--font-mono)', color: 'var(--color-success)' }}>${r.selling_price}</td>
+                      <td style={{ ...tdc, fontFamily: 'var(--font-mono)', color: 'var(--color-success)' }}>${(parseFloat(String(r.base_price || 0)) * (1 + parseFloat(String(r.mk || 0)))).toFixed(4)}</td>
                       <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--border-light)' }}>
                         <div style={{ display: 'flex', gap: 5 }}>
                           <button onClick={() => openEdit(r)} style={{ background: 'transparent', border: '1px solid #B8860B', borderRadius: 0, padding: '4px 8px', cursor: 'pointer', fontSize: 'var(--text-xs)', color: '#B8860B' }}><i className="fa-solid fa-pencil" style={{ fontSize: 9 }} /></button>
@@ -280,10 +300,14 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
               <input style={{ ...inputU, color: '#2E8B8B', fontFamily: 'var(--font-mono)' }} value={form.grade_id || ''} readOnly />
             </div>
             <div>
-              <label style={lbl}>Vietnamese Name (auto)</label>
-              <input style={{ ...inputU, color: 'var(--text-secondary)' }} value={form.vietnamese_name || ''} readOnly />
+              <label style={lbl}>Display Name (auto)</label>
+              <input style={{ ...inputU, color: 'var(--text-secondary)' }} value={form.display_name || ''} readOnly />
             </div>
             <div>
+              <label style={lbl}>Vietnamese Name (auto)</label>
+              <input style={{ ...inputU, color: 'var(--text-secondary)' }} value={form.full_name_vi || ''} readOnly />
+            </div>
+            <div style={{ gridColumn: 'span 2' }}>
               <label style={lbl}>Full Name EN (auto)</label>
               <input style={{ ...inputU, color: 'var(--text-secondary)' }} value={form.full_name_en || ''} readOnly />
             </div>
@@ -320,8 +344,18 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
               <input type="number" step="0.0001" style={inputU} value={String(form.base_price ?? '')} onChange={e => updateForm({ base_price: e.target.value })} />
             </div>
             <div>
-              <label style={lbl}>Markup %</label>
-              <input type="number" step="0.01" style={inputU} value={String(form.mk ?? '')} onChange={e => updateForm({ mk: e.target.value })} />
+              <label style={lbl}>Markup (decimal)</label>
+              <input
+                type="number" step="0.01" min="0" max="0.9999"
+                placeholder="e.g. 0.30"
+                style={{ ...inputU, borderBottomColor: (parseFloat(String(form.mk ?? '0')) >= 1) ? 'var(--color-danger)' : undefined }}
+                value={String(form.mk ?? '')}
+                onChange={e => updateForm({ mk: e.target.value })}
+              />
+              {parseFloat(String(form.mk ?? '0')) >= 1
+                ? <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-danger)' }}>Nhập dạng thập phân, VD: 0.30 = 30%</span>
+                : <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Thập phân: 0.30 = 30%, 0.05 = 5%</span>
+              }
             </div>
             <div>
               <label style={lbl}>Selling Price (auto)</label>
@@ -531,7 +565,7 @@ export default function MasterPage() {
           {!isOrderRole && (
             <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}
               onClick={() => { setActiveTab('stone'); setTriggerAdd(t => t + 1) }}>
-              <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />+ Add New
+              <i className="fa-solid fa-plus" style={{ fontSize: 10 }} /> Add New
             </button>
           )}
         </div>

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { isAuthenticated, getTokenWithConsent, clearToken, onTokenChange } from '@/lib/driveToken'
+import { useToast } from './ToastContext'
 
 /**
  * Compact Drive auth button for the topbar.
@@ -17,24 +18,53 @@ export default function DriveAuthButton() {
   const [connected, setConnected] = useState(false)
   const [hasClientId, setHasClientId] = useState(false)
   const [loading, setLoading] = useState(false)
+  const { toast } = useToast()
+
+  // Track whether the most recent disconnect was triggered manually by the user
+  const manualDisconnect = useRef(false)
+  // Track previous connected state to detect token expiry
+  const prevConnected = useRef(false)
 
   useEffect(() => {
     const id = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
     setHasClientId(!!id && !id.includes('your-google') && !id.includes('placeholder'))
-    setConnected(isAuthenticated())
-    return onTokenChange(() => setConnected(isAuthenticated()))
-  }, [])
+    const initial = isAuthenticated()
+    setConnected(initial)
+    prevConnected.current = initial
+
+    const unsubscribe = onTokenChange(() => {
+      const nowConnected = isAuthenticated()
+      setConnected(nowConnected)
+
+      // Token expired or was revoked externally (not a manual user click)
+      if (prevConnected.current && !nowConnected && !manualDisconnect.current) {
+        toast('Phiên Google Drive đã hết hạn — vui lòng kết nối lại', 'warning')
+      }
+
+      prevConnected.current = nowConnected
+      manualDisconnect.current = false
+    })
+
+    return unsubscribe
+  }, [toast])
 
   if (!hasClientId) return null
 
   async function handleClick() {
     if (connected) {
+      manualDisconnect.current = true
       clearToken()
+      toast('Google Drive đã ngắt kết nối', 'info')
       return
     }
     setLoading(true)
     try {
-      await getTokenWithConsent()
+      const token = await getTokenWithConsent()
+      if (token) {
+        toast('Google Drive đã kết nối thành công', 'success')
+      } else {
+        toast('Không thể kết nối Google Drive', 'danger')
+      }
     } finally {
       setLoading(false)
     }

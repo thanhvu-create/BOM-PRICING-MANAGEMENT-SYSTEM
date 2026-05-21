@@ -47,21 +47,54 @@ export async function POST(request: Request) {
       base_price:       Number(payload.base_price) || 0,
       mk:               Number(payload.mk) || 0,
       diamond_price:    Number(payload.diamond_price) || null,
-      vietnamese_name:  payload.vietnamese_name || '',
+      full_name_vi:     payload.full_name_vi || '',
       full_name_en:     payload.full_name_en || '',
     }
 
-    if (payload.old_grade_id && payload.old_grade_id !== payload.grade_id) {
-      // Grade ID đổi → update by old_grade_id
-      await db.from('dm_size').update(row).eq('grade_id', payload.old_grade_id)
+    const oldGradeId = payload.old_grade_id && payload.old_grade_id !== payload.grade_id
+      ? payload.old_grade_id as string
+      : null
+
+    if (oldGradeId) {
+      await db.from('dm_size').update(row).eq('grade_id', oldGradeId)
     } else {
-      // Upsert by grade_id
       const { error } = await db.from('dm_size').upsert(row, { onConflict: 'grade_id' })
       if (error) throw error
     }
 
-    // Sync dm_size → stone_material
-    await db.rpc('sync_dm_size_to_stone_material')
+    // Sync this row → stone_material (application-layer, no RPC)
+    // mk stored as decimal (e.g. 0.3 = 30%)
+    const basePrice = Number(payload.base_price) || 0
+    const mk        = Number(payload.mk) || 0
+    const sellingPrice = basePrice * (1 + mk)
+    const masterCode = row.master_code
+
+    if (masterCode) {
+      const smRow = {
+        group_code:    masterCode,
+        grade_id:      row.grade_id,
+        display_name:  row.display_name,
+        unit:          row.pricing_unit,
+        type_input:    row.measurement_type,
+        min_size:      row.min_size,
+        max_size:      row.max_size,
+        selling_price: sellingPrice,
+        base_price:    basePrice,
+        mkup:          mk,
+        full_name_vi:  row.full_name_vi || row.display_name,
+        full_name_en:  row.full_name_en || '',
+      }
+      if (oldGradeId) {
+        // Grade ID changed: delete old row, insert new
+        await db.from('stone_material').delete().eq('grade_id', oldGradeId)
+        await db.from('stone_material').insert(smRow)
+      } else {
+        await db.from('stone_material').upsert(smRow, { onConflict: 'grade_id' })
+      }
+    } else if (oldGradeId) {
+      // master_code cleared → remove from stone_material
+      await db.from('stone_material').delete().eq('grade_id', oldGradeId)
+    }
 
     return NextResponse.json({ success: true })
   } catch (err: any) {
@@ -87,7 +120,7 @@ export async function DELETE(request: Request) {
     const db = createServiceClient()
     const { error } = await db.from('dm_size').delete().eq('grade_id', gradeId)
     if (error) throw error
-    await db.rpc('sync_dm_size_to_stone_material')
+    await db.from('stone_material').delete().eq('grade_id', gradeId)
 
     return NextResponse.json({ success: true })
   } catch (err: any) {

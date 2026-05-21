@@ -210,3 +210,6 @@ body.modal-open header {
 /* ── Fade in ── */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .fade-in { animation: fadeIn 0.15s ease forwards; }
+
+/* ── Pulse dot ── */
+@keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }

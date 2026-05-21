@@ -83,7 +83,7 @@ export default function TinhGiaPage() {
   const [managerMax, setManagerMax] = useState(20)   // MANAGER_MAX_DISCOUNT from sys_config
   const [loadingDD, setLoadingDD] = useState(true)
   const [showStoneTypes, setShowStoneTypes] = useState(false)
-  const [stoneTypeList, setStoneTypeList] = useState<Array<{ code: string; viName: string; enName: string }>>([])
+  const [stoneTypeList, setStoneTypeList] = useState<Array<{ code: string; viName: string; enName: string; unit: string; typeInput: string }>>([])
   const [stoneTypeSearch, setStoneTypeSearch] = useState('')
   const [stoneTypeLoading, setStoneTypeLoading] = useState(false)
 
@@ -134,6 +134,10 @@ export default function TinhGiaPage() {
 
   // Lookup debounce timers
   const lookupTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
+  // Debounce timer for recalculate (laborHours changes)
+  const calcTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Track laborHours value used in the last successful calculate() call
+  const lastCalcLaborHours = useRef<string>('')
   // Prevents loadForEdit from re-running when editBomId is set programmatically after a save
   const skipNextLoad = useRef(false)
 
@@ -540,6 +544,7 @@ export default function TinhGiaPage() {
 
   /* ── Calculate ── */
   async function calculate(overrideSpType?: string) {
+    lastCalcLaborHours.current = laborHours   // stamp value used in this calculation
     setCalcError(''); setCalculating(true)
     const tid = toast('Calculating BOM cost...', 'loading')
     try {
@@ -1133,15 +1138,7 @@ export default function TinhGiaPage() {
             </div>
           )}
 
-          {calculating && (
-            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
-              <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 24, marginBottom: 12, display: 'block' }} />
-              <span style={{ fontSize: 'var(--text-sm)' }}>Đang tính giá...</span>
-            </div>
-          )}
-
-          {!calculating && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', opacity: calculating ? 0.65 : 1, transition: 'opacity 0.2s' }}>
               {/* ── LEFT: BOM Info + Labor + SP Type ── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div style={{ ...card, padding: '1.25rem 1.5rem', height: '100%' }}>
@@ -1170,8 +1167,10 @@ export default function TinhGiaPage() {
                         type="number" min="0" step="0.5" placeholder="0"
                         style={{ ...tdInput, width: '100%' }}
                         value={laborHours}
-                        onChange={e => { setLaborHours(e.target.value); calculate() }}
-                        onBlur={() => calculate()}
+                        onChange={e => setLaborHours(e.target.value)}
+                        onBlur={e => {
+                          if (e.target.value !== lastCalcLaborHours.current) calculate()
+                        }}
                       />
                     </div>
                   )}
@@ -1197,8 +1196,9 @@ export default function TinhGiaPage() {
               {/* ── RIGHT: Pricing Breakdown ── */}
               <div style={card}>
                 <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)' }}>
-                  <h6 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, margin: 0, paddingBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.08em' }} className={canSeeAll ? "" : "cost-restricted"}>
+                  <h6 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, margin: 0, paddingBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: 8 }} className={canSeeAll ? "" : "cost-restricted"}>
                     Cost Report
+                    {calculating && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: 'var(--text-muted)', flexShrink: 0, animation: 'pulse 1s ease-in-out infinite' }} />}
                   </h6>
                 </div>
                 <div style={{ padding: '1rem 1.5rem' }}>
@@ -1377,11 +1377,11 @@ export default function TinhGiaPage() {
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
       )}
 
       {/* ── CONFIRM RESET DIALOG ── */}
+
       {confirmVisible && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 400 }}>
@@ -1427,7 +1427,7 @@ export default function TinhGiaPage() {
       {showStoneTypes && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={e => e.target === e.currentTarget && setShowStoneTypes(false)}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 600, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 780, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>{t('stoneTypeListTitle')}</h3>
               <button onClick={() => setShowStoneTypes(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 20 }}>
@@ -1456,7 +1456,7 @@ export default function TinhGiaPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
                   <thead>
                     <tr>
-                      {['Group Code', t('colViName'), 'Full Name (EN)'].map(h => (
+                      {['Group Code', t('colViName'), 'Full Name (EN)', 'Unit', 'Type'].map(h => (
                         <th key={h} style={{ ...thStyle, position: 'sticky', top: 0 }}>{h}</th>
                       ))}
                     </tr>
@@ -1469,6 +1469,8 @@ export default function TinhGiaPage() {
                         <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '6px 6px' }}>{s.code}</td>
                         <td style={{ ...tdStyle, padding: '6px 6px' }}>{s.viName || '—'}</td>
                         <td style={{ ...tdStyle, color: 'var(--text-secondary)', padding: '6px 6px' }}>{s.enName || '—'}</td>
+                        <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '6px 6px', textAlign: 'center' }}>{s.unit || '—'}</td>
+                        <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '6px 6px', textAlign: 'center' }}>{s.typeInput || '—'}</td>
                       </tr>
                     ))}
                   </tbody>

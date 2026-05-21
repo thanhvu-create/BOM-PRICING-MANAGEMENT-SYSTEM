@@ -84,9 +84,6 @@ const SHEETS: SheetDef[] = [
     { key: 'type_definition', label: 'Type Definition' },
     { key: 'description', label: 'Description' },
   ]},
-  { key: 'color', label: 'Color', columns: [
-    { key: 'color', label: 'Color' },
-  ]},
   { key: 'process_fee', label: 'Process Fee', columns: [
     { key: 'unit_name', label: 'Unit Name' },
     { key: 'unit_price', label: 'Unit Price', type: 'number' },
@@ -132,6 +129,10 @@ export default function MKPage() {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
   const [deleteRow, setDeleteRow] = useState<any>(null)
+  const [typeDefs, setTypeDefs] = useState<string[]>([])
+  const [storeNames, setStoreNames] = useState<string[]>([])
+  const [regionNames, setRegionNames] = useState<string[]>([])
+  const [storeRegionMap, setStoreRegionMap] = useState<Record<string, string>>({})
   const { toast } = useToast()
 
   const activeSheet = SHEETS.find(s => s.key === activeKey)!
@@ -147,6 +148,28 @@ export default function MKPage() {
   }
 
   useEffect(() => { load(activeKey) }, [activeKey])
+
+  useEffect(() => {
+    fetch('/api/mk/type_definition')
+      .then(r => r.json())
+      .then(d => setTypeDefs((d.data || []).map((r: any) => r.type_definition).filter(Boolean)))
+      .catch(() => {})
+    fetch('/api/mk/store')
+      .then(r => r.json())
+      .then(d => {
+        const rows = d.data || []
+        setStoreNames(rows.map((r: any) => r.store_name).filter(Boolean))
+        setRegionNames([...new Set<string>(rows.map((r: any) => r.region).filter(Boolean))])
+        const map: Record<string, string> = {}
+        rows.forEach((r: any) => { if (r.store_name) map[r.store_name] = r.region || '' })
+        setStoreRegionMap(map)
+      })
+      .catch(() => {})
+  }, [])
+
+  // Fields that must not be edited (critical for pricing logic)
+  const isLockedField = (colKey: string) =>
+    activeKey === 'process_fee' && colKey === 'unit_name'
 
   function openAdd() {
     const empty: Record<string, string> = {}
@@ -246,9 +269,11 @@ export default function MKPage() {
           <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 4px' }}>Markup &amp; Pricing</h2>
           <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', letterSpacing: '0.04em', margin: 0 }}>Manage markup &amp; pricing tables</p>
         </div>
-        <button onClick={openAdd} className="btn-primary" style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--text-xs)' }}>
-          <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />+ Add New
-        </button>
+        {activeKey !== 'process_fee' && (
+          <button onClick={openAdd} className="btn-primary" style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--text-xs)' }}>
+            <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />Add New
+          </button>
+        )}
       </div>
 
       {/* Sheet tabs — horizontal scroll */}
@@ -318,10 +343,12 @@ export default function MKPage() {
                         style={{ background: 'transparent', border: '1px solid #B8860B', borderRadius: 0, padding: '4px 8px', cursor: 'pointer', fontSize: 'var(--text-xs)', color: '#B8860B' }}>
                         <i className="fa-solid fa-pencil" style={{ fontSize: 9 }} />
                       </button>
-                      <button onClick={() => handleDelete(row)}
-                        style={{ background: 'transparent', border: '1px solid var(--color-danger)', borderRadius: 0, padding: '4px 8px', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--color-danger)' }}>
-                        <i className="fa-solid fa-trash-can" style={{ fontSize: 9 }} />
-                      </button>
+                      {activeKey !== 'process_fee' && (
+                        <button onClick={() => handleDelete(row)}
+                          style={{ background: 'transparent', border: '1px solid var(--color-danger)', borderRadius: 0, padding: '4px 8px', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--color-danger)' }}>
+                          <i className="fa-solid fa-trash-can" style={{ fontSize: 9 }} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -396,26 +423,69 @@ export default function MKPage() {
               ) : activeSheet.columns.length > 3 ? (
                 // Wide sheets (≥4 fields): 2-column grid
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem 1.5rem' }}>
-                  {activeSheet.columns.map((c, idx) => (
-                    <div key={c.key}>
-                      <label style={lbl}>{c.label}</label>
-                      <input type={c.type === 'number' ? 'number' : 'text'} style={inputU}
-                        value={form[c.key] || ''} step={c.type === 'number' ? '0.0001' : undefined} autoFocus={idx === 0}
-                        onChange={e => setForm(p => ({ ...p, [c.key]: e.target.value }))} />
-                    </div>
-                  ))}
+                  {activeSheet.columns.map((c, idx) => {
+                    const isSpType = activeKey === 'price_gram' && c.key === 'sp_type'
+                    const isStore  = activeKey === 'price_list_type' && c.key === 'store'
+                    const isRegion = activeKey === 'price_list_type' && c.key === 'region'
+                    return (
+                      <div key={c.key}>
+                        <label style={lbl}>{c.label}</label>
+                        {isSpType ? (
+                          <select style={{ ...inputU, cursor: 'pointer' }} value={form[c.key] || ''} autoFocus={idx === 0}
+                            onChange={e => setForm(p => ({ ...p, [c.key]: e.target.value }))}>
+                            <option value="">-- Select --</option>
+                            {typeDefs.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                        ) : isStore ? (
+                          <select style={{ ...inputU, cursor: 'pointer' }} value={form[c.key] || ''} autoFocus={idx === 0}
+                            onChange={e => {
+                              const storeName = e.target.value
+                              const autoRegion = storeRegionMap[storeName] ?? ''
+                              setForm(p => ({ ...p, [c.key]: storeName, region: autoRegion }))
+                            }}>
+                            <option value="">-- Select --</option>
+                            {storeNames.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        ) : isRegion ? (
+                          <select style={{ ...inputU, cursor: 'pointer' }} value={form[c.key] || ''} autoFocus={idx === 0}
+                            onChange={e => setForm(p => ({ ...p, [c.key]: e.target.value }))}>
+                            <option value="">-- Select --</option>
+                            {regionNames.map(r => <option key={r} value={r}>{r}</option>)}
+                          </select>
+                        ) : (
+                          <input type={c.type === 'number' ? 'number' : 'text'} style={inputU}
+                            value={form[c.key] || ''} step={c.type === 'number' ? '0.0001' : undefined} autoFocus={idx === 0}
+                            onChange={e => setForm(p => ({ ...p, [c.key]: e.target.value }))} />
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               ) : (
                 // Narrow sheets (≤3 fields): single column
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {activeSheet.columns.map((c, idx) => (
-                    <div key={c.key}>
-                      <label style={lbl}>{c.label}</label>
-                      <input type={c.type === 'number' ? 'number' : 'text'} style={inputU}
-                        value={form[c.key] || ''} step={c.type === 'number' ? '0.0001' : undefined} autoFocus={idx === 0}
-                        onChange={e => setForm(p => ({ ...p, [c.key]: e.target.value }))} />
-                    </div>
-                  ))}
+                  {activeSheet.columns.map((c, idx) => {
+                    const locked = isLockedField(c.key)
+                    return (
+                      <div key={c.key}>
+                        <label style={lbl}>
+                          {c.label}
+                          {locked && <span style={{ marginLeft: 5, fontSize: 9, color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>
+                            <i className="fa-solid fa-lock" style={{ marginRight: 2 }} />locked
+                          </span>}
+                        </label>
+                        <input
+                          type={c.type === 'number' ? 'number' : 'text'}
+                          style={{ ...inputU, ...(locked ? { color: 'var(--text-muted)', cursor: 'not-allowed', userSelect: 'none' } : {}) }}
+                          value={form[c.key] || ''}
+                          step={c.type === 'number' ? '0.0001' : undefined}
+                          autoFocus={idx === 0 && !locked}
+                          readOnly={locked}
+                          onChange={locked ? undefined : e => setForm(p => ({ ...p, [c.key]: e.target.value }))}
+                        />
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </div>
