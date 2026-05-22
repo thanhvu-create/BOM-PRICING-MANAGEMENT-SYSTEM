@@ -23,7 +23,7 @@ const NAV_ITEMS = [
   { key: 'mk',        i18nKey: 'mk',      icon: 'fa-tags',              href: '/dashboard/mk',        roles: ['Admin','Manager'] },
   { key: 'master',    i18nKey: 'master',  icon: 'fa-gem',               href: '/dashboard/master',    roles: ['Admin','Manager','Order'] },
   { key: 'users',     i18nKey: 'users',   icon: 'fa-users',             href: '/dashboard/users',     roles: ['Admin'] },
-  { key: 'audit',     i18nKey: 'audit',   icon: 'fa-shield-halved',     href: '/dashboard/audit',     roles: ['Admin'] },
+  { key: 'audit',     i18nKey: 'audit',   icon: 'fa-shield-halved',     href: '/dashboard/audit',     roles: ['Admin', 'Manager'] },
 ]
 
 const PAGE_TITLE_KEYS: Record<string, string> = {

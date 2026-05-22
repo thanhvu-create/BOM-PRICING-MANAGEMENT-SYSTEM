@@ -3,6 +3,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useToast } from '@/components/shared/ToastContext'
 
+function fmtNum(v: any, dec = 4): string {
+  const n = parseFloat(String(v))
+  if (isNaN(n)) return '—'
+  return parseFloat(n.toFixed(dec)).toString()
+}
+
 /* ── LOGO CELL (async Drive proxy) ──────────────────────────── */
 function extractDriveFileId(url: string): string | null {
   if (!url) return null
@@ -87,6 +93,7 @@ const SHEETS: SheetDef[] = [
   { key: 'process_fee', label: 'Process Fee', columns: [
     { key: 'unit_name', label: 'Unit Name' },
     { key: 'unit_price', label: 'Unit Price', type: 'number' },
+    { key: 'unit_of_measure', label: 'Unit of Measure' },
   ]},
   { key: 'cif_rate', label: 'Price List Type (CIF)', columns: [
     { key: 'price_list_type', label: 'Price List Type' },
@@ -338,9 +345,11 @@ export default function MKPage() {
                                 ? (typeof row.markups === 'string' ? JSON.parse(row.markups) : row.markups)
                                 : {}
                               const v = mObj[mk]
-                              return v != null ? Number(v).toFixed(4) : '—'
+                              return v != null ? fmtNum(v, 4) : '—'
                             })()
-                          : String(row[c.key] ?? '—')}
+                          : c.type === 'number'
+                            ? fmtNum(row[c.key], 4)
+                            : String(row[c.key] ?? '—')}
                     </td>
                   ))}
                   <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--border-light)' }}>

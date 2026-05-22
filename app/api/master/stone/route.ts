@@ -31,6 +31,9 @@ export async function POST(request: Request) {
     const payload = await request.json()
     const db = createServiceClient()
 
+    const basePrice = Number(payload.base_price) || 0
+    const mk        = Number(payload.mk) || 0
+
     const row = {
       category:         payload.category || '',
       type:             payload.type || '',
@@ -44,9 +47,9 @@ export async function POST(request: Request) {
       min_size:         Number(payload.min_size) || 0,
       max_size:         Number(payload.max_size) || 0,
       display_name:     payload.display_name || '',
-      base_price:       Number(payload.base_price) || 0,
-      mk:               Number(payload.mk) || 0,
-      diamond_price:    Number(payload.diamond_price) || null,
+      base_price:       basePrice,
+      mk:               mk,
+      diamond_price:    basePrice * (1 + mk),  // always recompute = selling_price
       full_name_vi:     payload.full_name_vi || '',
       full_name_en:     payload.full_name_en || '',
     }
@@ -56,16 +59,14 @@ export async function POST(request: Request) {
       : null
 
     if (oldGradeId) {
-      await db.from('dm_size').update(row).eq('grade_id', oldGradeId)
+      const { error } = await db.from('dm_size').update(row).eq('grade_id', oldGradeId)
+      if (error) throw error
     } else {
       const { error } = await db.from('dm_size').upsert(row, { onConflict: 'grade_id' })
       if (error) throw error
     }
 
     // Sync this row → stone_material (application-layer, no RPC)
-    // mk stored as decimal (e.g. 0.3 = 30%)
-    const basePrice = Number(payload.base_price) || 0
-    const mk        = Number(payload.mk) || 0
     const sellingPrice = basePrice * (1 + mk)
     const masterCode = row.master_code
 
@@ -85,15 +86,19 @@ export async function POST(request: Request) {
         full_name_en:  row.full_name_en || '',
       }
       if (oldGradeId) {
-        // Grade ID changed: delete old row, insert new
-        await db.from('stone_material').delete().eq('grade_id', oldGradeId)
-        await db.from('stone_material').insert(smRow)
+        // Grade ID changed: delete old row, upsert new
+        const { error: delErr } = await db.from('stone_material').delete().eq('grade_id', oldGradeId)
+        if (delErr) throw delErr
+        const { error: insErr } = await db.from('stone_material').upsert(smRow, { onConflict: 'grade_id' })
+        if (insErr) throw insErr
       } else {
-        await db.from('stone_material').upsert(smRow, { onConflict: 'grade_id' })
+        const { error } = await db.from('stone_material').upsert(smRow, { onConflict: 'grade_id' })
+        if (error) throw error
       }
     } else if (oldGradeId) {
       // master_code cleared → remove from stone_material
-      await db.from('stone_material').delete().eq('grade_id', oldGradeId)
+      const { error } = await db.from('stone_material').delete().eq('grade_id', oldGradeId)
+      if (error) throw error
     }
 
     return NextResponse.json({ success: true })

@@ -347,7 +347,7 @@ export default function AuditPage() {
       .finally(() => setStatsLoading(false))
   }, [tab])
 
-  if (user.role !== 'Admin') {
+  if (!['Admin', 'Manager'].includes(user.role || '')) {
     return (
       <div style={{ padding: '2rem', color: 'var(--color-danger)', fontFamily: 'var(--font-body)' }}>
         Không có quyền truy cập trang này.

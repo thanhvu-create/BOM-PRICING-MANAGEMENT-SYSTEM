@@ -10,8 +10,8 @@ export async function GET() {
 
     const db = createServiceClient()
     const profile = await getUserProfile(user.id, user.email)
-    if (profile?.role !== 'Admin')
-      return NextResponse.json({ error: 'Admin only' }, { status: 403 })
+    if (!['Admin', 'Manager'].includes(profile?.role || ''))
+      return NextResponse.json({ error: 'Admin hoặc Manager mới có quyền xem thống kê' }, { status: 403 })
 
     // Last 30 days window
     const since = new Date()

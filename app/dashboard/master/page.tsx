@@ -21,6 +21,12 @@ interface DMRow { id?: string; name?: string; code?: string; en_name?: string; v
 const DM_SHEETS = ['DM_Category', 'DM_Types', 'DM_Shape', 'DM_Color', 'DM_Quality', 'Definition'] as const
 type DMSheet = typeof DM_SHEETS[number]
 
+function fmtNum(v: any, dec = 4): string {
+  const n = parseFloat(String(v))
+  if (isNaN(n)) return '—'
+  return parseFloat(n.toFixed(dec)).toString()
+}
+
 /* ── STYLE CONSTANTS ─────────────────────────────────────────── */
 const th: React.CSSProperties = { fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: 500, padding: '8px 10px', borderBottom: '1px solid var(--border-base)', background: 'var(--bg-base)', whiteSpace: 'nowrap' }
 const tdc: React.CSSProperties = { padding: '8px 10px', borderBottom: '1px solid var(--border-light)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', verticalAlign: 'middle' }
@@ -86,7 +92,12 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
   }
 
   function openAdd() { setForm(defaultForm()); setOldGradeId(''); setFormError(''); setModal('add') }
-  function openEdit(r: StoneRow) { setEditRow(r); setOldGradeId(r.grade_id); setForm({ ...r }); setFormError(''); setModal('edit') }
+  function openEdit(r: StoneRow) {
+    setEditRow(r); setOldGradeId(r.grade_id)
+    // Convert mk from decimal (DB) → percentage (UI): 0.30 → 30
+    setForm({ ...r, mk: Math.round(parseFloat(String(r.mk || 0)) * 100 * 10) / 10 })
+    setFormError(''); setModal('edit')
+  }
   function closeModal() { setModal(null); setEditRow(null); setOldGradeId('') }
 
   // Auto-generate derived fields from 5 dropdowns + sizes
@@ -125,10 +136,10 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
         next.full_name_vi = vnParts.join(' ')
       }
 
-      // Selling Price = base × (1 + mk), mk stored as decimal (0.3 = 30%)
+      // Selling Price = base × (1 + mk/100), mk in UI is percentage (30 = 30%)
       const bp = parseFloat(String(next.base_price)) || 0
       const mk = parseFloat(String(next.mk)) || 0
-      next.selling_price = Math.round(bp * (1 + mk) * 10000) / 10000
+      next.selling_price = Math.round(bp * (1 + mk / 100) * 10000) / 10000
 
       return next
     })
@@ -149,11 +160,12 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
     if (isNaN(bp) || bp <= 0) { setFormError('Base Price ($) là bắt buộc và phải lớn hơn 0'); return }
     const mkVal = parseFloat(String(form.mk ?? ''))
     if (isNaN(mkVal) || String(form.mk ?? '').trim() === '') { setFormError('Markup là bắt buộc (nhập 0 nếu không có markup)'); return }
-    if (mkVal < 0 || mkVal >= 1) { setFormError('Markup phải là số thập phân từ 0 đến dưới 1 (VD: 0.30 = 30%)'); return }
+    if (mkVal < 0 || mkVal > 100) { setFormError('Markup phải từ 0 đến 100 (VD: 30 = 30%)'); return }
     if (!form.grade_id) { setFormError('Grade ID chưa được tạo — vui lòng chọn đủ Category, Type, Shape'); return }
     setSaving(true); setFormError('')
     try {
-      const body = { ...form, old_grade_id: oldGradeId || form.grade_id }
+      // Convert mk from percentage (UI) → decimal (API/DB): 30 → 0.30
+      const body = { ...form, mk: mkVal / 100, old_grade_id: oldGradeId || form.grade_id }
       const r = await fetch('/api/master/stone', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const d = await r.json()
       if (!r.ok) { setFormError(d.error || 'Failed'); return }
@@ -238,12 +250,12 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
                     <td style={{ ...tdc, fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nameLang === 'vi' ? r.full_name_vi : r.full_name_en}</td>
                     <td style={tdc}>{r.pricing_unit}</td>
                     <td style={tdc}>{r.measurement_type}</td>
-                    <td style={{ ...tdc, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{r.min_size}</td>
-                    <td style={{ ...tdc, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{r.max_size}</td>
+                    <td style={{ ...tdc, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{fmtNum(r.min_size, 4)}</td>
+                    <td style={{ ...tdc, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{fmtNum(r.max_size, 4)}</td>
                     {!isOrderView && <>
-                      <td style={{ ...tdc, fontFamily: 'var(--font-mono)', color: 'var(--color-danger)' }}>${r.base_price}</td>
-                      <td style={{ ...tdc, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{r.mk}%</td>
-                      <td style={{ ...tdc, fontFamily: 'var(--font-mono)', color: 'var(--color-success)' }}>${(parseFloat(String(r.base_price || 0)) * (1 + parseFloat(String(r.mk || 0)))).toFixed(4)}</td>
+                      <td style={{ ...tdc, fontFamily: 'var(--font-mono)', color: 'var(--color-danger)' }}>${fmtNum(r.base_price, 4)}</td>
+                      <td style={{ ...tdc, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{(parseFloat(String(r.mk || 0)) * 100).toFixed(1)}%</td>
+                      <td style={{ ...tdc, fontFamily: 'var(--font-mono)', color: 'var(--color-success)' }}>${fmtNum(parseFloat(String(r.base_price || 0)) * (1 + parseFloat(String(r.mk || 0))), 4)}</td>
                       <td style={{ padding: '8px 10px', borderBottom: '1px solid var(--border-light)' }}>
                         <div style={{ display: 'flex', gap: 5 }}>
                           <button onClick={() => openEdit(r)} style={{ background: 'transparent', border: '1px solid #B8860B', borderRadius: 0, padding: '4px 8px', cursor: 'pointer', fontSize: 'var(--text-xs)', color: '#B8860B' }}><i className="fa-solid fa-pencil" style={{ fontSize: 9 }} /></button>
@@ -387,17 +399,17 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
               />
             </div>
             <div>
-              <label style={lbl}>Markup (decimal) <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+              <label style={lbl}>Markup (%) <span style={{ color: 'var(--color-danger)' }}>*</span></label>
               <input
-                type="number" step="0.01" min="0" max="0.9999"
-                placeholder="e.g. 0.30"
-                style={{ ...inputU, borderBottomColor: (parseFloat(String(form.mk ?? '0')) >= 1) ? 'var(--color-danger)' : undefined }}
+                type="number" step="0.1" min="0" max="100"
+                placeholder="e.g. 30"
+                style={{ ...inputU, borderBottomColor: (parseFloat(String(form.mk ?? '0')) > 100) ? 'var(--color-danger)' : undefined }}
                 value={String(form.mk ?? '')}
                 onChange={e => updateForm({ mk: e.target.value })}
               />
-              {parseFloat(String(form.mk ?? '0')) >= 1
-                ? <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-danger)' }}>Nhập dạng thập phân, VD: 0.30 = 30%</span>
-                : <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Thập phân: 0.30 = 30%, 0.05 = 5%</span>
+              {parseFloat(String(form.mk ?? '0')) > 100
+                ? <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-danger)' }}>Markup không được vượt quá 100%</span>
+                : <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>VD: 30 = 30%, 5 = 5%, 0 = không markup</span>
               }
             </div>
             <div>

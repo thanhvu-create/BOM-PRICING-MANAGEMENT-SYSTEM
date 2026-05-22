@@ -36,6 +36,12 @@ const labelStyle: React.CSSProperties = {
 
 const DEFAULT_KARATS = ['10K', '14K', '18K', '20K', '22K', '24K', 'PT', 'AG']
 
+function fmtNum(v: any, dec = 4): string {
+  const n = parseFloat(String(v))
+  if (isNaN(n)) return '—'
+  return parseFloat(n.toFixed(dec)).toString()
+}
+
 export default function GoldPage() {
   const { toast, update } = useToast()
   const [rows, setRows] = useState<GoldRow[]>([])
@@ -123,10 +129,10 @@ export default function GoldPage() {
   function openEdit(r: GoldRow) {
     setEditRow(r)
     setFDate(r.price_date)
-    setFGoldOz(String(r.amark_gold_oz))
-    setFPtOz(String(r.amark_pt_oz))
-    setFAgOz(String(r.amark_ag_oz))
-    setFLF(String(r.loss_factor))
+    setFGoldOz(parseFloat(String(r.amark_gold_oz)).toString())
+    setFPtOz(parseFloat(String(r.amark_pt_oz)).toString())
+    setFAgOz(parseFloat(String(r.amark_ag_oz)).toString())
+    setFLF(parseFloat(String(r.loss_factor)).toString())
     setFOverwrite(true) // editing existing row always overwrites
     setFormError(''); setModal('edit')
   }
@@ -271,7 +277,7 @@ export default function GoldPage() {
         if (k === 'PT')      val = _ptOz   ? (_ptOz   / OZ_TO_GRAM) * _lf               : 0
         else if (k === 'AG') val = _agOz   ? (_agOz   / OZ_TO_GRAM) * _lf               : 0
         else { const n = parseInt(k); val = (_goldOz && n) ? (_goldOz / OZ_TO_GRAM) * (n / 24) * _lf : 0 }
-        return { label: k, value: val ? '$' + val.toFixed(4) + ' /gr' : '—' }
+        return { label: k, value: val ? '$' + fmtNum(val, 4) + ' /gr' : '—' }
       })
     : []
 
@@ -546,13 +552,13 @@ export default function GoldPage() {
                   onMouseLeave={e => (e.currentTarget.style.background = '')}>
                   <td style={{ ...td, color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>{i + 1}</td>
                   <td style={{ ...td, fontFamily: 'var(--font-body)', fontWeight: 700, color: 'var(--text-primary)' }}>{r.price_date}</td>
-                  <td style={{ ...td, color: '#B8860B' }}>{Number(r.amark_gold_oz).toFixed(3)}</td>
-                  <td style={td}>{Number(r.amark_pt_oz).toFixed(3)}</td>
-                  <td style={td}>{Number(r.amark_ag_oz).toFixed(3)}</td>
-                  <td style={{ ...td, color: '#2E8B8B' }}>{r.loss_factor}</td>
+                  <td style={{ ...td, color: '#B8860B' }}>{fmtNum(r.amark_gold_oz, 2)}</td>
+                  <td style={td}>{fmtNum(r.amark_pt_oz, 2)}</td>
+                  <td style={td}>{fmtNum(r.amark_ag_oz, 2)}</td>
+                  <td style={{ ...td, color: '#2E8B8B' }}>{fmtNum(r.loss_factor, 3)}</td>
                   {activeKarats.map(k => (
                     <td key={k} style={{ ...td, color: '#2E8B8B' }}>
-                      {kp?.[k] != null ? Number(kp[k]).toFixed(3) : '—'}
+                      {kp?.[k] != null ? fmtNum(kp[k], 4) : '—'}
                     </td>
                   ))}
                   <td style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-light)' }}>

@@ -10,8 +10,8 @@ export async function GET(req: NextRequest) {
 
     const db = createServiceClient()
     const profile = await getUserProfile(user.id, user.email)
-    if (profile?.role !== 'Admin')
-      return NextResponse.json({ error: 'Admin only' }, { status: 403 })
+    if (!['Admin', 'Manager'].includes(profile?.role || ''))
+      return NextResponse.json({ error: 'Admin hoặc Manager mới có quyền xem nhật ký' }, { status: 403 })
 
     const { searchParams } = new URL(req.url)
     const actor    = searchParams.get('actor')    || ''
