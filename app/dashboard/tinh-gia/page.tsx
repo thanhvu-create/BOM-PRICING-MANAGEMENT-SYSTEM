@@ -439,7 +439,7 @@ export default function TinhGiaPage() {
           return {
             ...row,
             gradeId:      d.grade_id   || '',
-            inputType:    d.type_input || 'mm',
+            inputType:    d.input_type || 'mm',
             sellingPrice: sp,
             pricingUnit:  pu,
             giaBan:       pu === 'pc' ? qty * sp : tlHot * sp,
