@@ -13,12 +13,11 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase
+    const db = createServiceClient()
+    const { data: profile } = await db
       .from('users').select('role, store').eq('id', user.id).single()
     const store = profile?.store || ''
     const role = profile?.role || ''
-
-    const db = createServiceClient()
 
     const [ptRes, pltRes, spRes, sgRes, spPersonRes, storeRes] = await Promise.all([
       db.from('mk_product_type').select('product_type'),

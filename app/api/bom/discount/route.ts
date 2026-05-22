@@ -8,7 +8,8 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase
+    const db = createServiceClient()
+    const { data: profile } = await db
       .from('users').select('username, role').eq('id', user.id).single()
     const role = profile?.role || ''
     const username = profile?.username || user.email || ''
@@ -16,7 +17,6 @@ export async function POST(request: Request) {
     const { bomId, newSellPrice, discountPct, discountAmt } = await request.json()
 
     // Lấy config limit
-    const db = createServiceClient()
     const { data: cfg } = await db.from('sys_config').select('value').eq('key', 'MANAGER_MAX_DISCOUNT').single()
     const managerMax = Number(cfg?.value) || 20
 

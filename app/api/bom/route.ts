@@ -15,12 +15,12 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase
+    const db = createServiceClient()
+    const { data: profile } = await db
       .from('users').select('username, role, store').eq('id', user.id).single()
     const role = profile?.role || ''
     const store = profile?.store || ''
 
-    const db = createServiceClient()
     let query = db.from('bom').select('*').order('created_at', { ascending: false })
 
     // Filter theo store nếu không phải Admin/Manager
@@ -43,15 +43,14 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase
+    const db = createServiceClient()
+    const { data: profile } = await db
       .from('users').select('username, role').eq('id', user.id).single()
     const username = profile?.username || user.email || ''
     const role = profile?.role || ''
 
     const payload = await request.json()
     const { header, golds, stones, calculatedCosts } = payload
-
-    const db = createServiceClient()
 
     // Generate BOM ID
     const { data: bomId } = await db.rpc('generate_bom_id', {
