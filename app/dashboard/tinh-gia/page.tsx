@@ -423,7 +423,6 @@ export default function TinhGiaPage() {
     if (!groupCode.trim()) return
     const sizeVal = parseFloat(size) || 0
     const ctwVal  = parseFloat(ctw1pc) || 0
-    if (sizeVal === 0 && ctwVal === 0) return
     try {
       const r = await fetch(`/api/master/lookup?groupCode=${encodeURIComponent(groupCode)}&size=${sizeVal}&ctw=${ctwVal}`)
       const d = await r.json()
@@ -1157,23 +1156,21 @@ export default function TinhGiaPage() {
 
                   <hr style={{ border: 'none', borderTop: '1px solid var(--border-light)', margin: '1rem 0' }} />
 
-                  {/* Labor Hours (CASE B) */}
-                  {hasStones && (
-                    <div style={{ marginBottom: '1rem' }}>
-                      <label style={{ ...lbl, marginBottom: 8 }}>
-                        EST. LABOR HOURS <span style={{ color: 'var(--color-danger)' }}>*</span>
-                      </label>
-                      <input
-                        type="number" min="0" step="0.5" placeholder="0"
-                        style={{ ...tdInput, width: '100%' }}
-                        value={laborHours}
-                        onChange={e => setLaborHours(e.target.value)}
-                        onBlur={e => {
-                          if (e.target.value !== lastCalcLaborHours.current) calculate()
-                        }}
-                      />
-                    </div>
-                  )}
+                  {/* Labor Hours (always visible; required only when hasStones) */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ ...lbl, marginBottom: 8 }}>
+                      EST. LABOR HOURS{hasStones && <span style={{ color: 'var(--color-danger)' }}> *</span>}
+                    </label>
+                    <input
+                      type="number" min="0" step="0.5" placeholder="0"
+                      style={{ ...tdInput, width: '100%' }}
+                      value={laborHours}
+                      onChange={e => setLaborHours(e.target.value)}
+                      onBlur={e => {
+                        if (e.target.value !== lastCalcLaborHours.current) calculate()
+                      }}
+                    />
+                  </div>
 
                   {/* SP Type */}
                   <div style={{ marginBottom: '1rem' }}>
