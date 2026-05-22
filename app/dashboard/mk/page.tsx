@@ -269,7 +269,7 @@ export default function MKPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+      <div className="page-header-row" style={{ marginBottom: '1.5rem' }}>
         <div>
           <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-secondary)', margin: '0 0 4px' }}>MASTER DATA</p>
           <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 4px' }}>Markup &amp; Pricing</h2>
@@ -404,7 +404,7 @@ export default function MKPage() {
               {activeKey === 'store_markup' ? (
                 // Store Markup: range row (2-col) + markup keys (3-col grid)
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem 1.5rem', marginBottom: '1.25rem' }}>
+                  <div className="form-grid-2" style={{ marginBottom: '1.25rem' }}>
                     {displayCols.filter(c => !c.key.startsWith(MARKUP_PFX)).map((c, idx) => (
                       <div key={c.key}>
                         <label style={lbl}>{c.label}</label>
@@ -415,7 +415,7 @@ export default function MKPage() {
                   </div>
                   <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '1rem' }}>
                     <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', margin: '0 0 0.85rem' }}>Markup Factor by Price List Type</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.85rem 1.25rem' }}>
+                    <div className="form-grid-3" style={{ gap: '0.85rem 1.25rem' }}>
                       {displayCols.filter(c => c.key.startsWith(MARKUP_PFX)).map(c => (
                         <div key={c.key}>
                           <label style={{ ...lbl, fontSize: '0.6rem' }}>{c.label}</label>
@@ -428,7 +428,7 @@ export default function MKPage() {
                 </>
               ) : activeSheet.columns.length > 3 ? (
                 // Wide sheets (≥4 fields): 2-column grid
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem 1.5rem' }}>
+                <div className="form-grid-2" style={{ gap: '1rem 1.5rem' }}>
                   {activeSheet.columns.map((c, idx) => {
                     const isSpType = activeKey === 'price_gram' && c.key === 'sp_type'
                     const isStore  = activeKey === 'price_list_type' && c.key === 'store'

@@ -276,7 +276,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
           {/* 5 Dropdowns — auto-generate Master Code, Grade ID, Names */}
           <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-light)', borderRadius: 2, padding: '0.75rem 1rem', marginBottom: '1rem' }}>
             <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', margin: '0 0 0.75rem' }}>Phân loại (auto-gen Master Code)</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-grid-3">
               {([['Category', 'category', dd?.categories], ['Type', 'type', dd?.types], ['Shape', 'shape_code', dd?.shapes], ['Color', 'color', dd?.colors], ['Quality', 'quality', dd?.qualities]] as [string, keyof StoneRow, DDOption[] | undefined][]).map(([label, key, opts]) => (
                 <div key={key}>
                   <label style={lbl}>{label}</label>
@@ -290,7 +290,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
           </div>
 
           {/* Auto-generated readonly fields */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+          <div className="form-grid-2" style={{ marginBottom: '1rem' }}>
             <div>
               <label style={lbl}>Master Code (auto)</label>
               <input style={{ ...inputU, color: '#2E8B8B', fontFamily: 'var(--font-mono)' }} value={form.master_code || ''} readOnly />
@@ -314,7 +314,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
           </div>
 
           {/* Size & type fields */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+          <div className="form-grid-4" style={{ marginBottom: '1rem' }}>
             <div>
               <label style={lbl}>Min Size</label>
               <input type="number" step="0.001" style={inputU} value={String(form.min_size ?? '')} onChange={e => updateForm({ min_size: e.target.value })} />
@@ -338,7 +338,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
           </div>
 
           {/* Price fields */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+          <div className="form-grid-3" style={{ marginBottom: '1rem' }}>
             <div>
               <label style={lbl}>Base Price ($)</label>
               <input type="number" step="0.0001" style={inputU} value={String(form.base_price ?? '')} onChange={e => updateForm({ base_price: e.target.value })} />
@@ -549,7 +549,7 @@ export default function MasterPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+      <div className="page-header-row" style={{ marginBottom: '1.5rem' }}>
         <div>
           <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-secondary)', margin: '0 0 4px' }}>MASTER DATA</p>
           <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 4px' }}>Stone Data</h2>

@@ -277,7 +277,7 @@ export default function GoldPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+      <div className="page-header-row" style={{ marginBottom: '1.5rem' }}>
         <div>
           <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-secondary)', margin: '0 0 4px' }}>MASTER DATA</p>
           <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 4px' }}>Gold Prices</h2>
@@ -614,7 +614,7 @@ export default function GoldPage() {
               )}
 
               {/* Row 1: Date + Loss Factor */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div className="form-grid-2" style={{ marginBottom: '1.25rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>Date *</label>
                   <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} readOnly={modal === 'edit'}
@@ -630,7 +630,7 @@ export default function GoldPage() {
               {/* Section: Amark Price */}
               <div style={{ marginBottom: '1.25rem' }}>
                 <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', textTransform: 'uppercase', marginBottom: 10 }}>Amark Price (USD/oz)</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                <div className="form-grid-3">
                   <div>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>Gold (oz) *</label>
                     <input type="number" value={fGoldOz} onChange={e => setFGoldOz(e.target.value)} placeholder="0.00" step="0.01"
@@ -652,7 +652,7 @@ export default function GoldPage() {
               {/* Section: Auto-Calculated */}
               <div style={{ marginBottom: '1rem' }}>
                 <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', textTransform: 'uppercase', marginBottom: 10 }}>Auto-Calculated (USD/gram)</p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+                <div className="grid-4col">
                   {previewEntries.map(({ label, value }) => {
                     const formula = label === 'AG'
                       ? 'Ag_oz / 31.103 × LF'

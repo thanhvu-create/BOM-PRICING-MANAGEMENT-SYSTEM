@@ -750,7 +750,7 @@ export default function TinhGiaPage() {
           </div>
           <div style={{ padding: '1.5rem' }}>
             {/* Row 1: DATE | PRODUCT TYPE | CUSTOMER NAME | SO/MO */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="form-grid-4" style={{ marginBottom: '1rem' }}>
               <div>
                 <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>
                   {t('labelDate')} <span style={{ color: 'var(--color-danger)' }}>*</span>
@@ -778,7 +778,7 @@ export default function TinhGiaPage() {
               </div>
             </div>
             {/* Row 2: MODEL NUMBER | PRICE LIST TYPE | SALESPERSON | STORE */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="form-grid-4" style={{ marginBottom: '1rem' }}>
               <div>
                 <label style={{ ...lbl, fontWeight: 500, marginBottom: 6 }}>{t('labelModelNum')}</label>
                 <input style={inputUnder} value={model} onChange={e => setModel(e.target.value)} placeholder="Model" />
@@ -808,7 +808,7 @@ export default function TinhGiaPage() {
               </div>
             </div>
             {/* Row 3: IMAGE 1 | IMAGE 2 | IMAGE 3 | FOLDER URL */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="form-grid-4" style={{ marginBottom: '1rem' }}>
               <DriveImageInput
                 label="IMAGE 1 URL"
                 value={img1}
@@ -1138,7 +1138,7 @@ export default function TinhGiaPage() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', opacity: calculating ? 0.65 : 1, transition: 'opacity 0.2s' }}>
+          <div className="step4-grid" style={{ opacity: calculating ? 0.65 : 1, transition: 'opacity 0.2s' }}>
               {/* ── LEFT: BOM Info + Labor + SP Type ── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div style={{ ...card, padding: '1.25rem 1.5rem', height: '100%' }}>

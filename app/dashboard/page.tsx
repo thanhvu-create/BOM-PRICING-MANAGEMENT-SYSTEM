@@ -81,7 +81,7 @@ export default function DashboardPage() {
     <div>
 
       {/* ── Section header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '1.5rem' }}>
+      <div className="page-header-row" style={{ marginBottom: '1.5rem' }}>
         <div>
           <p style={{ fontSize: 'var(--text-xs)', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 4 }}>
             OVERVIEW
@@ -108,7 +108,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── KPI Cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div className="grid-4col" style={{ marginBottom: '1.5rem' }}>
         {[
           { icon: 'fa-file-invoice-dollar', label: 'TOTAL BOMS',       value: (stats?.totalBOMs ?? 0).toLocaleString(),      sub: 'All time',         heading: true },
           { icon: 'fa-calendar-day',        label: "TODAY'S BOMS",     value: (stats?.todayBOMs ?? 0).toLocaleString(),      sub: 'Today',            heading: true },
@@ -136,7 +136,7 @@ export default function DashboardPage() {
       {showValue && stats && (
         <>
           {/* Row 2: Sales by Store + Top Product Types */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="grid-2col" style={{ marginBottom: '1rem' }}>
 
             {/* Sales by Store */}
             <div style={card}>
@@ -193,7 +193,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Row 3: Top Salespersons + Discount Summary */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="grid-2col" style={{ marginBottom: '1rem' }}>
 
             {/* Top 5 Salespersons */}
             <div style={card}>

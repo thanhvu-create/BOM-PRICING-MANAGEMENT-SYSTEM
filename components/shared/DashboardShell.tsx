@@ -399,14 +399,16 @@ function DashboardContent({ user, children }: Props) {
         )}
 
         {/* ── CONTENT ────────────────────────────────────── */}
-        <main style={{ padding: '1.5rem' }}>
+        <main className="main-content">
           {children}
         </main>
 
         <style>{`
+          .main-content { padding: 1.5rem; }
           @media (max-width: 767px) {
             .hide-mobile { display: none !important; }
             .show-mobile { display: flex !important; }
+            .main-content { padding: 0.75rem; }
           }
           @media (min-width: 768px) {
             .show-mobile { display: none !important; }

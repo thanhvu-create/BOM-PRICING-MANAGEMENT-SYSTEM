@@ -59,9 +59,9 @@ export default function ReviewPage() {
   const { t } = useLang()
   const { toast, update, dismiss } = useToast()
 
-  // GAS exact: cost-total-restricted = Admin/Manager only; cost-restricted = NOT Order; discount cols = all non-Order
+  // cost-total-restricted = Admin/Manager only; Sell/Disc/AfterDisc visible to all roles incl. Order
   const showCostTotal = role === 'Admin' || role === 'Manager'
-  const showSellPrice = role !== 'Order'
+  const showSellPrice = true
   const showStones    = role !== 'Sales' && role !== 'Sales Supervisor'
   const canDiscount   = role === 'Admin' || role === 'Manager' || role === 'Sales Supervisor'
 
@@ -586,7 +586,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div className="page-header-row" style={{ marginBottom: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: 16, color: 'var(--text-secondary)' }} />
           <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>{t('reviewTitle')}</h2>
@@ -609,7 +609,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
 
       {/* Filter bar — date + store filters */}
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, padding: '0.75rem 1rem', marginBottom: '1rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+        <div className="filter-bar">
           <input type="date" style={{ ...inputStyle, width: '100%' }} value={dateFrom}
             onChange={e => { setDateFrom(e.target.value); setPage(1) }} />
           <input type="date" style={{ ...inputStyle, width: '100%' }} value={dateTo}

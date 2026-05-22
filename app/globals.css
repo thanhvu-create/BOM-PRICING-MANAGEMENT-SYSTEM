@@ -213,3 +213,66 @@ body.modal-open header {
 
 /* ── Pulse dot ── */
 @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+/* ── Responsive Utilities ── */
+
+/* Table scroll wrapper */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-scroll table { min-width: 600px; }
+
+/* Responsive grids */
+.grid-4col { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+.grid-2col { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+.grid-3col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+
+/* Filter bar */
+.filter-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+
+/* Page header row */
+.page-header-row { display: flex; justify-content: space-between; align-items: flex-end; }
+.page-header-row .header-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+/* Form grid for BOM header (4 col) */
+.form-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+.form-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+.form-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+
+/* Two-column layout for Step 4 */
+.step4-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+
+/* Add user form: 4 fields + button */
+.add-user-form-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end; }
+
+/* Modal body horizontal padding */
+.modal-body-inner { padding: 1.5rem; }
+
+@media (max-width: 767px) {
+  /* Grids collapse to 1 col */
+  .grid-4col { grid-template-columns: repeat(2, 1fr); }
+  .grid-2col { grid-template-columns: 1fr; }
+  .grid-3col { grid-template-columns: 1fr; }
+  .filter-bar { grid-template-columns: 1fr; }
+  .form-grid-4 { grid-template-columns: 1fr 1fr; }
+  .form-grid-3 { grid-template-columns: 1fr 1fr; }
+  .form-grid-2 { grid-template-columns: 1fr; }
+  .step4-grid  { grid-template-columns: 1fr; }
+
+  /* Page header stacks */
+  .page-header-row { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+
+  /* Reduce modal inner padding */
+  .modal-body-inner { padding: 1rem; }
+
+  /* Table min-width override per context */
+  .table-scroll table { min-width: 0; }
+
+  /* Add user form collapses to 2-col, button spans full width */
+  .add-user-form-row { grid-template-columns: 1fr 1fr; }
+  .add-user-form-row > *:last-child { grid-column: 1 / -1; }
+
+  /* Button groups wrap */
+  .btn-group-wrap { flex-wrap: wrap; gap: 0.5rem; }
+
+  /* Hide non-essential cols on mobile — add class to <td>/<th> */
+  .col-hide-mobile { display: none !important; }
+}

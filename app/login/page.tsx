@@ -67,6 +67,7 @@ export default function LoginPage() {
       alignItems: 'center',
       justifyContent: 'center',
       fontFamily: 'var(--font-body)',
+      padding: '1rem',
     }}>
       <div style={{
         background: 'var(--bg-surface)',

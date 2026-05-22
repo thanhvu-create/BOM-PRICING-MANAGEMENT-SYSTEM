@@ -162,7 +162,7 @@ export default function UsersPage() {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+      <div className="page-header-row" style={{ marginBottom: '1.25rem' }}>
         <div>
           <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-secondary)', margin: '0 0 4px' }}>
             ADMIN
@@ -204,7 +204,7 @@ export default function UsersPage() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: '1rem', alignItems: 'end' }}>
+          <div className="add-user-form-row">
             <div>
               <label style={labelStyle}>Username *</label>
               <input
@@ -269,7 +269,8 @@ export default function UsersPage() {
 
       {/* Users Table */}
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
           <thead>
             <tr>
               {['ID', 'USERNAME', 'ROLE', 'STORE', 'CREATED', 'ACTIONS'].map(h => (
@@ -349,6 +350,7 @@ export default function UsersPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* ── EDIT MODAL ── */}
