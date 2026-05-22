@@ -18,7 +18,7 @@ interface Dropdowns {
   storeNames: string[]
 }
 interface GoldRow  { id: number; goldType: string; color: string; weight: string; pricePerGr: number; cost: number }
-interface StoneRow { id: number; groupCode: string; size: string; ctw1pc: string; qty: string; tlHot: number; gradeId: string; giaBan: number; inputType: string; sellingPrice: number; pricingUnit: string }
+interface StoneRow { id: number; groupCode: string; size: string; ctw1pc: string; qty: string; tlHot: number; gradeId: string; giaBan: number; inputType: string; sellingPrice: number; pricingUnit: string; notFound: boolean }
 interface PricingData {
   costGold: number; costStones: number; costLabor: number
   costSubtotal: number; costCif: number; costTotal: number; sellPrice: number
@@ -30,7 +30,7 @@ function nextId() { return ++_rowId }
 function today() { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }) }
 function fmt$(n: number) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
 function newGold(): GoldRow  { return { id: nextId(), goldType: '18K', color: 'Yellow', weight: '', pricePerGr: 0, cost: 0 } }
-function newStone(): StoneRow { return { id: nextId(), groupCode: '', size: '', ctw1pc: '', qty: '', tlHot: 0, gradeId: '', giaBan: 0, inputType: 'mm', sellingPrice: 0, pricingUnit: 'ct' } }
+function newStone(): StoneRow { return { id: nextId(), groupCode: '', size: '', ctw1pc: '', qty: '', tlHot: 0, gradeId: '', giaBan: 0, inputType: 'mm', sellingPrice: 0, pricingUnit: 'ct', notFound: false } }
 
 /* ── STYLE CONSTANTS ───────────────────────────────────────── */
 const inputUnder: React.CSSProperties = {
@@ -194,7 +194,7 @@ export default function TinhGiaPage() {
             size: String(s.size || ''), ctw1pc: String(ctw || ''),
             qty: String(qty || ''), tlHot,
             gradeId: s.grade_id || '', giaBan, inputType: s.input_type || 'mm',
-            sellingPrice: 0, pricingUnit: 'ct',
+            sellingPrice: 0, pricingUnit: 'ct', notFound: false,
           }
         })
         setStoneRows(filledStones)
@@ -268,7 +268,7 @@ export default function TinhGiaPage() {
             size: String(s.size || ''), ctw1pc: String(ctw || ''),
             qty: String(qty || ''), tlHot: s.tl_hot || ctw * qty,
             gradeId: s.grade_id || '', giaBan: s.gia_ban || 0,
-            inputType: s.input_type || 'mm', sellingPrice: 0, pricingUnit: 'ct',
+            inputType: s.input_type || 'mm', sellingPrice: 0, pricingUnit: 'ct', notFound: false,
           }
         })
         setStoneRows(filledStones)
@@ -423,6 +423,8 @@ export default function TinhGiaPage() {
     if (!groupCode.trim()) return
     const sizeVal = parseFloat(size) || 0
     const ctwVal  = parseFloat(ctw1pc) || 0
+    // Whether user has actually entered a size/ctw (triggers "not found" warning if no match)
+    const hasSizeCriteria = sizeVal > 0 || ctwVal > 0
     try {
       const r = await fetch(`/api/master/lookup?groupCode=${encodeURIComponent(groupCode)}&size=${sizeVal}&ctw=${ctwVal}`)
       const d = await r.json()
@@ -441,6 +443,23 @@ export default function TinhGiaPage() {
             sellingPrice: sp,
             pricingUnit:  pu,
             giaBan:       pu === 'pc' ? qty * sp : tlHot * sp,
+            notFound:     false,
+          }
+        }))
+      } else {
+        // No size match — but the API may still return type_input from a fallback query
+        setStoneRows(rows => rows.map(row => {
+          if (row.id !== rowId) return row
+          return {
+            ...row,
+            // Update inputType if the API discovered it (even without a size match)
+            inputType:    d.type_input || row.inputType,
+            // Clear grade & price since no match
+            gradeId:      '',
+            sellingPrice: 0,
+            giaBan:       0,
+            // Show "not found" warning only when user has entered a size/ctw value
+            notFound:     hasSizeCriteria,
           }
         }))
       }
@@ -501,6 +520,13 @@ export default function TinhGiaPage() {
         const gc = field === 'groupCode' ? val : r.groupCode
         const sz = field === 'size' ? val : r.size
         updated.giaBan = 0
+        updated.notFound = false  // reset warning while re-looking up
+        if (field === 'groupCode') {
+          // Reset inputType/grade on group change; lookup will refresh them
+          updated.gradeId = ''
+          updated.inputType = 'mm'
+          updated.sellingPrice = 0
+        }
         scheduleLookup(id, gc, sz, r.ctw1pc)
       }
 
@@ -1074,8 +1100,13 @@ export default function TinhGiaPage() {
                     <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textAlign: 'center' }}>
                       {r.inputType || 'mm'}
                     </td>
-                    <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: r.gradeId ? 'var(--color-success)' : 'var(--text-muted)', paddingRight: 6 }}>
-                      {r.gradeId || '—'}
+                    <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', paddingRight: 6,
+                      color: r.gradeId ? 'var(--color-success)' : r.notFound ? 'var(--color-danger)' : 'var(--text-muted)' }}>
+                      {r.gradeId
+                        ? r.gradeId
+                        : r.notFound
+                          ? <span title="Không tìm thấy size phù hợp trong dữ liệu">⚠ Không tìm thấy</span>
+                          : '—'}
                     </td>
                     {/* Giá bán — cost-restricted */}
                     {canSeeAll && (
