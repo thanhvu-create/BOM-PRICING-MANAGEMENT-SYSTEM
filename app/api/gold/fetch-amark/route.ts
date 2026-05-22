@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getUserProfile } from '@/lib/supabase/server'
 
 // ─── Yahoo Finance — gold/silver/platinum futures ─────────────────────────
 // GC=F = Gold futures (≈ spot), SI=F = Silver futures, PL=F = Platinum futures
@@ -58,7 +58,7 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const db = createServiceClient()
-    const { data: profile } = await db.from('users').select('role').eq('id', user.id).single()
+    const profile = await getUserProfile(user.id, user.email)
     if (!['Admin', 'Manager'].includes(profile?.role || ''))
       return NextResponse.json({ error: 'Admin or Manager only' }, { status: 403 })
 

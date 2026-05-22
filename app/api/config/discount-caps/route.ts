@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getUserProfile } from '@/lib/supabase/server'
 import { logAction } from '@/lib/audit'
 
 // GET /api/config/discount-caps
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const db = createServiceClient()
-    const { data: profile } = await db.from('users').select('username, role').eq('id', user.id).single()
+    const profile = await getUserProfile(user.id, user.email)
     if (profile?.role !== 'Admin') return NextResponse.json({ error: 'Admin only' }, { status: 403 })
 
     const { managerMax } = await request.json()

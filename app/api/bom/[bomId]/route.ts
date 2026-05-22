@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getUserProfile } from '@/lib/supabase/server'
 import { logAction } from '@/lib/audit'
 
 // GET /api/bom/[bomId] — lấy chi tiết BOM
@@ -71,14 +71,13 @@ export async function DELETE(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase
-      .from('users').select('username, role').eq('id', user.id).single()
+    const db = createServiceClient()
+    const profile = await getUserProfile(user.id, user.email)
     if (profile?.role !== 'Admin') {
       return NextResponse.json({ error: 'Admin only' }, { status: 403 })
     }
 
     const { bomId } = await params
-    const db = createServiceClient()
 
     // Fetch before delete for audit
     const { data: oldBom } = await db.from('bom').select('bom_id, so_mo, model, sell_price').eq('bom_id', bomId).single()
@@ -113,16 +112,14 @@ export async function PUT(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase
-      .from('users').select('username, role').eq('id', user.id).single()
+    const db = createServiceClient()
+    const profile = await getUserProfile(user.id, user.email)
     const username = profile?.username || user.email || ''
 
     const { bomId } = await params
     const payload = await request.json()
     const { header, golds, stones, calculatedCosts } = payload
     const costs = calculatedCosts || {}
-
-    const db = createServiceClient()
 
     // Fetch before update for audit diff
     const { data: oldBom } = await db.from('bom').select('sell_price, discount_pct, so_mo, model').eq('bom_id', bomId).single()

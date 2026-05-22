@@ -4,7 +4,7 @@
  * Body: { key: string, value: string }
  */
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getUserProfile } from '@/lib/supabase/server'
 import { logAction } from '@/lib/audit'
 
 export async function GET(request: Request) {
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
   if (error) return NextResponse.json({ success: false, message: error.message })
 
-  const { data: profile } = await db.from('users').select('username, role').eq('id', user.id).single()
+  const profile = await getUserProfile(user.id, user.email)
   logAction({
     actor:    profile?.username || user.email || '',
     role:     profile?.role,

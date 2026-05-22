@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getUserProfile } from '@/lib/supabase/server'
 
 const SHEET_TABLE: Record<string, string> = {
   'DM_Category': 'dm_category',
@@ -44,7 +44,7 @@ export async function POST(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await createServiceClient().from('users').select('role').eq('id', user.id).single()
+    const profile = await getUserProfile(user.id, user.email)
     if (!['Admin', 'Manager'].includes(profile?.role || ''))
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -91,7 +91,7 @@ export async function DELETE(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await createServiceClient().from('users').select('role').eq('id', user.id).single()
+    const profile = await getUserProfile(user.id, user.email)
     if (!['Admin', 'Manager'].includes(profile?.role || ''))
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

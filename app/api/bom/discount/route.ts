@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getUserProfile } from '@/lib/supabase/server'
 
 // POST /api/bom/discount — Apply discount to a BOM
 export async function POST(request: Request) {
@@ -9,8 +9,7 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const db = createServiceClient()
-    const { data: profile } = await db
-      .from('users').select('username, role').eq('id', user.id).single()
+    const profile = await getUserProfile(user.id, user.email)
     const role = profile?.role || ''
     const username = profile?.username || user.email || ''
 

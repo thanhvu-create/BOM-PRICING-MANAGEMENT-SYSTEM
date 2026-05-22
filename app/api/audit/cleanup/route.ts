@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getUserProfile } from '@/lib/supabase/server'
 
 // GET /api/audit/cleanup — Vercel Cron target (daily @ 2am UTC)
 // Also accepts DELETE for manual trigger by Admin
@@ -15,13 +15,11 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   // Allow Admin to manually trigger cleanup
-  const { createClient } = await import('@/lib/supabase/server')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const db = createServiceClient()
-  const { data: profile } = await db.from('users').select('role').eq('id', user.id).single()
+  const profile = await getUserProfile(user.id, user.email)
   if (profile?.role !== 'Admin')
     return NextResponse.json({ error: 'Admin only' }, { status: 403 })
 

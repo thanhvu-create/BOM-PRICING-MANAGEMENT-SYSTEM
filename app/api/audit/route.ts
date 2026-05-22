@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getUserProfile } from '@/lib/supabase/server'
 
 // GET /api/audit?actor=&entity=&action=&from=&to=&page=&pageSize=
 export async function GET(req: NextRequest) {
@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const db = createServiceClient()
-    const { data: profile } = await db.from('users').select('role').eq('id', user.id).single()
+    const profile = await getUserProfile(user.id, user.email)
     if (profile?.role !== 'Admin')
       return NextResponse.json({ error: 'Admin only' }, { status: 403 })
 

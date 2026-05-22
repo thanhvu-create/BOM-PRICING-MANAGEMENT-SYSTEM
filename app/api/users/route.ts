@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getUserProfile } from '@/lib/supabase/server'
 import { logAction } from '@/lib/audit'
 
 // GET — danh sách users (Admin only)
@@ -9,7 +9,7 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await createServiceClient().from('users').select('role').eq('id', user.id).single()
+    const profile = await getUserProfile(user.id, user.email)
     if (profile?.role !== 'Admin')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const db = createServiceClient()
-    const { data: actorProfile } = await db.from('users').select('username, role').eq('id', user.id).single()
+    const actorProfile = await getUserProfile(user.id, user.email)
     if (actorProfile?.role !== 'Admin')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -83,7 +83,7 @@ export async function PUT(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const db = createServiceClient()
-    const { data: actorProfile } = await db.from('users').select('username, role').eq('id', user.id).single()
+    const actorProfile = await getUserProfile(user.id, user.email)
     if (actorProfile?.role !== 'Admin')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -128,7 +128,7 @@ export async function DELETE(request: Request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const db = createServiceClient()
-    const { data: actorProfile } = await db.from('users').select('username, role').eq('id', user.id).single()
+    const actorProfile = await getUserProfile(user.id, user.email)
     if (actorProfile?.role !== 'Admin')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

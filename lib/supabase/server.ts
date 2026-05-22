@@ -29,3 +29,17 @@ export function createServiceClient() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 }
+
+// Lookup user profile by Supabase Auth user.id, with fallback to email-derived username.
+// Needed because some accounts may have a mismatch between public.users.id and auth.users.id.
+export async function getUserProfile(userId: string, userEmail: string | undefined) {
+  const db = createServiceClient()
+  let { data } = await db.from('users').select('username, role, store').eq('id', userId).single()
+  if (!data && userEmail) {
+    const username = userEmail.replace(/@bom\.internal$/i, '')
+    const { data: fallback } = await db
+      .from('users').select('username, role, store').eq('username', username).single()
+    data = fallback
+  }
+  return data as { username: string; role: string; store: string } | null
+}

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getUserProfile } from '@/lib/supabase/server'
 import { logAction } from '@/lib/audit'
 
 // POST /api/bom/[bomId]/discount — áp dụng chiết khấu
@@ -12,8 +12,7 @@ export async function POST(
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: profile } = await supabase
-      .from('users').select('username, role').eq('id', user.id).single()
+    const profile = await getUserProfile(user.id, user.email)
     const username = profile?.username || ''
     const role = profile?.role || ''
 
