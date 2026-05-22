@@ -420,10 +420,10 @@ CREATE TRIGGER trg_dm_size_updated_at
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- Lookup stone grade (tương đương lookupStoneGrade trong GAS)
+-- Luôn dùng p_mm_size (CT/MM SIZE) để tra cứu, bất kể type_input là mm hay ct
 CREATE OR REPLACE FUNCTION lookup_stone_grade(
   p_group_code  text,
-  p_mm_size     numeric,
-  p_ctw1pc      numeric
+  p_mm_size     numeric
 )
 RETURNS TABLE (
   grade_id      text,
@@ -440,13 +440,7 @@ BEGIN
     sm.unit
   FROM stone_material sm
   WHERE sm.group_code = p_group_code
-    AND (
-      (sm.type_input = 'mm' AND p_mm_size  BETWEEN sm.min_size AND sm.max_size)
-      OR
-      (sm.type_input = 'ct' AND
-        CASE WHEN p_ctw1pc > 0 THEN p_ctw1pc ELSE p_mm_size END
-        BETWEEN sm.min_size AND sm.max_size)
-    )
+    AND p_mm_size BETWEEN sm.min_size AND sm.max_size
   LIMIT 1;
 END;
 $$ LANGUAGE plpgsql;

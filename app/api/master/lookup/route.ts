@@ -1,9 +1,9 @@
 /**
- * GET /api/master/lookup?groupCode=DIA&size=2.5&ctw=0.06
+ * GET /api/master/lookup?groupCode=DIA&size=2.5
  * Thay thế lookupStoneGrade() trong Server_API_BOM.gs
  *
- * Khi không tìm thấy match theo size/ctw, vẫn trả về type_input của group
- * để client có thể hiển thị đúng cột INPUT TYPE ngay khi chọn group code.
+ * Luôn dùng CT/MM SIZE để tra cứu range, bất kể type_input là mm hay ct.
+ * Khi không tìm thấy match, vẫn trả về type_input của group để client hiển thị đúng cột.
  */
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -16,13 +16,11 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const groupCode = searchParams.get('groupCode') || ''
   const mmSize    = parseFloat(searchParams.get('size') || '0')
-  const ctw1pc    = parseFloat(searchParams.get('ctw') || '0')
 
-  // Primary lookup: match by group_code + size range
+  // Primary lookup: match by group_code + CT/MM size range (always uses mmSize)
   const { data, error } = await supabase.rpc('lookup_stone_grade', {
     p_group_code: groupCode,
     p_mm_size:    mmSize,
-    p_ctw1pc:     ctw1pc,
   })
 
   if (error) return NextResponse.json({ success: false, message: error.message })
@@ -42,6 +40,6 @@ export async function GET(request: Request) {
   return NextResponse.json({
     success: false,
     type_input: fallback?.type_input ?? null,
-    message: `No grade found for "${groupCode}" size=${mmSize} ctw=${ctw1pc}`,
+    message: `No grade found for "${groupCode}" size=${mmSize}`,
   })
 }

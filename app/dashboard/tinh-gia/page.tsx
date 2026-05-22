@@ -422,11 +422,10 @@ export default function TinhGiaPage() {
   const lookupStone = useCallback(async (rowId: number, groupCode: string, size: string, ctw1pc: string) => {
     if (!groupCode.trim()) return
     const sizeVal = parseFloat(size) || 0
-    const ctwVal  = parseFloat(ctw1pc) || 0
-    // Whether user has actually entered a size/ctw (triggers "not found" warning if no match)
-    const hasSizeCriteria = sizeVal > 0 || ctwVal > 0
+    // Whether user has entered a CT/MM size (triggers "not found" warning if no match)
+    const hasSizeCriteria = sizeVal > 0
     try {
-      const r = await fetch(`/api/master/lookup?groupCode=${encodeURIComponent(groupCode)}&size=${sizeVal}&ctw=${ctwVal}`)
+      const r = await fetch(`/api/master/lookup?groupCode=${encodeURIComponent(groupCode)}&size=${sizeVal}`)
       const d = await r.json()
       if (d.success) {
         setStoneRows(rows => rows.map(row => {
@@ -1025,7 +1024,7 @@ export default function TinhGiaPage() {
               </colgroup>
               <thead>
                 <tr>
-                  {['#', 'STONE TYPE (MASTER)', 'MM SIZE', 'CTW/1PC', 'QTY', 'CTW TOTAL', 'INPUT TYPE', 'GRADE ID',
+                  {['#', 'STONE TYPE (MASTER)', 'CT/MM SIZE', 'CTW/1PC', 'QTY', 'CTW TOTAL', 'INPUT TYPE', 'GRADE ID',
                     ...(canSeeAll ? ['SELL PRICE'] : []),
                     'DELETE'
                   ].map((h, i) => <th key={`sh-${i}`} style={{ ...thStyle, textAlign: h === 'SELL PRICE' || h === 'CTW TOTAL' ? 'right' : h === 'DELETE' || h === '#' ? 'center' : 'left' }}>{h}</th>)}
