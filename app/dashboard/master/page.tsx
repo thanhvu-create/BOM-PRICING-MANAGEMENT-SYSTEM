@@ -135,9 +135,22 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
   }
 
   async function handleSave() {
-    if (!form.grade_id) { setFormError('Grade ID là bắt buộc'); return }
-    const mkVal = parseFloat(String(form.mk ?? '0'))
-    if (mkVal >= 1) { setFormError('Markup phải là số thập phân < 1 (VD: 0.30 = 30%)'); return }
+    // Required field validation
+    if (!form.category) { setFormError('Category là bắt buộc'); return }
+    if (!form.type) { setFormError('Type là bắt buộc'); return }
+    if (!form.shape_code) { setFormError('Shape là bắt buộc'); return }
+    if (!form.color) { setFormError('Color là bắt buộc'); return }
+    const minS = parseFloat(String(form.min_size ?? ''))
+    const maxS = parseFloat(String(form.max_size ?? ''))
+    if (isNaN(minS) || String(form.min_size ?? '').trim() === '') { setFormError('Min Size là bắt buộc'); return }
+    if (isNaN(maxS) || String(form.max_size ?? '').trim() === '') { setFormError('Max Size là bắt buộc'); return }
+    if (minS > maxS) { setFormError('Min Size không được lớn hơn Max Size'); return }
+    const bp = parseFloat(String(form.base_price ?? ''))
+    if (isNaN(bp) || bp <= 0) { setFormError('Base Price ($) là bắt buộc và phải lớn hơn 0'); return }
+    const mkVal = parseFloat(String(form.mk ?? ''))
+    if (isNaN(mkVal) || String(form.mk ?? '').trim() === '') { setFormError('Markup là bắt buộc (nhập 0 nếu không có markup)'); return }
+    if (mkVal < 0 || mkVal >= 1) { setFormError('Markup phải là số thập phân từ 0 đến dưới 1 (VD: 0.30 = 30%)'); return }
+    if (!form.grade_id) { setFormError('Grade ID chưa được tạo — vui lòng chọn đủ Category, Type, Shape'); return }
     setSaving(true); setFormError('')
     try {
       const body = { ...form, old_grade_id: oldGradeId || form.grade_id }
@@ -277,10 +290,26 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
           <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-light)', borderRadius: 2, padding: '0.75rem 1rem', marginBottom: '1rem' }}>
             <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', margin: '0 0 0.75rem' }}>Phân loại (auto-gen Master Code)</p>
             <div className="form-grid-3">
-              {([['Category', 'category', dd?.categories], ['Type', 'type', dd?.types], ['Shape', 'shape_code', dd?.shapes], ['Color', 'color', dd?.colors], ['Quality', 'quality', dd?.qualities]] as [string, keyof StoneRow, DDOption[] | undefined][]).map(([label, key, opts]) => (
+              {([
+                ['Category', 'category', dd?.categories, true],
+                ['Type',     'type',     dd?.types,       true],
+                ['Shape',    'shape_code', dd?.shapes,    true],
+                ['Color',    'color',    dd?.colors,      true],
+                ['Quality',  'quality',  dd?.qualities,   false],
+              ] as [string, keyof StoneRow, DDOption[] | undefined, boolean][]).map(([label, key, opts, required]) => (
                 <div key={key}>
-                  <label style={lbl}>{label}</label>
-                  <select style={selS} value={String(form[key] || '')} onChange={e => updateForm({ [key]: e.target.value } as Partial<StoneRow>)}>
+                  <label style={lbl}>
+                    {label}
+                    {required
+                      ? <span style={{ color: 'var(--color-danger)', marginLeft: 2 }}>*</span>
+                      : <span style={{ color: 'var(--text-muted)', marginLeft: 4, fontSize: '0.6rem', fontWeight: 400, letterSpacing: '0.05em', textTransform: 'none' }}>(tùy chọn)</span>
+                    }
+                  </label>
+                  <select
+                    style={{ ...selS, borderColor: (required && !form[key]) ? 'var(--color-danger)' : undefined }}
+                    value={String(form[key] || '')}
+                    onChange={e => updateForm({ [key]: e.target.value } as Partial<StoneRow>)}
+                  >
                     <option value="">—</option>
                     {(opts || []).map(o => <option key={o.code} value={o.name}>{o.name}</option>)}
                   </select>
@@ -314,14 +343,21 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
           </div>
 
           {/* Size & type fields */}
+          {(() => {
+            const minV = parseFloat(String(form.min_size ?? ''))
+            const maxV = parseFloat(String(form.max_size ?? ''))
+            const sizeWarn = !isNaN(minV) && !isNaN(maxV) && minV > maxV
+            return (
           <div className="form-grid-4" style={{ marginBottom: '1rem' }}>
             <div>
-              <label style={lbl}>Min Size</label>
-              <input type="number" step="0.001" style={inputU} value={String(form.min_size ?? '')} onChange={e => updateForm({ min_size: e.target.value })} />
+              <label style={lbl}>Min Size <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+              <input type="number" step="0.001" style={{ ...inputU, borderBottomColor: sizeWarn ? 'var(--color-danger)' : undefined }} value={String(form.min_size ?? '')} onChange={e => updateForm({ min_size: e.target.value })} />
+              {sizeWarn && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-danger)' }}>Min phải ≤ Max</span>}
             </div>
             <div>
-              <label style={lbl}>Max Size</label>
-              <input type="number" step="0.001" style={inputU} value={String(form.max_size ?? '')} onChange={e => updateForm({ max_size: e.target.value })} />
+              <label style={lbl}>Max Size <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+              <input type="number" step="0.001" style={{ ...inputU, borderBottomColor: sizeWarn ? 'var(--color-danger)' : undefined }} value={String(form.max_size ?? '')} onChange={e => updateForm({ max_size: e.target.value })} />
+              {sizeWarn && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-danger)' }}>Max phải ≥ Min</span>}
             </div>
             <div>
               <label style={lbl}>Pricing Unit</label>
@@ -336,15 +372,22 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
               </select>
             </div>
           </div>
+            )
+          })()}
 
           {/* Price fields */}
           <div className="form-grid-3" style={{ marginBottom: '1rem' }}>
             <div>
-              <label style={lbl}>Base Price ($)</label>
-              <input type="number" step="0.0001" style={inputU} value={String(form.base_price ?? '')} onChange={e => updateForm({ base_price: e.target.value })} />
+              <label style={lbl}>Base Price ($) <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+              <input
+                type="number" step="0.0001"
+                style={{ ...inputU, borderBottomColor: (parseFloat(String(form.base_price ?? '0')) <= 0 && String(form.base_price ?? '') !== '') ? 'var(--color-danger)' : undefined }}
+                value={String(form.base_price ?? '')}
+                onChange={e => updateForm({ base_price: e.target.value })}
+              />
             </div>
             <div>
-              <label style={lbl}>Markup (decimal)</label>
+              <label style={lbl}>Markup (decimal) <span style={{ color: 'var(--color-danger)' }}>*</span></label>
               <input
                 type="number" step="0.01" min="0" max="0.9999"
                 placeholder="e.g. 0.30"
