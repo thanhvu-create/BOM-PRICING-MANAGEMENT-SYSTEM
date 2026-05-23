@@ -24,6 +24,8 @@ export async function GET() {
       colors:      colRes.data || [],
       qualities:   quaRes.data || [],
       definitions: defRes.data || [],
+    }, {
+      headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400' },
     })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })

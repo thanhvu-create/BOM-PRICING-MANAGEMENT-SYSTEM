@@ -20,7 +20,10 @@ export async function GET() {
     const role = profile?.role || ''
     const store = profile?.store || ''
 
-    let query = db.from('bom').select('*').order('created_at', { ascending: false })
+    // List view: select only columns needed for table + thumbnail. img2/img3 loaded on-demand in detail modal.
+    let query = db.from('bom')
+      .select('id, bom_id, date, product_type, so_mo, model, total_stone_qty, total_stone_ctw, sell_price, discount_pct, discount_price, cost_total, sales_person, store, customer_name, created_by, img1, price_list_type, note, folder_url')
+      .order('created_at', { ascending: false })
 
     // Filter theo store nếu không phải Admin/Manager
     if (store && !['Admin', 'Manager'].includes(role) && STORE_PRICE_MAP[store]) {
@@ -29,7 +32,9 @@ export async function GET() {
 
     const { data, error } = await query
     if (error) throw error
-    return NextResponse.json({ data: data || [] })
+    return NextResponse.json({ data: data || [] }, {
+      headers: { 'Cache-Control': 'no-store' },
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

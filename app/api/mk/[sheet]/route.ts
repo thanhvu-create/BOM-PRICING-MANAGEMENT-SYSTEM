@@ -32,13 +32,13 @@ export async function GET(
 
     const db = createServiceClient()
     const { data, error } = await db.from(table).select('*').order('sort_order', { ascending: true, nullsFirst: false })
+    const CC = { headers: { 'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=3600' } }
     if (error) {
-      // Nếu sort_order không tồn tại, thử order by id
       const { data: d2, error: e2 } = await db.from(table).select('*')
       if (e2) throw e2
-      return NextResponse.json({ data: d2 || [] })
+      return NextResponse.json({ data: d2 || [] }, CC)
     }
-    return NextResponse.json({ data: data || [] })
+    return NextResponse.json({ data: data || [] }, CC)
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

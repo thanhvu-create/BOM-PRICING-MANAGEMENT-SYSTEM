@@ -14,11 +14,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid fileId' }, { status: 400 })
     }
 
-    // Try multiple Drive URL formats — thumbnail works best for "anyone with link" files
+    // Try 2 Drive URL formats — thumbnail first (fastest for shared files)
     const urls = [
-      `https://drive.google.com/thumbnail?id=${fileId}&sz=s200`,
-      `https://drive.google.com/uc?export=view&id=${fileId}`,
-      `https://drive.google.com/uc?export=download&id=${fileId}`,
+      `https://drive.google.com/thumbnail?id=${fileId}&sz=s400`,
       `https://lh3.googleusercontent.com/d/${fileId}`,
     ]
 
@@ -30,7 +28,7 @@ export async function GET(req: NextRequest) {
         const res = await fetch(url, {
           headers: { 'User-Agent': 'Mozilla/5.0' },
           redirect: 'follow',
-          signal: AbortSignal.timeout(8000),
+          signal: AbortSignal.timeout(4000),
         })
         if (!res.ok) continue
         const ct = res.headers.get('content-type') || ''

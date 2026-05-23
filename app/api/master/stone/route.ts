@@ -11,7 +11,9 @@ export async function GET() {
     const db = createServiceClient()
     const { data, error } = await db.from('dm_size').select('*').order('master_code').order('grade_id')
     if (error) throw error
-    return NextResponse.json({ data: data || [] })
+    return NextResponse.json({ data: data || [] }, {
+      headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400' },
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

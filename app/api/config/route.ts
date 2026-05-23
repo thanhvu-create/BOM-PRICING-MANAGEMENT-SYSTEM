@@ -16,7 +16,9 @@ export async function GET(request: Request) {
     .from('sys_config').select('value').eq('key', key).single()
 
   if (error) return NextResponse.json({ success: false })
-  return NextResponse.json({ success: true, rate: parseFloat(data.value) })
+  return NextResponse.json({ success: true, rate: parseFloat(data.value) }, {
+    headers: { 'Cache-Control': 'public, max-age=60, s-maxage=60' },
+  })
 }
 
 export async function POST(request: Request) {

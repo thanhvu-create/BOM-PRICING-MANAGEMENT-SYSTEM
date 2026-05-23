@@ -69,6 +69,7 @@ export async function GET() {
     const base = { totalBOMs, todayBOMs, monthBOMs, totalValue: 0, avgSellPrice: 0, discountedCount: 0, byStore: [], byProductType: [], bySalesPerson: [], recentBOMs: [] }
 
     if (isAdminOrManager) {
+      const CC = { headers: { 'Cache-Control': 'public, max-age=120, s-maxage=120, stale-while-revalidate=600' } }
       return NextResponse.json({
         data: {
           ...base,
@@ -80,11 +81,13 @@ export async function GET() {
           bySalesPerson: Object.entries(spMap).map(([name, v]) => ({ name, count: v.count, value: v.value })).sort((a, b) => b.count - a.count).slice(0, 5),
           recentBOMs:    recentArr.slice(0, 5),
         }
-      })
+      }, CC)
     }
 
     // Sales / Sales Supervisor / Order: chỉ trả về 3 KPI counts
-    return NextResponse.json({ data: base })
+    return NextResponse.json({ data: base }, {
+      headers: { 'Cache-Control': 'public, max-age=120, s-maxage=120, stale-while-revalidate=600' },
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

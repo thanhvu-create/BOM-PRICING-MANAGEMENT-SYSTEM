@@ -29,7 +29,9 @@ export async function GET(
     const orderBy = isDefinition ? 'en_name' : 'name'
     const { data, error } = await db.from(table).select(select).order(orderBy)
     if (error) throw error
-    return NextResponse.json({ data: data || [] })
+    return NextResponse.json({ data: data || [] }, {
+      headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400' },
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

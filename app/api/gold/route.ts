@@ -26,7 +26,9 @@ export async function GET() {
     const { data, error } = await db
       .from('gold_material').select('*').order('price_date', { ascending: false })
     if (error) throw error
-    return NextResponse.json({ data: data || [] })
+    return NextResponse.json({ data: data || [] }, {
+      headers: { 'Cache-Control': 'public, max-age=300, s-maxage=300' },
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
