@@ -1,11 +1,13 @@
 /**
  * Centralized Google Drive OAuth token management.
- * Shared by DriveImageInput, DriveAuthButton, and review page.
  *
  * Token lifecycle:
- *  - On first click of DriveAuthButton → popup consent → token saved ~55 min
- *  - Subsequent requests → silent refresh (no popup) until user disconnects
- *  - clearToken() → forgets token; next request will need new consent
+ *  - DriveAuthButton click → GIS initCodeClient popup (code flow)
+ *  - Server exchanges code → access_token + refresh_token
+ *  - refresh_token encrypted in DB (users.google_refresh_token)
+ *  - access_token cached locally ~55 min
+ *  - When expired → getTokenSilent() tries /api/auth/drive-token (server refresh)
+ *  - If no refresh_token in DB → returns null → DriveAuthButton shows disconnected
  */
 
 const LS_KEY = 'bom_gdrive_token'
@@ -13,15 +15,15 @@ const LS_EXP = 'bom_gdrive_token_exp'
 
 let _token: string | null = null
 let _tokenExpiry = 0
+let _refreshing: Promise<string | null> | null = null
 const _listeners: Set<() => void> = new Set()
 
-// ── Pub/sub for token state changes ──────────────────────────────────────────
+// ── Pub/sub ───────────────────────────────────────────────────────────────────
 
 function notifyListeners() {
   _listeners.forEach(fn => { try { fn() } catch {} })
 }
 
-/** Subscribe to token state changes. Returns an unsubscribe function. */
 export function onTokenChange(fn: () => void): () => void {
   _listeners.add(fn)
   return () => _listeners.delete(fn)
@@ -33,16 +35,13 @@ function loadCachedToken() {
   try {
     const t = localStorage.getItem(LS_KEY)
     const exp = Number(localStorage.getItem(LS_EXP) ?? 0)
-    if (t && exp > Date.now()) {
-      _token = t
-      _tokenExpiry = exp
-    }
+    if (t && exp > Date.now()) { _token = t; _tokenExpiry = exp }
   } catch {}
 }
 
 function saveToken(token: string, expiresIn: number) {
   _token = token
-  _tokenExpiry = Date.now() + (expiresIn - 300) * 1000  // 5-min buffer
+  _tokenExpiry = Date.now() + (expiresIn - 300) * 1000   // 5-min buffer
   try {
     localStorage.setItem(LS_KEY, token)
     localStorage.setItem(LS_EXP, String(_tokenExpiry))
@@ -50,7 +49,6 @@ function saveToken(token: string, expiresIn: number) {
   notifyListeners()
 }
 
-/** Remove cached token and notify all listeners. */
 export function clearToken() {
   _token = null
   _tokenExpiry = 0
@@ -61,69 +59,99 @@ export function clearToken() {
   notifyListeners()
 }
 
-/** Returns true if a valid, non-expired token is cached. */
 export function isAuthenticated(): boolean {
   if (!_token) loadCachedToken()
   return !!_token && Date.now() < _tokenExpiry
 }
 
-// ── OAuth client init ─────────────────────────────────────────────────────────
+// ── Server-side refresh ───────────────────────────────────────────────────────
+
+async function refreshViaServer(): Promise<string | null> {
+  // Deduplicate concurrent refresh calls
+  if (_refreshing) return _refreshing
+  _refreshing = (async () => {
+    try {
+      const res = await fetch('/api/auth/drive-token')
+      if (!res.ok) return null
+      const { access_token, expires_in } = await res.json()
+      if (!access_token) return null
+      saveToken(access_token, expires_in ?? 3600)
+      return access_token
+    } catch { return null }
+    finally { _refreshing = null }
+  })()
+  return _refreshing
+}
+
+// ── Code flow (new connect) ───────────────────────────────────────────────────
 
 function clientIdOk(): boolean {
   const id = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
   return !!id && !id.includes('your-google') && !id.includes('placeholder')
 }
 
-function requestToken(prompt: '' | 'consent'): Promise<string | null> {
+/**
+ * Opens Google OAuth popup using authorization code flow.
+ * Server exchanges code → stores refresh_token → returns access_token.
+ * Call only from a user gesture (button click).
+ */
+export function requestCodeWithConsent(): Promise<string | null> {
   if (!clientIdOk()) return Promise.resolve(null)
   const g = (window as any).google
   if (!g?.accounts?.oauth2) return Promise.resolve(null)
 
   return new Promise(resolve => {
-    const client = g.accounts.oauth2.initTokenClient({
+    const client = g.accounts.oauth2.initCodeClient({
       client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
       scope: 'https://www.googleapis.com/auth/drive.readonly',
-      callback: (res: any) => {
-        if (res?.access_token) {
-          saveToken(res.access_token, res.expires_in ?? 3600)
-          resolve(res.access_token)
-        } else {
-          clearToken()
-          resolve(null)
-        }
+      ux_mode: 'popup',
+      callback: async (res: any) => {
+        if (!res?.code) { resolve(null); return }
+        try {
+          const r = await fetch('/api/auth/google-drive', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: res.code }),
+          })
+          if (!r.ok) { resolve(null); return }
+          const { access_token, expires_in } = await r.json()
+          if (access_token) {
+            saveToken(access_token, expires_in ?? 3600)
+            resolve(access_token)
+          } else { resolve(null) }
+        } catch { resolve(null) }
       },
       error_callback: () => { clearToken(); resolve(null) },
     })
-    client.requestAccessToken({ prompt })
+    client.requestCode()
   })
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
- * Returns cached token only. Never triggers any OAuth popup.
- * Returns null if no valid token is cached — caller should show a "connect" hint.
+ * Returns a valid access token without any popup.
+ * 1. Returns cached token if still valid.
+ * 2. Tries server-side refresh (uses stored refresh_token in DB).
+ * 3. Returns null → caller should prompt user to reconnect Drive.
  */
-export function getTokenSilent(): Promise<string | null> {
+export async function getTokenSilent(): Promise<string | null> {
   if (!_token) loadCachedToken()
-  if (_token && Date.now() < _tokenExpiry) return Promise.resolve(_token)
-  return Promise.resolve(null)
+  if (_token && Date.now() < _tokenExpiry) return _token
+  // Token expired → try server refresh
+  return refreshViaServer()
 }
 
 /**
- * Returns token, showing an OAuth popup if needed (explicit user action).
- * Call this only from a user gesture (e.g. button click).
+ * Opens OAuth consent popup (code flow) to connect Drive.
+ * Call only from a user gesture.
  */
 export function getTokenWithConsent(): Promise<string | null> {
-  return requestToken('consent')
+  return requestCodeWithConsent()
 }
 
 // ── Drive fetch helpers ───────────────────────────────────────────────────────
 
-/**
- * Fetch a Drive file and return a blob URL for display in the current window.
- * Returns null if no token or request fails.
- */
 export async function fetchDriveBlob(fileId: string): Promise<string | null> {
   const token = await getTokenSilent()
   if (!token) return null
@@ -138,10 +166,6 @@ export async function fetchDriveBlob(fileId: string): Promise<string | null> {
   } catch { return null }
 }
 
-/**
- * Fetch a Drive file and return a data: URI.
- * Required for print popups (blob URLs don't survive window.open).
- */
 export async function fetchDriveDataUri(fileId: string): Promise<string | null> {
   const token = await getTokenSilent()
   if (!token) return null

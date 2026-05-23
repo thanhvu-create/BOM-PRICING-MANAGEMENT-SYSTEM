@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { isAuthenticated, getTokenWithConsent, clearToken, onTokenChange } from '@/lib/driveToken'
+import { isAuthenticated, getTokenSilent, getTokenWithConsent, clearToken, onTokenChange } from '@/lib/driveToken'
 import { useToast } from './ToastContext'
 
 /**
@@ -28,15 +28,21 @@ export default function DriveAuthButton() {
   useEffect(() => {
     const id = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
     setHasClientId(!!id && !id.includes('your-google') && !id.includes('placeholder'))
+
+    // Try local cache first, then server refresh (auto-restore if refresh_token in DB)
     const initial = isAuthenticated()
     setConnected(initial)
     prevConnected.current = initial
+    if (!initial) {
+      getTokenSilent().then(token => {
+        if (token) { setConnected(true); prevConnected.current = true }
+      })
+    }
 
     const unsubscribe = onTokenChange(() => {
       const nowConnected = isAuthenticated()
       setConnected(nowConnected)
 
-      // Token expired or was revoked externally (not a manual user click)
       if (prevConnected.current && !nowConnected && !manualDisconnect.current) {
         toast('Phiên Google Drive đã hết hạn — vui lòng kết nối lại', 'warning')
       }
