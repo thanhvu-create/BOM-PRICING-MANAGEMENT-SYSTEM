@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useUser } from '@/components/shared/UserContext'
+import { useConfig } from '@/components/shared/ConfigContext'
 import { useLang } from '@/components/shared/I18nContext'
 import { useToast } from '@/components/shared/ToastContext'
 import DriveImageInput from '@/components/shared/DriveImageInput'
@@ -71,6 +72,7 @@ const PREFS_KEY = 'bom_prefs'
 /* ── COMPONENT ─────────────────────────────────────────────── */
 export default function TinhGiaPage() {
   const { role, store: userStore } = useUser()
+  const { vndRate, mgrDiscCap: managerMax } = useConfig()
   const { t } = useLang()
   const { toast, update, dismiss } = useToast()
   const isAdmin    = role === 'Admin'
@@ -79,8 +81,6 @@ export default function TinhGiaPage() {
 
   const [step, setStep] = useState(1)
   const [dropdowns, setDropdowns] = useState<Dropdowns | null>(null)
-  const [vndRate, setVndRate] = useState(0)
-  const [managerMax, setManagerMax] = useState(20)   // MANAGER_MAX_DISCOUNT from sys_config
   const [loadingDD, setLoadingDD] = useState(true)
   const [showStoneTypes, setShowStoneTypes] = useState(false)
   const [stoneTypeList, setStoneTypeList] = useState<Array<{ code: string; viName: string; enName: string; unit: string; typeInput: string }>>([])
@@ -391,17 +391,15 @@ export default function TinhGiaPage() {
     const ctrl = new AbortController()
     const { signal } = ctrl
     const storeParam = (canSeeAll || !userStore) ? '' : `?store=${userStore}`
-    Promise.all([
-      fetch(`/api/bom/dropdowns${storeParam}`, { signal }).then(r => r.json()),
-      fetch('/api/config?key=VND_RATE', { signal }).then(r => r.json()),
-      fetch('/api/config?key=MANAGER_MAX_DISCOUNT', { signal }).then(r => r.json()),
-    ]).then(([dd, cfg, mgrCfg]) => {
-      setDropdowns(dd)
-      if (dd.productTypes?.[0])   setProductType(dd.productTypes[0])
-      if (dd.priceListTypes?.[0]) setPriceListType(dd.priceListTypes[0])
-      if (cfg.rate) setVndRate(Number(cfg.rate))
-      if (mgrCfg.rate) setManagerMax(Number(mgrCfg.rate))
-    }).catch(e => { if (e.name !== 'AbortError') console.error(e) }).finally(() => setLoadingDD(false))
+    fetch(`/api/bom/dropdowns${storeParam}`, { signal })
+      .then(r => r.json())
+      .then(dd => {
+        setDropdowns(dd)
+        if (dd.productTypes?.[0])   setProductType(dd.productTypes[0])
+        if (dd.priceListTypes?.[0]) setPriceListType(dd.priceListTypes[0])
+      })
+      .catch(e => { if (e.name !== 'AbortError') console.error(e) })
+      .finally(() => setLoadingDD(false))
     return () => ctrl.abort()
   }, [canSeeAll, userStore])
 

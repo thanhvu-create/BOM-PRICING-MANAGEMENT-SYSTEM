@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useUser } from '@/components/shared/UserContext'
+import { useConfig } from '@/components/shared/ConfigContext'
 import { useLang } from '@/components/shared/I18nContext'
 import { useToast } from '@/components/shared/ToastContext'
 import { fetchDriveDataUri, fetchDriveBlob } from '@/lib/driveToken'
@@ -130,6 +131,7 @@ function DriveImage({ url, size = 200, style, onClick, alt = '' }: {
 /* ── COMPONENT ───────────────────────────────────────────────*/
 export default function ReviewPage() {
   const { role } = useUser()
+  const { vndRate, mgrDiscCap } = useConfig()
   const { t } = useLang()
   const { toast, update, dismiss } = useToast()
 
@@ -141,7 +143,6 @@ export default function ReviewPage() {
 
   const [boms, setBoms] = useState<BomRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [vndRate, setVndRate] = useState(0)
 
   // Filters
   const [search, setSearch] = useState('')
@@ -168,7 +169,6 @@ export default function ReviewPage() {
   const [discountSaving, setDiscountSaving] = useState(false)
   const [discountError, setDiscountError] = useState('')
   const [discountSuccess, setDiscountSuccess] = useState('')
-  const [mgrDiscCap, setMgrDiscCap] = useState(20)
 
   // Delete confirm dialog
   const [deleteBomId, setDeleteBomId] = useState<string | null>(null)
@@ -184,13 +184,7 @@ export default function ReviewPage() {
   const [highlightedBomId, setHighlightedBomId] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/config?key=VND_RATE').then(r => r.json()),
-      fetch('/api/config?key=MANAGER_MAX_DISCOUNT').then(r => r.json()),
-    ]).then(([rateD, discD]) => {
-      if (rateD.rate) setVndRate(Number(rateD.rate))
-      if (discD.rate) setMgrDiscCap(Number(discD.rate))
-    }).catch(() => {})
+    // vndRate + mgrDiscCap read from ConfigContext (provided by DashboardShell)
 
     // Check if tinh-gia just saved a BOM (same tab)
     try {

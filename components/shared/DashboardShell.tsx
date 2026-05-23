@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { UserProvider } from './UserContext'
+import { ConfigProvider } from './ConfigContext'
 import { I18nProvider, useLang } from './I18nContext'
 import { useToast } from './ToastContext'
 import DriveAuthButton from './DriveAuthButton'
@@ -60,20 +61,20 @@ function DashboardContent({ user, children }: Props) {
   const visibleNav = NAV_ITEMS.filter(n => n.roles.includes(role))
   const canEditRate = role === 'Admin' || role === 'Manager'
   const isAdmin = role === 'Admin'
+  const canDiscount = isAdmin || role === 'Manager' || role === 'Sales Supervisor'
 
   useEffect(() => {
-    fetch('/api/config?key=VND_RATE')
-      .then(r => r.json())
-      .then(d => { if (d.rate != null) setVndRate(Number(d.rate)) })
-      .catch(() => {})
+    // Fetch both configs in parallel; mgrDiscCap needed by all roles that can apply discounts
+    const requests: Promise<any>[] = [
+      fetch('/api/config?key=VND_RATE').then(r => r.json()),
+    ]
+    if (canDiscount) requests.push(fetch('/api/config?key=MANAGER_MAX_DISCOUNT').then(r => r.json()))
 
-    if (isAdmin) {
-      fetch('/api/config?key=MANAGER_MAX_DISCOUNT')
-        .then(r => r.json())
-        .then(d => { if (d.rate != null) setMgrDiscCap(Number(d.rate)) })
-        .catch(() => {})
-    }
-  }, [isAdmin])
+    Promise.all(requests).then(([rateD, discD]) => {
+      if (rateD?.rate != null) setVndRate(Number(rateD.rate))
+      if (discD?.rate != null) setMgrDiscCap(Number(discD.rate))
+    }).catch(() => {})
+  }, [canDiscount])
 
   async function handleLogout() {
     const supabase = createClient()
@@ -144,6 +145,7 @@ function DashboardContent({ user, children }: Props) {
 
   return (
     <UserProvider value={sessionUser}>
+    <ConfigProvider value={{ vndRate, mgrDiscCap }}>
       <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
 
         {/* ── TOPBAR ─────────────────────────────────────────── */}
@@ -442,6 +444,7 @@ function DashboardContent({ user, children }: Props) {
           }
 `}</style>
       </div>
+    </ConfigProvider>
     </UserProvider>
   )
 }

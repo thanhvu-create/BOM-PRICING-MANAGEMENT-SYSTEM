@@ -22,8 +22,8 @@ export async function GET(
       { data: stones },
     ] = await Promise.all([
       db.from('bom').select('*').eq('bom_id', bomId).single(),
-      db.from('bom_gold').select('*').eq('bom_id', bomId).order('idx'),
-      db.from('bom_stone').select('*').eq('bom_id', bomId).order('idx'),
+      db.from('bom_gold').select('idx, gold_type, color, weight').eq('bom_id', bomId).order('idx'),
+      db.from('bom_stone').select('idx, group_code, grade_id, size, ctw1pc, qty, tl_hot, input_type, gia_ban').eq('bom_id', bomId).order('idx'),
     ])
 
     if (bomErr || !bomRow) return NextResponse.json({ error: 'BOM not found' }, { status: 404 })
