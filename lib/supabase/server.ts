@@ -30,16 +30,19 @@ export function createServiceClient() {
   )
 }
 
-// Lookup user profile by Supabase Auth user.id, with fallback to email-derived username.
-// Needed because some accounts may have a mismatch between public.users.id and auth.users.id.
+// Lookup user profile — single query using OR to avoid 2 round-trips.
 export async function getUserProfile(userId: string, userEmail: string | undefined) {
   const db = createServiceClient()
-  let { data } = await db.from('users').select('username, role, store').eq('id', userId).single()
-  if (!data && userEmail) {
-    const username = userEmail.replace(/@bom\.internal$/i, '')
-    const { data: fallback } = await db
-      .from('users').select('username, role, store').eq('username', username).single()
-    data = fallback
-  }
-  return data as { username: string; role: string; store: string } | null
+  const username = userEmail ? userEmail.replace(/@bom\.internal$/i, '') : ''
+
+  const { data: rows } = await db
+    .from('users')
+    .select('username, role, store, id')
+    .or(username ? `id.eq.${userId},username.eq.${username}` : `id.eq.${userId}`)
+
+  if (!rows || rows.length === 0) return null
+  // Prefer exact id match; fall back to username match
+  const byId = rows.find(r => r.id === userId)
+  const result = byId ?? rows[0]
+  return result as { username: string; role: string; store: string } | null
 }

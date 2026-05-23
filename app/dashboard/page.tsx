@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useUser } from '@/components/shared/UserContext'
 import { useLang } from '@/components/shared/I18nContext'
 
@@ -43,25 +43,31 @@ export default function DashboardPage() {
   const [refreshing, setRefreshing] = useState(false)
 
   const showValue = ['Admin', 'Manager'].includes(role)
+  const ctrlRef = useRef<AbortController | null>(null)
 
   async function loadStats(refresh = false) {
+    ctrlRef.current?.abort()
+    const ctrl = new AbortController()
+    ctrlRef.current = ctrl
     if (refresh) setRefreshing(true)
     else setLoading(true)
     setError('')
     try {
-      const r = await fetch('/api/dashboard')
+      const r = await fetch('/api/dashboard', { signal: ctrl.signal })
       if (!r.ok) throw new Error('Failed to load')
       const d = await r.json()
       setStats(d.data)
     } catch (e: any) {
-      setError(e.message)
+      if (e.name !== 'AbortError') setError(e.message)
     } finally {
-      setLoading(false)
-      setRefreshing(false)
+      if (!ctrl.signal.aborted) { setLoading(false); setRefreshing(false) }
     }
   }
 
-  useEffect(() => { loadStats() }, [])
+  useEffect(() => {
+    loadStats()
+    return () => ctrlRef.current?.abort()
+  }, [])
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', padding: '3rem 0' }}>

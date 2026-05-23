@@ -178,13 +178,19 @@ export default function ReviewPage() {
 
   // Client-side cache: tránh re-fetch khi mở lại cùng BOM
   const detailCache = useRef<Map<string, BomDetail>>(new Map())
+  const loadBomsCtrl = useRef<AbortController | null>(null)
 
   // Highlight newly saved/edited BOM row
   const [highlightedBomId, setHighlightedBomId] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/config?key=VND_RATE').then(r => r.json()).then(d => { if (d.rate) setVndRate(Number(d.rate)) }).catch(() => {})
-    fetch('/api/config?key=MANAGER_MAX_DISCOUNT').then(r => r.json()).then(d => { if (d.rate) setMgrDiscCap(Number(d.rate)) }).catch(() => {})
+    Promise.all([
+      fetch('/api/config?key=VND_RATE').then(r => r.json()),
+      fetch('/api/config?key=MANAGER_MAX_DISCOUNT').then(r => r.json()),
+    ]).then(([rateD, discD]) => {
+      if (rateD.rate) setVndRate(Number(rateD.rate))
+      if (discD.rate) setMgrDiscCap(Number(discD.rate))
+    }).catch(() => {})
 
     // Check if tinh-gia just saved a BOM (same tab)
     try {
@@ -232,15 +238,22 @@ export default function ReviewPage() {
   }, [quotBomId, detailBomId, discountBom, deleteBomId, lightboxSrc])
 
   async function loadBoms() {
+    loadBomsCtrl.current?.abort()
+    const ctrl = new AbortController()
+    loadBomsCtrl.current = ctrl
     setLoading(true)
     const tid = toast('Loading BOM history...', 'loading')
     try {
-      const r = await fetch('/api/bom')
+      const r = await fetch('/api/bom', { signal: ctrl.signal })
       const d = await r.json()
       setBoms(d.data || [])
       update(tid, 'BOM history loaded', 'success')
-    } catch { update(tid, 'Failed to load BOM history', 'danger') }
-    finally { setLoading(false) }
+    } catch (e: any) {
+      if (e.name !== 'AbortError') update(tid, 'Failed to load BOM history', 'danger')
+      else dismiss(tid)
+    } finally {
+      if (!ctrl.signal.aborted) setLoading(false)
+    }
   }
 
   /* ── Filtered list ─── */

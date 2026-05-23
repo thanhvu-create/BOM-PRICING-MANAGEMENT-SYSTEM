@@ -134,6 +134,7 @@ export default function TinhGiaPage() {
 
   // Lookup debounce timers
   const lookupTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
+  const lookupCache = useRef<Map<string, any>>(new Map())
   // Debounce timer for recalculate (laborHours changes)
   const calcTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Track laborHours value used in the last successful calculate() call
@@ -387,18 +388,21 @@ export default function TinhGiaPage() {
 
   /* ── Load dropdowns ── */
   useEffect(() => {
+    const ctrl = new AbortController()
+    const { signal } = ctrl
     const storeParam = (canSeeAll || !userStore) ? '' : `?store=${userStore}`
     Promise.all([
-      fetch(`/api/bom/dropdowns${storeParam}`).then(r => r.json()),
-      fetch('/api/config?key=VND_RATE').then(r => r.json()),
-      fetch('/api/config?key=MANAGER_MAX_DISCOUNT').then(r => r.json()),
+      fetch(`/api/bom/dropdowns${storeParam}`, { signal }).then(r => r.json()),
+      fetch('/api/config?key=VND_RATE', { signal }).then(r => r.json()),
+      fetch('/api/config?key=MANAGER_MAX_DISCOUNT', { signal }).then(r => r.json()),
     ]).then(([dd, cfg, mgrCfg]) => {
       setDropdowns(dd)
       if (dd.productTypes?.[0])   setProductType(dd.productTypes[0])
       if (dd.priceListTypes?.[0]) setPriceListType(dd.priceListTypes[0])
       if (cfg.rate) setVndRate(Number(cfg.rate))
       if (mgrCfg.rate) setManagerMax(Number(mgrCfg.rate))
-    }).catch(console.error).finally(() => setLoadingDD(false))
+    }).catch(e => { if (e.name !== 'AbortError') console.error(e) }).finally(() => setLoadingDD(false))
+    return () => ctrl.abort()
   }, [canSeeAll, userStore])
 
   /* ── Fetch gold price ── */
@@ -423,11 +427,15 @@ export default function TinhGiaPage() {
     if (!groupCode.trim()) return
     const sizeVal = parseFloat(size) || 0
     const ctwVal  = parseFloat(ctw1pc) || 0
-    // mm type needs sizeVal > 0; ct type needs ctwVal > 0
     const hasSizeCriteria = sizeVal > 0 || ctwVal > 0
+    const cacheKey = `${groupCode}|${sizeVal}|${ctwVal}`
     try {
-      const r = await fetch(`/api/master/lookup?groupCode=${encodeURIComponent(groupCode)}&size=${sizeVal}&ctw=${ctwVal}`)
-      const d = await r.json()
+      let d = lookupCache.current.get(cacheKey)
+      if (!d) {
+        const r = await fetch(`/api/master/lookup?groupCode=${encodeURIComponent(groupCode)}&size=${sizeVal}&ctw=${ctwVal}`)
+        d = await r.json()
+        if (d.success) lookupCache.current.set(cacheKey, d)
+      }
       if (d.success) {
         setStoneRows(rows => rows.map(row => {
           if (row.id !== rowId) return row
