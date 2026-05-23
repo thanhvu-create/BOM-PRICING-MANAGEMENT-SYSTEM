@@ -1083,8 +1083,13 @@ export default function TinhGiaPage() {
                       )}
                     </td>
                     <td style={{ ...tdStyle, width: 80 }}>
-                      <input type="number" style={tdInput} value={r.size} min="0" step="0.01" placeholder="0.00"
-                        onChange={e => updateStone(r.id, 'size', e.target.value)} />
+                      {r.inputType === 'ct' ? (
+                        <input type="text" style={tdInput} value={r.size} placeholder="VD: 20mm*14mm"
+                          onChange={e => updateStone(r.id, 'size', e.target.value)} />
+                      ) : (
+                        <input type="number" style={tdInput} value={r.size} min="0" step="0.01" placeholder="0.00"
+                          onChange={e => updateStone(r.id, 'size', e.target.value)} />
+                      )}
                     </td>
                     <td style={{ ...tdStyle, width: 90 }}>
                       <input type="number" style={tdInput} value={r.ctw1pc} min="0" step="0.001" placeholder="0.000"
