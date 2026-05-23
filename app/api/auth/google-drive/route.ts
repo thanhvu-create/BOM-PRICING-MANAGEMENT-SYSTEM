@@ -26,15 +26,19 @@ export async function POST(request: Request) {
         code,
         client_id:     process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirect_uri:  'postmessage',   // popup flow — GIS standard
+        redirect_uri:  'postmessage',
         grant_type:    'authorization_code',
       }),
     })
 
     const tokenData = await tokenRes.json()
     if (!tokenRes.ok || !tokenData.access_token) {
-      console.error('[google-drive] token exchange failed:', tokenData)
-      return NextResponse.json({ error: 'Token exchange failed' }, { status: 502 })
+      console.error('[google-drive] google error:', JSON.stringify(tokenData))
+      // Pass Google's actual error back so client can show meaningful message
+      return NextResponse.json({
+        error: tokenData.error || 'token_exchange_failed',
+        detail: tokenData.error_description || '',
+      }, { status: 502 })
     }
 
     const { access_token, refresh_token, expires_in } = tokenData
