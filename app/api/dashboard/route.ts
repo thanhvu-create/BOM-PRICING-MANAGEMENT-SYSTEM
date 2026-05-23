@@ -34,6 +34,7 @@ export async function GET() {
         db.rpc('stats_daily_trend'),
         db.from('bom')
           .select('bom_id, date, model, store, sell_price')
+          .is('deleted_at', null)
           .order('date', { ascending: false })
           .limit(5),
       ])

@@ -21,7 +21,7 @@ export async function GET(
       { data: golds },
       { data: stones },
     ] = await Promise.all([
-      db.from('bom').select('*').eq('bom_id', bomId).single(),
+      db.from('bom').select('*').eq('bom_id', bomId).is('deleted_at', null).single(),
       db.from('bom_gold').select('idx, gold_type, color, weight').eq('bom_id', bomId).order('idx'),
       db.from('bom_stone').select('idx, group_code, grade_id, size, ctw1pc, qty, tl_hot, input_type, gia_ban').eq('bom_id', bomId).order('idx'),
     ])
@@ -83,8 +83,12 @@ export async function DELETE(
     // Fetch before delete for audit
     const { data: oldBom } = await db.from('bom').select('bom_id, so_mo, model, sell_price').eq('bom_id', bomId).single()
 
-    // Cascade delete via FK (bom_gold + bom_stone auto-deleted)
-    const { error } = await db.from('bom').delete().eq('bom_id', bomId)
+    // Soft delete — giữ record trong DB để có thể khôi phục
+    const { error } = await db.from('bom').update({
+      deleted_at: new Date().toISOString(),
+      updated_by: profile?.username || user.email || '',
+      updated_at: new Date().toISOString(),
+    }).eq('bom_id', bomId)
     if (error) throw error
 
     logAction({

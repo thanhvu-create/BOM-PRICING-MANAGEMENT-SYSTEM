@@ -25,6 +25,7 @@ export async function GET() {
     // List view: select only columns needed for table + thumbnail. img2/img3 loaded on-demand in detail modal.
     let query = db.from('bom')
       .select('id, bom_id, date, product_type, so_mo, model, total_stone_qty, total_stone_ctw, sell_price, discount_pct, discount_price, cost_total, sales_person, store, customer_name, created_by, img1, price_list_type, note, folder_url')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
     // Filter theo store nếu không phải Admin/Manager
