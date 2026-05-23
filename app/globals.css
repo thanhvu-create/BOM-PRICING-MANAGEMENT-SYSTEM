@@ -311,15 +311,16 @@ body.modal-open header {
   .detail-thumbnails { flex-direction: row !important; flex-wrap: wrap; }
 }
 
-/* ── Topbar Row 2 — horizontal scroll on small viewports ── */
-.topbar-row2 {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-base) transparent;
+/* ── Topbar Row 2 — no overflow on any laptop ── */
+.topbar-row2 { overflow-x: visible; }
+
+/* ── Nav label: icon-only on laptop (<1500px), full text on wide desktop ── */
+.nav-item-label { display: inline; }
+
+@media (min-width: 768px) and (max-width: 1499px) {
+  .nav-item-label { display: none; }
+  .topbar-right-controls { gap: 0.875rem !important; }
 }
-.topbar-row2::-webkit-scrollbar { height: 3px; }
-.topbar-row2::-webkit-scrollbar-thumb { background: var(--border-base); }
 
 /* ── Charts grid — auto-collapse below ~780px ── */
 .charts-grid-auto {

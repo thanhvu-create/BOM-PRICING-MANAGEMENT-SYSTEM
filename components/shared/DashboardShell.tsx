@@ -238,9 +238,10 @@ function DashboardContent({ user, children }: Props) {
                 <Link
                   key={n.key}
                   href={n.href}
+                  title={t(n.i18nKey)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '0.6rem 1rem',
+                    padding: '0.6rem 0.875rem',
                     fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)',
                     fontWeight: isActive(n.href) ? 600 : 500,
                     letterSpacing: '0.1em', textTransform: 'uppercase',
@@ -251,14 +252,14 @@ function DashboardContent({ user, children }: Props) {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  <i className={`fa-solid ${n.icon}`} style={{ fontSize: 10 }} />
-                  {t(n.i18nKey)}
+                  <i className={`fa-solid ${n.icon}`} style={{ fontSize: 11 }} />
+                  <span className="nav-item-label">{t(n.i18nKey)}</span>
                 </Link>
               ))}
             </nav>
 
             {/* Right controls: STORE BADGE | USD RATE | MANAGER DISCOUNT CAP | LANG */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', paddingBottom: '0.25rem', flexShrink: 0 }}>
+            <div className="topbar-right-controls" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', paddingBottom: '0.25rem', flexShrink: 0 }}>
 
               {/* Store badge — shown if user.store has value */}
               {user.store && (
