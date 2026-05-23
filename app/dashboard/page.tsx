@@ -200,7 +200,8 @@ export default function DashboardPage() {
                 <i className="fa-solid fa-user-tie" style={{ fontSize: 10 }} />
                 {t('dashTopSales')}
               </p>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 280 }}>
                 <thead>
                   <tr>
                     {['#', 'SALESPERSON', 'BOMS', 'VALUE'].map((h, i) => (
@@ -226,6 +227,7 @@ export default function DashboardPage() {
                       ))}
                 </tbody>
               </table>
+              </div>
             </div>
 
             {/* Discount Summary */}
@@ -268,7 +270,8 @@ export default function DashboardPage() {
                 {t('dashViewAll')}
               </a>
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 400 }}>
               <thead>
                 <tr>
                   {['BOM ID', 'DATE', 'MODEL', 'STORE', 'SELL PRICE'].map((h, i) => (
@@ -315,6 +318,7 @@ export default function DashboardPage() {
                     ))}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}

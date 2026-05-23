@@ -230,7 +230,7 @@ function DashboardContent({ user, children }: Props) {
           </div>
 
           {/* ROW 2 — nav left | controls right */}
-          <div className="hide-mobile" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'stretch' }}>
+          <div className="hide-mobile topbar-row2" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'stretch' }}>
 
             {/* Nav items */}
             <nav style={{ display: 'flex', gap: 0 }}>
@@ -258,7 +258,7 @@ function DashboardContent({ user, children }: Props) {
             </nav>
 
             {/* Right controls: STORE BADGE | USD RATE | MANAGER DISCOUNT CAP | LANG */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', paddingBottom: '0.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', paddingBottom: '0.25rem', flexShrink: 0 }}>
 
               {/* Store badge — shown if user.store has value */}
               {user.store && (
@@ -392,12 +392,26 @@ function DashboardContent({ user, children }: Props) {
               </div>
 
               <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => { setLang(lang === 'vi' ? 'en' : 'vi'); setMobileOpen(false) }}
-                  style={{ flex: 1, padding: '8px 0', border: '1px solid var(--border-base)', background: 'transparent', cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', letterSpacing: '0.08em', textTransform: 'uppercase' }}
-                >
-                  {lang === 'vi' ? 'VI' : 'EN'}
-                </button>
+                {/* Segmented VI | EN — same as desktop */}
+                <div style={{ display: 'flex', border: '1px solid var(--border-base)', overflow: 'hidden', borderRadius: 0, flex: 1 }}>
+                  {(['vi', 'en'] as const).map(l => (
+                    <button
+                      key={l}
+                      onClick={() => setLang(l)}
+                      style={{
+                        flex: 1, padding: '8px 0', border: 'none',
+                        background: lang === l ? 'var(--text-primary)' : 'transparent',
+                        color: lang === l ? 'var(--text-inverse)' : 'var(--text-muted)',
+                        fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)',
+                        fontWeight: lang === l ? 700 : 500, letterSpacing: '0.08em',
+                        cursor: lang === l ? 'default' : 'pointer',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {l.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
                 <button
                   onClick={handleLogout}
                   style={{ flex: 1, padding: '8px 0', border: '1px solid var(--color-danger)', background: 'transparent', cursor: 'pointer', color: 'var(--color-danger)', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', letterSpacing: '0.08em', textTransform: 'uppercase' }}

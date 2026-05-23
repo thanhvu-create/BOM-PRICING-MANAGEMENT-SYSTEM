@@ -98,7 +98,6 @@ function actionBadgeStyle(action: string): CSSProperties {
 
 const s: Record<string, CSSProperties> = {
   page: {
-    padding: '2rem',
     background: 'var(--bg-base)',
     minHeight: '100vh',
     fontFamily: 'var(--font-body)',
@@ -148,7 +147,7 @@ const s: Record<string, CSSProperties> = {
   },
   chartsGrid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))',
     gap: '1.5rem',
     marginBottom: '1.5rem',
   },

@@ -275,4 +275,29 @@ body.modal-open header {
 
   /* Hide non-essential cols on mobile — add class to <td>/<th> */
   .col-hide-mobile { display: none !important; }
+
+  /* Audit page — remove double padding on mobile */
+  .audit-page { padding: 0 !important; }
+
+  /* Filter inputs/selects — full width on mobile */
+  .filter-input-group input,
+  .filter-input-group select { width: 100% !important; box-sizing: border-box; }
+}
+
+/* ── Topbar Row 2 — horizontal scroll on small viewports ── */
+.topbar-row2 {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-base) transparent;
+}
+.topbar-row2::-webkit-scrollbar { height: 3px; }
+.topbar-row2::-webkit-scrollbar-thumb { background: var(--border-base); }
+
+/* ── Charts grid — auto-collapse below ~780px ── */
+.charts-grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
 }
