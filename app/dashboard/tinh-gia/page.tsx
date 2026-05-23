@@ -715,16 +715,16 @@ export default function TinhGiaPage() {
   )
 
   const steps = [
-    { label: '1. INFO (HEADER)', icon: 'fa-regular fa-file' },
-    { label: '2. GOLD', icon: 'fa-solid fa-coins' },
-    { label: '3. STONES', icon: 'fa-solid fa-gem' },
-    { label: '4. SUMMARY', icon: 'fa-solid fa-calculator' },
+    { label: '1. INFO (HEADER)', short: '1', icon: 'fa-regular fa-file' },
+    { label: '2. GOLD', short: '2', icon: 'fa-solid fa-coins' },
+    { label: '3. STONES', short: '3', icon: 'fa-solid fa-gem' },
+    { label: '4. SUMMARY', short: '4', icon: 'fa-solid fa-calculator' },
   ]
 
   return (
     <div>
       {/* Step indicator bar + RESET button */}
-      <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, marginBottom: '1.5rem', border: '1px solid var(--border-base)', background: 'var(--bg-base)' }}>
+      <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, marginBottom: '1.5rem', border: '1px solid var(--border-base)', background: 'var(--bg-base)', overflowX: 'auto' }}>
         {steps.map((s, i) => {
           const isActive   = step === i + 1
           const isComplete = i < step - 1
@@ -732,7 +732,7 @@ export default function TinhGiaPage() {
             <button key={i}
               onClick={() => isComplete && setStep(i + 1)}
               style={{
-                flex: 1, padding: '0.75rem 0.5rem',
+                flex: 1, padding: '0.75rem 0.5rem', minWidth: 44,
                 fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 500,
                 letterSpacing: '0.08em', textTransform: 'uppercase',
                 color: isActive ? 'var(--text-primary)' : isComplete ? 'var(--color-success)' : 'var(--text-muted)',
@@ -747,7 +747,8 @@ export default function TinhGiaPage() {
               {isComplete
                 ? <i className="fa-solid fa-check" style={{ fontSize: 10 }} />
                 : <i className={s.icon} style={{ fontSize: 10 }} />}
-              {s.label}
+              <span className="step-label-full">{s.label}</span>
+              <span className="step-label-short">{s.short}</span>
             </button>
           )
         })}

@@ -595,16 +595,25 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
 
       {/* Filter bar — date + store filters */}
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, padding: '0.75rem 1rem', marginBottom: '1rem' }}>
-        <div className="filter-bar">
-          <input type="date" style={{ ...inputStyle, width: '100%' }} value={dateFrom}
-            onChange={e => { setDateFrom(e.target.value); setPage(1) }} />
-          <input type="date" style={{ ...inputStyle, width: '100%' }} value={dateTo}
-            onChange={e => { setDateTo(e.target.value); setPage(1) }} />
-          <select style={{ ...inputStyle, width: '100%' }} value={storeFilter}
-            onChange={e => { setStoreFilter(e.target.value); setPage(1) }}>
-            <option value="">{t('allStores')}</option>
-            {['VN', 'US', 'ADM'].map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+        <div className="review-filter-grid">
+          <div>
+            <span style={{ display: 'block', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: 4 }}>{t('filterFrom')}</span>
+            <input type="date" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }} value={dateFrom}
+              onChange={e => { setDateFrom(e.target.value); setPage(1) }} />
+          </div>
+          <div>
+            <span style={{ display: 'block', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: 4 }}>{t('filterTo')}</span>
+            <input type="date" style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }} value={dateTo}
+              onChange={e => { setDateTo(e.target.value); setPage(1) }} />
+          </div>
+          <div>
+            <span style={{ display: 'block', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: 4 }}>{t('labelStore')}</span>
+            <select style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }} value={storeFilter}
+              onChange={e => { setStoreFilter(e.target.value); setPage(1) }}>
+              <option value="">{t('allStores')}</option>
+              {['VN', 'US', 'ADM'].map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
         </div>
         <div style={{ marginTop: 6, fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
           {filtered.length} results {filtered.length !== boms.length && `(of ${boms.length} total)`}
@@ -937,9 +946,9 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                 return (
                   <>
                     {/* Info table + thumbnails */}
-                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'flex-start' }}>
-                      <div style={{ flex: 1 }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <div className="detail-info-row">
+                      <div style={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 260 }}>
                           <tbody>
                             <tr>
                               <td style={iL}>BOM ID</td>
@@ -993,7 +1002,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
 
                       {/* Thumbnails — top right of info block */}
                       {(h.img1 || h.img2 || h.img3) && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
+                        <div className="detail-thumbnails" style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
                           {[h.img1, h.img2, h.img3].filter(Boolean).map((url: string, i: number) => (
                             <DriveImage key={i} url={url} size={144} alt={`img${i+1}`}
                               onClick={() => setLightboxSrc(getLightboxSrc(url))}

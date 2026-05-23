@@ -284,6 +284,33 @@ body.modal-open header {
   .filter-input-group select { width: 100% !important; box-sizing: border-box; }
 }
 
+/* ── Step indicator — short label on mobile ── */
+.step-label-short { display: none; }
+
+/* ── Review filter grid: 3-col → 2-col (dates side-by-side) + store full-width ── */
+.review-filter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.75rem;
+}
+
+/* ── Detail modal info row (table + thumbnails) ── */
+.detail-info-row { display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1.5rem; }
+
+@media (max-width: 600px) {
+  /* Step bar: hide long label, show short number */
+  .step-label-full { display: none; }
+  .step-label-short { display: inline; }
+
+  /* Review filter: dates side-by-side, store full-width */
+  .review-filter-grid { grid-template-columns: 1fr 1fr; }
+  .review-filter-grid > *:last-child { grid-column: 1 / -1; }
+
+  /* Detail modal: stack thumbnails below table */
+  .detail-info-row { flex-direction: column; }
+  .detail-thumbnails { flex-direction: row !important; flex-wrap: wrap; }
+}
+
 /* ── Topbar Row 2 — horizontal scroll on small viewports ── */
 .topbar-row2 {
   overflow-x: auto;
