@@ -1242,11 +1242,11 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
             <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)' }}>
-              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0, color: 'var(--text-primary)' }}>Xóa BOM</h3>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0, color: 'var(--text-primary)' }}>{t('confirmDelete')}</h3>
             </div>
             <div style={{ padding: '1.5rem' }}>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', margin: 0 }}>
-                Bạn có chắc muốn xóa BOM <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{deleteBomId}</span>? Thao tác này không thể hoàn tác.
+                {t('delete')} BOM <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{deleteBomId}</span>? {t('cannotUndo')}
               </p>
             </div>
             <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>

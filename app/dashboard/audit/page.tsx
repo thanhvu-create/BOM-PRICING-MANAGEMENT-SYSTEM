@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, CSSProperties } from 'react'
 import { useUser } from '@/components/shared/UserContext'
+import { useLang } from '@/components/shared/I18nContext'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -296,6 +297,7 @@ const s: Record<string, CSSProperties> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AuditPage() {
+  const { t } = useLang()
   const user = useUser()
   const [tab, setTab] = useState<'log' | 'stats'>('log')
 
@@ -350,7 +352,7 @@ export default function AuditPage() {
   if (!['Admin', 'Manager'].includes(user.role || '')) {
     return (
       <div style={{ padding: '2rem', color: 'var(--color-danger)', fontFamily: 'var(--font-body)' }}>
-        Không có quyền truy cập trang này.
+        {t('noAccess')}
       </div>
     )
   }
@@ -359,17 +361,17 @@ export default function AuditPage() {
 
   return (
     <div style={s.page}>
-      <h1 style={s.heading}>Nhật Ký Hoạt Động</h1>
+      <h1 style={s.heading}>{t('auditPageTitle')}</h1>
 
       {/* Tabs */}
       <div style={s.tabs}>
         <button style={tabStyle(tab === 'log')} onClick={() => setTab('log')}>
           <i className="fa-solid fa-list-ul" style={{ marginRight: 6 }} />
-          Nhật Ký
+          {t('tabLog')}
         </button>
         <button style={tabStyle(tab === 'stats')} onClick={() => setTab('stats')}>
           <i className="fa-solid fa-chart-bar" style={{ marginRight: 6 }} />
-          Thống Kê
+          {t('tabStats')}
         </button>
       </div>
 
@@ -382,7 +384,7 @@ export default function AuditPage() {
               <span style={s.filterLabel}>Actor</span>
               <input
                 style={s.input}
-                placeholder="Tên user..."
+                placeholder="Actor..."
                 value={filters.actor}
                 onChange={e => setFilters(f => ({ ...f, actor: e.target.value }))}
               />
@@ -394,7 +396,7 @@ export default function AuditPage() {
                 value={filters.entity}
                 onChange={e => setFilters(f => ({ ...f, entity: e.target.value }))}
               >
-                <option value="">Tất cả</option>
+                <option value="">{t('allOptions')}</option>
                 {Object.entries(ENTITY_LABELS).map(([v, l]) => (
                   <option key={v} value={v}>{l}</option>
                 ))}
@@ -407,7 +409,7 @@ export default function AuditPage() {
                 value={filters.action}
                 onChange={e => setFilters(f => ({ ...f, action: e.target.value }))}
               >
-                <option value="">Tất cả</option>
+                <option value="">{t('allOptions')}</option>
                 <option value="CREATE">CREATE</option>
                 <option value="UPDATE">UPDATE</option>
                 <option value="DELETE">DELETE</option>
@@ -415,7 +417,7 @@ export default function AuditPage() {
               </select>
             </div>
             <div style={s.filterGroup}>
-              <span style={s.filterLabel}>Từ ngày</span>
+              <span style={s.filterLabel}>{t('filterFrom')}</span>
               <input
                 style={s.input}
                 type="date"
@@ -424,7 +426,7 @@ export default function AuditPage() {
               />
             </div>
             <div style={s.filterGroup}>
-              <span style={s.filterLabel}>Đến ngày</span>
+              <span style={s.filterLabel}>{t('filterTo')}</span>
               <input
                 style={s.input}
                 type="date"
@@ -434,7 +436,7 @@ export default function AuditPage() {
             </div>
             <button style={s.btnSmall} onClick={() => fetchLogs(1)}>
               <i className="fa-solid fa-magnifying-glass" style={{ marginRight: 4 }} />
-              Lọc
+              {t('btnFilter')}
             </button>
             <button style={s.btnOutline} onClick={() => {
               setFilters({ actor: '', entity: '', action: '', from: '', to: '' })
@@ -449,13 +451,13 @@ export default function AuditPage() {
             <table style={s.table}>
               <thead>
                 <tr>
-                  <th style={s.th}>Thời gian</th>
+                  <th style={s.th}>{t('colTime')}</th>
                   <th style={s.th}>Actor</th>
                   <th style={s.th}>Role</th>
                   <th style={s.th}>Action</th>
                   <th style={s.th}>Entity</th>
                   <th style={s.th}>ID</th>
-                  <th style={s.th}>Tóm tắt / Diff</th>
+                  <th style={s.th}>{t('colSummary')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -463,12 +465,12 @@ export default function AuditPage() {
                   <tr>
                     <td colSpan={7} style={s.emptyRow}>
                       <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 6 }} />
-                      Đang tải...
+                      {t('loading')}
                     </td>
                   </tr>
                 ) : rows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={s.emptyRow}>Không có dữ liệu</td>
+                    <td colSpan={7} style={s.emptyRow}>{t('noData')}</td>
                   </tr>
                 ) : rows.map(row => {
                   const expanded = expandedId === row.id
@@ -532,7 +534,7 @@ export default function AuditPage() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div style={s.pagRow}>
-              <span>{((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} / {total} mục</span>
+              <span>{((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} / {total} {t('records')}</span>
               <button
                 style={{ ...s.btnOutline, alignSelf: 'auto', padding: '4px 12px' }}
                 disabled={page <= 1}
@@ -540,7 +542,7 @@ export default function AuditPage() {
               >
                 ← Trước
               </button>
-              <span>Trang {page} / {totalPages}</span>
+              <span>{t('page')} {page} / {totalPages}</span>
               <button
                 style={{ ...s.btnOutline, alignSelf: 'auto', padding: '4px 12px' }}
                 disabled={page >= totalPages}
@@ -559,8 +561,8 @@ export default function AuditPage() {
           {statsLoading || !stats ? (
             <div style={{ ...s.card, textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
               {statsLoading
-                ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />Đang tải thống kê...</>
-                : 'Không có dữ liệu'}
+                ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}</>
+                : t('noData')}
             </div>
           ) : (
             <>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useToast } from '@/components/shared/ToastContext'
+import { useLang } from '@/components/shared/I18nContext'
 
 function fmtNum(v: any, dec = 4): string {
   const n = parseFloat(String(v))
@@ -127,6 +128,7 @@ const inputU: React.CSSProperties = { width: '100%', border: 'none', borderBotto
 const lbl: React.CSSProperties = { display: 'block', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', marginBottom: 3 }
 
 export default function MKPage() {
+  const { t } = useLang()
   const [activeKey, setActiveKey] = useState<SheetKey>('price_list_type')
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -279,12 +281,12 @@ export default function MKPage() {
       <div className="page-header-row" style={{ marginBottom: '1.5rem' }}>
         <div>
           <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-secondary)', margin: '0 0 4px' }}>MASTER DATA</p>
-          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 4px' }}>Markup &amp; Pricing</h2>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', letterSpacing: '0.04em', margin: 0 }}>Manage markup &amp; pricing tables</p>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 4px' }}>{t('pageTitleMk')}</h2>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', letterSpacing: '0.04em', margin: 0 }}>{t('mkSubtitle')}</p>
         </div>
         {activeKey !== 'process_fee' && (
           <button onClick={openAdd} className="btn-primary" style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--text-xs)' }}>
-            <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />Add New
+            <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />{t('addNew')}
           </button>
         )}
       </div>
@@ -314,16 +316,16 @@ export default function MKPage() {
               <tr>
                 <th style={{ ...th, width: 40, textAlign: 'center' }}>#</th>
                 {displayCols.map(c => <th key={c.key} style={th}>{c.label}</th>)}
-                <th style={th}>Actions</th>
+                <th style={th}>{t('colActions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr><td colSpan={displayCols.length + 2} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                  <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />Loading...
+                  <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
                 </td></tr>
               ) : data.length === 0 ? (
-                <tr><td colSpan={displayCols.length + 2} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No data</td></tr>
+                <tr><td colSpan={displayCols.length + 2} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>{t('noData')}</td></tr>
               ) : data.map((row, i) => (
                 <tr key={i}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
@@ -377,11 +379,11 @@ export default function MKPage() {
       {deleteRow && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: 380, padding: '1.5rem' }}>
-            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>Xác nhận xóa</h3>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>Bạn có chắc muốn xóa dòng này? Hành động này không thể hoàn tác.</p>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>{t('confirmDelete')}</h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>{t('cannotUndo')}</p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button onClick={() => setDeleteRow(null)} className="btn-outline" style={{ padding: '8px 18px' }}>Hủy</button>
-              <button onClick={doDelete} style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Xóa</button>
+              <button onClick={() => setDeleteRow(null)} className="btn-outline" style={{ padding: '8px 18px' }}>{t('cancel')}</button>
+              <button onClick={doDelete} style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('delete')}</button>
             </div>
           </div>
         </div>
@@ -507,9 +509,9 @@ export default function MKPage() {
 
             {/* STICKY FOOTER */}
             <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0, background: 'var(--bg-base)', borderRadius: '0 0 4px 4px' }}>
-              <button onClick={closeModal} className="btn-outline" style={{ padding: '8px 20px' }}>Cancel</button>
+              <button onClick={closeModal} className="btn-outline" style={{ padding: '8px 20px' }}>{t('cancel')}</button>
               <button onClick={handleSave} className="btn-primary" style={{ padding: '8px 20px' }} disabled={saving}>
-                {saving ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 6 }} />Saving...</> : 'Save'}
+                {saving ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 6 }} />{t('saving')}</> : t('save')}
               </button>
             </div>
           </div>

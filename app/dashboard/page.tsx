@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useUser } from '@/components/shared/UserContext'
+import { useLang } from '@/components/shared/I18nContext'
 
 interface Stats {
   totalBOMs: number
@@ -34,6 +35,7 @@ const eyebrow: React.CSSProperties = {
 }
 
 export default function DashboardPage() {
+  const { t } = useLang()
   const { role } = useUser()
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
@@ -81,7 +83,7 @@ export default function DashboardPage() {
       <div className="page-header-row" style={{ marginBottom: '1.5rem' }}>
         <div>
           <p style={{ fontSize: 'var(--text-xs)', fontWeight: 500, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 4 }}>
-            OVERVIEW
+            {t('dashOverview')}
           </p>
           <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>
             BOM Pricing Management System
@@ -107,10 +109,10 @@ export default function DashboardPage() {
       {/* ── KPI Cards ── */}
       <div className="grid-4col" style={{ marginBottom: '1.5rem' }}>
         {[
-          { icon: 'fa-file-invoice-dollar', label: 'TOTAL BOMS',       value: (stats?.totalBOMs ?? 0).toLocaleString(),      sub: 'All time',         heading: true },
-          { icon: 'fa-calendar-day',        label: "TODAY'S BOMS",     value: (stats?.todayBOMs ?? 0).toLocaleString(),      sub: 'Today',            heading: true },
-          { icon: 'fa-calendar-week',       label: 'THIS MONTH',       value: (stats?.monthBOMs ?? 0).toLocaleString(),      sub: 'This month',       heading: true },
-          { icon: 'fa-money-bill-wave',     label: 'TOTAL MSRP VALUE', value: showValue ? fmt(stats?.totalValue ?? 0) : '—', sub: 'Total MSRP Value', heading: false },
+          { icon: 'fa-file-invoice-dollar', label: t('dashTotalBoms'),  value: (stats?.totalBOMs ?? 0).toLocaleString(),      sub: t('dashAllTime'), heading: true },
+          { icon: 'fa-calendar-day',        label: t('dashTodayBoms'), value: (stats?.todayBOMs ?? 0).toLocaleString(),      sub: t('dashAllTime'), heading: true },
+          { icon: 'fa-calendar-week',       label: t('dashMonthBoms'), value: (stats?.monthBOMs ?? 0).toLocaleString(),      sub: t('dashAllTime'), heading: true },
+          { icon: 'fa-money-bill-wave',     label: t('dashTotalValue'),value: showValue ? fmt(stats?.totalValue ?? 0) : '—', sub: t('dashTotalValue'), heading: false },
         ].map((k, i) => (
           <div key={i} style={card}>
             <p style={eyebrow}>
@@ -139,7 +141,7 @@ export default function DashboardPage() {
             <div style={card}>
               <p style={eyebrow}>
                 <i className="fa-solid fa-store" style={{ fontSize: 10 }} />
-                SALES BY STORE
+                {t('dashByStore')}
               </p>
               {stats.byStore.length === 0
                 ? <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>No data</p>
@@ -168,7 +170,7 @@ export default function DashboardPage() {
             <div style={card}>
               <p style={eyebrow}>
                 <i className="fa-solid fa-tags" style={{ fontSize: 10 }} />
-                TOP 5 PRODUCT TYPES
+                {t('dashTopProducts')}
               </p>
               {stats.byProductType.length === 0
                 ? <p style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>No data</p>
@@ -196,7 +198,7 @@ export default function DashboardPage() {
             <div style={card}>
               <p style={eyebrow}>
                 <i className="fa-solid fa-user-tie" style={{ fontSize: 10 }} />
-                TOP 5 SALESPERSONS
+                {t('dashTopSales')}
               </p>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
@@ -230,11 +232,11 @@ export default function DashboardPage() {
             <div style={card}>
               <p style={eyebrow}>
                 <i className="fa-solid fa-percent" style={{ fontSize: 10 }} />
-                DISCOUNT SUMMARY
+                {t('dashDiscSummary')}
               </p>
               <div style={{ marginBottom: 24 }}>
                 <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', margin: '0 0 8px' }}>
-                  DISCOUNTED BOMS
+                  {t('dashDiscBoms')}
                 </p>
                 <div style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--text-primary)', lineHeight: 1 }}>
                   {stats.discountedCount.toLocaleString()}
@@ -245,7 +247,7 @@ export default function DashboardPage() {
               </div>
               <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: 20 }}>
                 <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', margin: '0 0 8px' }}>
-                  AVG. SELL PRICE
+                  {t('dashAvgSell')}
                 </p>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xl)', color: 'var(--text-primary)', lineHeight: 1 }}>
                   {fmt(stats.avgSellPrice)}
@@ -260,10 +262,10 @@ export default function DashboardPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <p style={eyebrow}>
                 <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: 10 }} />
-                RECENT ACTIVITY
+                {t('dashRecentAct')}
               </p>
               <a href="/dashboard/review" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textDecoration: 'none', letterSpacing: '0.06em' }}>
-                View all ›
+                {t('dashViewAll')}
               </a>
             </div>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -281,7 +283,7 @@ export default function DashboardPage() {
               </thead>
               <tbody>
                 {(stats.recentBOMs || []).length === 0
-                  ? <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>No recent BOMs</td></tr>
+                  ? <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>{t('dashNoRecent')}</td></tr>
                   : stats.recentBOMs.map(b => (
                       <tr key={b.bom_id} style={{ borderBottom: '1px solid var(--border-light)' }}>
                         <td style={{ padding: '10px 8px' }}>
@@ -322,10 +324,10 @@ export default function DashboardPage() {
         <div style={{ ...card, textAlign: 'center', padding: '4rem' }}>
           <i className="fa-solid fa-gem" style={{ fontSize: 36, color: 'var(--text-muted)', marginBottom: 20, display: 'block' }} />
           <p style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', color: 'var(--text-primary)', marginBottom: 8 }}>
-            Welcome to BOM Pricing System
+            {t('dashWelcome')}
           </p>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-            Use the navigation above to access BOM Pricing and Price History.
+            {t('dashUseNav')}
           </p>
         </div>
       )}

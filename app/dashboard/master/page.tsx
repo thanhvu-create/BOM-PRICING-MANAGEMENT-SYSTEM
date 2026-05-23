@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import React from 'react'
 import { useToast } from '@/components/shared/ToastContext'
 import { useUser } from '@/components/shared/UserContext'
+import { useLang } from '@/components/shared/I18nContext'
 
 /* ── TYPES ─────────────────────────────────────────────────── */
 interface StoneRow {
@@ -52,6 +53,7 @@ function Modal({ title, onClose, children, width = 520 }: { title: string; onClo
 
 /* ── STONE MASTER TAB ────────────────────────────────────────── */
 function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role = '' }: { triggerAdd?: number; triggerSync?: number; onSyncingChange?: (v: boolean) => void; role?: string }) {
+  const { t } = useLang()
   const isOrderView = role === 'Order'
   const [rows, setRows] = useState<StoneRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -200,7 +202,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
       <div style={{ marginBottom: '1rem' }}>
         <input
           style={{ border: '1px solid var(--border-base)', borderRadius: 0, padding: '8px 12px', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-body)', outline: 'none', width: '100%', boxSizing: 'border-box', background: 'var(--bg-surface)' }}
-          placeholder="Search master code / grade ID / name..."
+          placeholder={t('masterSearchPlh')}
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -234,8 +236,8 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
               </tr>
             </thead>
             <tbody>
-              {loading ? <tr><td colSpan={isOrderView ? 8 : 12} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />Loading...</td></tr>
-                : filtered.length === 0 ? <tr><td colSpan={isOrderView ? 8 : 12} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No data</td></tr>
+              {loading ? <tr><td colSpan={isOrderView ? 8 : 12} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}</td></tr>
+                : filtered.length === 0 ? <tr><td colSpan={isOrderView ? 8 : 12} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>{t('noData')}</td></tr>
                 : filtered.map((r, i) => (
                   <tr key={i}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
@@ -282,13 +284,13 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
       {deleteStoneRow && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: 380, padding: '1.5rem' }}>
-            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>Xác nhận xóa</h3>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>{t('confirmDelete')}</h3>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
-              Xóa <strong>{deleteStoneRow.grade_id}</strong>? Hành động này không thể hoàn tác.
+              {t('delete')} <strong>{deleteStoneRow.grade_id}</strong>? {t('cannotUndo')}
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button onClick={() => setDeleteStoneRow(null)} className="btn-outline" style={{ padding: '8px 18px' }}>Hủy</button>
-              <button onClick={doDeleteStone} style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Xóa</button>
+              <button onClick={() => setDeleteStoneRow(null)} className="btn-outline" style={{ padding: '8px 18px' }}>{t('cancel')}</button>
+              <button onClick={doDeleteStone} style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('delete')}</button>
             </div>
           </div>
         </div>
@@ -419,9 +421,9 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)' }}>
-            <button onClick={closeModal} className="btn-outline" style={{ padding: '8px 18px' }}>Cancel</button>
+            <button onClick={closeModal} className="btn-outline" style={{ padding: '8px 18px' }}>{t('cancel')}</button>
             <button onClick={handleSave} className="btn-primary" style={{ padding: '8px 18px' }} disabled={saving}>
-              {saving ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 6 }} />Saving...</> : 'Save'}
+              {saving ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 6 }} />{t('saving')}</> : t('save')}
             </button>
           </div>
         </Modal>
@@ -432,6 +434,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
 
 /* ── DM CATEGORIES TAB ───────────────────────────────────────── */
 function DMCategoriesTab() {
+  const { t } = useLang()
   const [activeSheet, setActiveSheet] = useState<DMSheet>('DM_Category')
   const [data, setData] = useState<DMRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -527,8 +530,8 @@ function DMCategoriesTab() {
             </tr>
           </thead>
           <tbody>
-            {loading ? <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />Loading...</td></tr>
-              : data.length === 0 ? <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No data</td></tr>
+            {loading ? <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}</td></tr>
+              : data.length === 0 ? <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>{t('noData')}</td></tr>
               : data.map((r, i) => (
                 <tr key={i}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
@@ -555,13 +558,13 @@ function DMCategoriesTab() {
       {deleteRow && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: 380, padding: '1.5rem' }}>
-            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>Xác nhận xóa</h3>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>{t('confirmDelete')}</h3>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
-              Xóa <strong>{isDef ? deleteRow.en_name : deleteRow.code}</strong>? Hành động này không thể hoàn tác.
+              {t('delete')} <strong>{isDef ? deleteRow.en_name : deleteRow.code}</strong>? {t('cannotUndo')}
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button onClick={() => setDeleteRow(null)} className="btn-outline" style={{ padding: '8px 18px' }}>Hủy</button>
-              <button onClick={doDelete} style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Xóa</button>
+              <button onClick={() => setDeleteRow(null)} className="btn-outline" style={{ padding: '8px 18px' }}>{t('cancel')}</button>
+              <button onClick={doDelete} style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('delete')}</button>
             </div>
           </div>
         </div>
@@ -581,9 +584,9 @@ function DMCategoriesTab() {
             </>}
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)' }}>
-            <button onClick={closeModal} className="btn-outline" style={{ padding: '8px 18px' }}>Cancel</button>
+            <button onClick={closeModal} className="btn-outline" style={{ padding: '8px 18px' }}>{t('cancel')}</button>
             <button onClick={handleSave} className="btn-primary" style={{ padding: '8px 18px' }} disabled={saving}>
-              {saving ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 6 }} />...</> : 'Save'}
+              {saving ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 6 }} /></> : t('save')}
             </button>
           </div>
         </Modal>
@@ -594,6 +597,7 @@ function DMCategoriesTab() {
 
 /* ── MAIN PAGE ───────────────────────────────────────────────── */
 export default function MasterPage() {
+  const { t } = useLang()
   const [activeTab, setActiveTab] = useState<'stone' | 'dm'>('stone')
   const [triggerAdd, setTriggerAdd] = useState(0)
   const [triggerSync, setTriggerSync] = useState(0)
@@ -607,14 +611,14 @@ export default function MasterPage() {
       <div className="page-header-row" style={{ marginBottom: '1.5rem' }}>
         <div>
           <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-secondary)', margin: '0 0 4px' }}>MASTER DATA</p>
-          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 4px' }}>Stone Data</h2>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 4px' }}>{t('pageTitleMaster')}</h2>
           <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', letterSpacing: '0.04em', margin: 0 }}>Stone catalog — auto-sync to Stone_Material</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {!isOrderRole && (
             <button className="btn-outline" style={{ padding: '6px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}
-              onClick={() => setTriggerSync(t => t + 1)} disabled={syncing}>
-              <i className={`fa-solid ${syncing ? 'fa-circle-notch fa-spin' : 'fa-rotate'}`} style={{ fontSize: 10 }} />{syncing ? 'Syncing...' : 'Sync All'}
+              onClick={() => setTriggerSync(n => n + 1)} disabled={syncing}>
+              <i className={`fa-solid ${syncing ? 'fa-circle-notch fa-spin' : 'fa-rotate'}`} style={{ fontSize: 10 }} />{syncing ? t('syncing') : t('syncAll')}
             </button>
           )}
           {!isOrderRole && (
@@ -625,8 +629,8 @@ export default function MasterPage() {
           )}
           {!isOrderRole && (
             <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 5 }}
-              onClick={() => { setActiveTab('stone'); setTriggerAdd(t => t + 1) }}>
-              <i className="fa-solid fa-plus" style={{ fontSize: 10 }} /> Add New
+              onClick={() => { setActiveTab('stone'); setTriggerAdd(n => n + 1) }}>
+              <i className="fa-solid fa-plus" style={{ fontSize: 10 }} /> {t('addNew')}
             </button>
           )}
         </div>

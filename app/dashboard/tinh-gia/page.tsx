@@ -710,7 +710,7 @@ export default function TinhGiaPage() {
   if (loadingDD) return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', padding: '3rem 0' }}>
       <i className="fa-solid fa-circle-notch fa-spin" />
-      <span style={{ fontSize: 'var(--text-sm)' }}>Đang tải dữ liệu...</span>
+      <span style={{ fontSize: 'var(--text-sm)' }}>{t('loading')}</span>
     </div>
   )
 
@@ -1420,12 +1420,12 @@ export default function TinhGiaPage() {
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 400 }}>
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0, color: 'var(--text-primary)' }}>
-                Xác nhận Reset
+                {t('confirm')} Reset
               </h3>
             </div>
             <div style={{ padding: '1.25rem 1.5rem' }}>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: 0 }}>
-                Xóa toàn bộ dữ liệu đã nhập? Thao tác này không thể hoàn tác.
+                {t('reset')} — {t('cannotUndo')}
               </p>
             </div>
             <div style={{ padding: '0.75rem 1.5rem', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>

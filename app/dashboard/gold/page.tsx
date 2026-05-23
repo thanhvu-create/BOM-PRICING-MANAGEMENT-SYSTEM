@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useToast } from '@/components/shared/ToastContext'
+import { useLang } from '@/components/shared/I18nContext'
 
 interface GoldRow {
   id: string
@@ -23,17 +24,6 @@ const td: React.CSSProperties = {
   padding: '10px 12px', borderBottom: '1px solid var(--border-light)',
   fontSize: 'var(--text-sm)', fontFamily: 'var(--font-mono)',
 }
-const inputStyle: React.CSSProperties = {
-  width: '100%', border: 'none', borderBottom: '1px solid var(--border-base)',
-  background: 'transparent', padding: '6px 0',
-  fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)',
-  color: 'var(--text-primary)', outline: 'none',
-}
-const labelStyle: React.CSSProperties = {
-  display: 'block', fontSize: 'var(--text-xs)', textTransform: 'uppercase',
-  letterSpacing: '0.1em', color: 'var(--text-secondary)', marginBottom: 4,
-}
-
 const DEFAULT_KARATS = ['10K', '14K', '18K', '20K', '22K', '24K', 'PT', 'AG']
 
 function fmtNum(v: any, dec = 4): string {
@@ -43,6 +33,7 @@ function fmtNum(v: any, dec = 4): string {
 }
 
 export default function GoldPage() {
+  const { t } = useLang()
   const { toast, update } = useToast()
   const [rows, setRows] = useState<GoldRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -286,20 +277,20 @@ export default function GoldPage() {
       <div className="page-header-row" style={{ marginBottom: '1.5rem' }}>
         <div>
           <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-secondary)', margin: '0 0 4px' }}>MASTER DATA</p>
-          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 4px' }}>Gold Prices</h2>
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', letterSpacing: '0.04em', margin: 0 }}>Daily metal prices — auto-fetched from Amark.com</p>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, color: 'var(--text-primary)', margin: '0 0 4px' }}>{t('pageTitleGold')}</h2>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', letterSpacing: '0.04em', margin: 0 }}>{t('goldSubtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <button onClick={handleFetchAmark} disabled={fetching} className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)', opacity: fetching ? 0.6 : 1 }}>
             <i className={`fa-solid ${fetching ? 'fa-circle-notch fa-spin' : 'fa-cloud-arrow-down'}`} style={{ fontSize: 11 }} />
-            {fetching ? 'Fetching...' : 'Fetch Today (Amark)'}
+            {fetching ? t('loading') : t('btnFetchAmark')}
           </button>
           <button onClick={openAdd} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
-            <i className="fa-solid fa-plus" style={{ fontSize: 11 }} /> Add Manual
+            <i className="fa-solid fa-plus" style={{ fontSize: 11 }} /> {t('btnAddManual')}
           </button>
           <div style={{ position: 'relative' }}>
             <button onClick={() => setShowKaratPanel(v => !v)} className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
-              <i className="fa-solid fa-table-columns" style={{ fontSize: 11 }} />Karat Cols <i className="fa-solid fa-chevron-down" style={{ fontSize: 9 }} />
+              <i className="fa-solid fa-table-columns" style={{ fontSize: 11 }} />{t('btnKaratCols')} <i className="fa-solid fa-chevron-down" style={{ fontSize: 9 }} />
             </button>
             {showKaratPanel && (
               <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, background: '#fff', border: '1px solid var(--border-base)', borderRadius: 2, padding: '12px', width: 280, zIndex: 100, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
@@ -350,7 +341,7 @@ export default function GoldPage() {
                 finally { setTriggerStatusLoading(false) }
               }
             }} className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
-              <i className="fa-solid fa-clock" style={{ fontSize: 11 }} />Auto Trigger <i className="fa-solid fa-chevron-down" style={{ fontSize: 9 }} />
+              <i className="fa-solid fa-clock" style={{ fontSize: 11 }} />{t('btnAutoTrigger')} <i className="fa-solid fa-chevron-down" style={{ fontSize: 9 }} />
             </button>
             {showTriggerPanel && (() => {
               async function saveConfig() {
@@ -399,7 +390,7 @@ export default function GoldPage() {
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: triggerEnabled ? '#2E8B8B' : '#9B4040', display: 'inline-block', flexShrink: 0 }} />
                     )}
                     <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: triggerEnabled ? '#2E8B8B' : '#9B4040', flex: 1 }}>
-                      {triggerEnabled ? '● Trigger Active' : '○ Trigger Tắt'}
+                      {triggerEnabled ? t('triggerActive') : t('triggerOff')}
                     </span>
                     <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                       {String(parseInt(triggerHour)).padStart(2,'0')}:00 VN
@@ -421,7 +412,7 @@ export default function GoldPage() {
                       marginBottom: 12,
                     }}>
                     <i className={`fa-solid ${togglingTrigger ? 'fa-circle-notch fa-spin' : triggerEnabled ? 'fa-toggle-on' : 'fa-toggle-off'}`} style={{ fontSize: 11 }} />
-                    {togglingTrigger ? 'Đang xử lý...' : triggerEnabled ? 'Tắt Trigger' : 'Bật Trigger'}
+                    {togglingTrigger ? t('loading') : triggerEnabled ? t('toggleDisable') : t('toggleEnable')}
                   </button>
 
                   {/* Loss Factor */}
@@ -439,7 +430,7 @@ export default function GoldPage() {
 
                   {/* Hour selector */}
                   <div style={{ marginBottom: 12 }}>
-                    <label style={{ display: 'block', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 4 }}>Giờ chạy tự động (VN)</label>
+                    <label style={{ display: 'block', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: 4 }}>{t('labelTriggerHour')}</label>
                     <div style={{ display: 'flex', gap: 0 }}>
                       <select value={triggerHour} onChange={e => setTriggerHour(e.target.value)}
                         style={{ flex: 1, border: '1px solid var(--border-base)', borderRight: 'none', padding: '6px 8px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', outline: 'none', background: 'var(--bg-surface)', borderRadius: '2px 0 0 2px' }}>
@@ -502,7 +493,7 @@ export default function GoldPage() {
                     disabled={recalcWorking}
                     style={{ width: '100%', background: '#2E8B8B', color: '#fff', border: 'none', borderRadius: 2, padding: '7px 0', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: recalcWorking ? 'not-allowed' : 'pointer', opacity: recalcWorking ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                     <i className={`fa-solid ${recalcWorking ? 'fa-circle-notch fa-spin' : 'fa-calculator'}`} style={{ fontSize: 10 }} />
-                    {recalcWorking ? 'Recalculating...' : 'Recalc All Prices'}
+                    {recalcWorking ? t('loading') : t('btnRecalc')}
                   </button>
                 </div>
               )
@@ -525,13 +516,13 @@ export default function GoldPage() {
               <tr>
                 {[
                   { key: '#', label: '#' },
-                  { key: 'date', label: 'Ngày' },
+                  { key: 'date', label: t('colDate') },
                   { key: 'gold', label: 'Gold ASK (oz)' },
                   { key: 'pt', label: 'PT ASK (oz)' },
                   { key: 'ag', label: 'AG ASK (oz)' },
-                  { key: 'lf', label: 'Loss Factor' },
+                  { key: 'lf', label: t('colLossFactor') },
                   ...activeKarats.map(k => ({ key: k, label: k === 'PT' ? 'PT ($/gr)' : k === 'AG' ? 'AG ($/gr)' : `${k} ($/gr)` })),
-                  { key: 'actions', label: 'Actions' },
+                  { key: 'actions', label: t('colActions') },
                 ].map(h => (
                   <th key={h.key} style={th}>{h.label}</th>
                 ))}
@@ -540,10 +531,10 @@ export default function GoldPage() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={6 + activeKarats.length + 1} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-                  <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />Loading...
+                  <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
                 </td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={6 + activeKarats.length + 1} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No data</td></tr>
+                <tr><td colSpan={6 + activeKarats.length + 1} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>{t('noData')}</td></tr>
               ) : rows.map((r, i) => {
                 const kp = parseKaratPrices(r.karat_prices)
                 return (
@@ -606,7 +597,7 @@ export default function GoldPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <i className="fa-solid fa-coins" style={{ color: '#947545', fontSize: 18 }} />
                 <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', fontWeight: 400, margin: 0, color: '#2C2A27' }}>
-                  {modal === 'add' ? 'Add Gold Price Manually' : `Edit Gold Price — ${editRow?.price_date}`}
+                  {modal === 'add' ? t('modalAddGold') : `${t('modalEditGold')} ${editRow?.price_date}`}
                 </h3>
               </div>
               <button onClick={closeModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: 20, lineHeight: 1 }}>×</button>
@@ -635,7 +626,7 @@ export default function GoldPage() {
 
               {/* Section: Amark Price */}
               <div style={{ marginBottom: '1.25rem' }}>
-                <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', textTransform: 'uppercase', marginBottom: 10 }}>Amark Price (USD/oz)</p>
+                <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', textTransform: 'uppercase', marginBottom: 10 }}>{t('labelAmarkSection')}</p>
                 <div className="form-grid-3">
                   <div>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>Gold (oz) *</label>
@@ -657,7 +648,7 @@ export default function GoldPage() {
 
               {/* Section: Auto-Calculated */}
               <div style={{ marginBottom: '1rem' }}>
-                <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', textTransform: 'uppercase', marginBottom: 10 }}>Auto-Calculated (USD/gram)</p>
+                <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', textTransform: 'uppercase', marginBottom: 10 }}>{t('labelAutoCalc')}</p>
                 <div className="grid-4col">
                   {previewEntries.map(({ label, value }) => {
                     const formula = label === 'AG'
@@ -699,7 +690,7 @@ export default function GoldPage() {
                   <input type="checkbox" id="gm_overwrite" checked={fOverwrite} onChange={e => setFOverwrite(e.target.checked)}
                     style={{ width: 14, height: 14, cursor: 'pointer', accentColor: '#947545' }} />
                   <label htmlFor="gm_overwrite" style={{ fontSize: 'var(--text-xs)', color: '#888', cursor: 'pointer' }}>
-                    Ghi đè nếu đã có ngày này
+                    {t('labelOverwrite')}
                   </label>
                 </div>
               )}
@@ -709,11 +700,11 @@ export default function GoldPage() {
             <div style={{ background: '#F5F1EC', padding: '1rem 1.75rem', display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid #E8E0D6' }}>
               <button onClick={closeModal}
                 style={{ background: '#fff', border: '1px solid #D1C9BE', borderRadius: 4, padding: '9px 22px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#555' }}>
-                Cancel
+                {t('cancel')}
               </button>
               <button onClick={handleSave} disabled={saving}
                 style={{ background: '#1A1814', border: '1px solid #1A1814', borderRadius: 4, padding: '9px 22px', cursor: saving ? 'not-allowed' : 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#fff', opacity: saving ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-                {saving ? <><i className="fa-solid fa-circle-notch fa-spin" />Saving...</> : <><i className="fa-solid fa-floppy-disk" />Save</>}
+                {saving ? <><i className="fa-solid fa-circle-notch fa-spin" />{t('saving')}</> : <><i className="fa-solid fa-floppy-disk" />{t('save')}</>}
               </button>
             </div>
           </div>
@@ -725,13 +716,13 @@ export default function GoldPage() {
       {deleteGoldRow && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: 380, padding: '1.5rem' }}>
-            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>Xác nhận xóa</h3>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>{t('confirmDelete')}</h3>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
-              Xóa dòng giá ngày <strong>{deleteGoldRow.price_date}</strong>? Hành động này không thể hoàn tác.
+              {t('delete')} <strong>{deleteGoldRow.price_date}</strong>? {t('cannotUndo')}
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button onClick={() => setDeleteGoldRow(null)} className="btn-outline" style={{ padding: '8px 18px' }}>Hủy</button>
-              <button onClick={doDeleteGold} style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Xóa</button>
+              <button onClick={() => setDeleteGoldRow(null)} className="btn-outline" style={{ padding: '8px 18px' }}>{t('cancel')}</button>
+              <button onClick={doDeleteGold} style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('delete')}</button>
             </div>
           </div>
         </div>
@@ -741,13 +732,13 @@ export default function GoldPage() {
       {removeKaratLabel && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: 380, padding: '1.5rem' }}>
-            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>Xóa cột Karat</h3>
+            <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>{t('confirmDelete')}</h3>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
-              Xóa cột <strong>{removeKaratLabel}</strong> khỏi tất cả dòng? Hành động này không thể hoàn tác.
+              {t('delete')} <strong>{removeKaratLabel}</strong>? {t('cannotUndo')}
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button onClick={() => setRemoveKaratLabel(null)} className="btn-outline" style={{ padding: '8px 18px' }}>Hủy</button>
-              <button onClick={doRemoveKarat} style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Xóa</button>
+              <button onClick={() => setRemoveKaratLabel(null)} className="btn-outline" style={{ padding: '8px 18px' }}>{t('cancel')}</button>
+              <button onClick={doRemoveKarat} style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('delete')}</button>
             </div>
           </div>
         </div>

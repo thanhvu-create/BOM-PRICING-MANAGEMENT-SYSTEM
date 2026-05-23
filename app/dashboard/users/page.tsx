@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useToast } from '@/components/shared/ToastContext'
+import { useLang } from '@/components/shared/I18nContext'
 
 interface AppUser {
   id: string
@@ -59,6 +60,7 @@ function getRoleBadge(role: string): React.CSSProperties {
 }
 
 export default function UsersPage() {
+  const { t } = useLang()
   const { toast, update } = useToast()
   const [users, setUsers] = useState<AppUser[]>([])
   const [loading, setLoading] = useState(true)
@@ -104,8 +106,8 @@ export default function UsersPage() {
 
   async function handleAdd() {
     setFormError('')
-    if (!fUsername.trim()) { setFormError('Username là bắt buộc'); return }
-    if (!fPassword.trim()) { setFormError('Password là bắt buộc'); return }
+    if (!fUsername.trim()) { setFormError(t('errUsernameReq')); return }
+    if (!fPassword.trim()) { setFormError(t('errPasswordReq')); return }
     setSaving(true)
     const tid = toast(`Creating user "${fUsername}"...`, 'loading')
     try {
@@ -168,7 +170,7 @@ export default function UsersPage() {
             ADMIN
           </p>
           <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>
-            User Management
+            {t('usersPageTitle')}
           </h2>
         </div>
         <button
@@ -184,7 +186,7 @@ export default function UsersPage() {
           }}
         >
           <i className={`fa-solid ${showAddForm ? 'fa-chevron-up' : 'fa-user-plus'}`} style={{ fontSize: 11 }} />
-          {showAddForm ? 'ẨN FORM' : '+ ADD USER'}
+          {showAddForm ? t('btnHideForm') : t('btnAddUser')}
         </button>
       </div>
 
@@ -195,7 +197,7 @@ export default function UsersPage() {
           borderRadius: 4, padding: '1.25rem', marginBottom: '1.25rem',
         }}>
           <p style={{ ...labelStyle, marginBottom: '1rem', fontSize: 'var(--text-xs)', color: 'var(--text-primary)', fontWeight: 600 }}>
-            NEW USER
+            {t('sectionNewUser')}
           </p>
 
           {formError && (
@@ -206,7 +208,7 @@ export default function UsersPage() {
 
           <div className="add-user-form-row">
             <div>
-              <label style={labelStyle}>Username *</label>
+              <label style={labelStyle}>{t('labelUsername')} *</label>
               <input
                 style={inputStyle}
                 value={fUsername}
@@ -216,7 +218,7 @@ export default function UsersPage() {
               />
             </div>
             <div>
-              <label style={labelStyle}>Password *</label>
+              <label style={labelStyle}>{t('labelPassword')} *</label>
               <input
                 type="password"
                 style={inputStyle}
@@ -227,15 +229,15 @@ export default function UsersPage() {
               />
             </div>
             <div>
-              <label style={labelStyle}>Role</label>
+              <label style={labelStyle}>{t('labelRole')}</label>
               <select style={selectStyle} value={fRole} onChange={e => setFRole(e.target.value)}>
                 {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
             <div>
-              <label style={labelStyle}>Store</label>
+              <label style={labelStyle}>{t('labelStore')}</label>
               <select style={selectStyle} value={fStore} onChange={e => setFStore(e.target.value)}>
-                <option value="">-- All stores --</option>
+                <option value="">{t('allStoresSel')}</option>
                 {STORES.filter(s => s).map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
@@ -253,8 +255,8 @@ export default function UsersPage() {
               }}
             >
               {saving
-                ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 11 }} /> Saving...</>
-                : <><i className="fa-solid fa-user-plus" style={{ fontSize: 11 }} /> Add User</>
+                ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 11 }} /> {t('saving')}</>
+                : <><i className="fa-solid fa-user-plus" style={{ fontSize: 11 }} /> {t('add')}</>
               }
             </button>
           </div>
@@ -273,7 +275,7 @@ export default function UsersPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
           <thead>
             <tr>
-              {['ID', 'USERNAME', 'ROLE', 'STORE', 'CREATED', 'ACTIONS'].map(h => (
+              {['ID', t('labelUsername').toUpperCase(), t('labelRole').toUpperCase(), t('labelStore').toUpperCase(), t('colDate').toUpperCase(), t('colActions').toUpperCase()].map(h => (
                 <th key={h} style={th}>{h}</th>
               ))}
             </tr>
@@ -282,13 +284,13 @@ export default function UsersPage() {
             {loading ? (
               <tr>
                 <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
-                  <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />Đang tải...
+                  <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
                 <td colSpan={6} style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>
-                  Chưa có user nào
+                  {t('noUsers')}
                 </td>
               </tr>
             ) : users.map(u => (
@@ -311,7 +313,7 @@ export default function UsersPage() {
                 <td style={td}>
                   {u.store
                     ? <span style={{ border: '1px solid var(--border-base)', padding: '1px 8px', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary)' }}>{u.store}</span>
-                    : <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>All stores</span>
+                    : <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-xs)' }}>{t('allStoresOpt')}</span>
                   }
                 </td>
                 {/* Created */}
@@ -363,7 +365,7 @@ export default function UsersPage() {
             {/* Modal header */}
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>
-                Sửa tài khoản
+                {t('modalEditUser')}
               </h3>
               <button onClick={closeEdit} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18 }}>
                 <i className="fa-solid fa-xmark" />
@@ -389,7 +391,7 @@ export default function UsersPage() {
 
               {/* Role */}
               <div>
-                <label style={labelStyle}>Role *</label>
+                <label style={labelStyle}>{t('labelRole')} *</label>
                 <select style={selectStyle} value={eRole} onChange={e => setERole(e.target.value)}>
                   {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
@@ -397,16 +399,16 @@ export default function UsersPage() {
 
               {/* Store */}
               <div>
-                <label style={labelStyle}>Store</label>
+                <label style={labelStyle}>{t('labelStore')}</label>
                 <select style={selectStyle} value={eStore} onChange={e => setEStore(e.target.value)}>
-                  <option value="">-- All stores --</option>
+                  <option value="">{t('allStoresSel')}</option>
                   {STORES.filter(s => s).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
 
               {/* New password */}
               <div>
-                <label style={labelStyle}>New Password <span style={{ color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(để trống = không đổi)</span></label>
+                <label style={labelStyle}>{t('labelNewPassword')} <span style={{ color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>{t('noChangePassword')}</span></label>
                 <input
                   type="password"
                   style={inputStyle}
@@ -423,14 +425,14 @@ export default function UsersPage() {
                 onClick={closeEdit}
                 style={{ padding: '8px 20px', background: 'transparent', border: '1px solid var(--border-strong)', borderRadius: 0, cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' }}
               >
-                Hủy
+                {t('cancel')}
               </button>
               <button
                 onClick={handleEdit}
                 disabled={editSaving}
                 style={{ padding: '8px 20px', background: 'var(--btn-dark-bg)', color: 'var(--text-inverse)', border: '1px solid var(--btn-dark-bg)', borderRadius: 0, cursor: editSaving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}
               >
-                {editSaving ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 6 }} />Saving...</> : 'Lưu'}
+                {editSaving ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 6 }} />{t('saving')}</> : t('save')}
               </button>
             </div>
           </div>
@@ -442,23 +444,23 @@ export default function UsersPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: 400, padding: '1.5rem' }}>
             <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>
-              Xóa tài khoản
+              {t('confirmDeleteUser')}
             </h3>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
-              Xóa user <strong style={{ fontFamily: 'var(--font-mono)' }}>{deleteUser.username}</strong>? Hành động này không thể hoàn tác.
+              {t('delete')} <strong style={{ fontFamily: 'var(--font-mono)' }}>{deleteUser.username}</strong>? {t('cannotUndo')}
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button
                 onClick={() => setDeleteUser(null)}
                 style={{ padding: '8px 18px', background: 'transparent', border: '1px solid var(--border-strong)', borderRadius: 0, cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' }}
               >
-                Hủy
+                {t('cancel')}
               </button>
               <button
                 onClick={doDelete}
                 style={{ padding: '8px 18px', background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}
               >
-                Xóa
+                {t('delete')}
               </button>
             </div>
           </div>

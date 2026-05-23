@@ -311,20 +311,31 @@ function DashboardContent({ user, children }: Props) {
               {/* Drive auth button */}
               <DriveAuthButton />
 
-              {/* Lang toggle */}
-              <button
-                onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
-                style={{
-                  padding: '4px 10px', border: '1px solid var(--border-base)',
-                  borderRadius: 0, background: 'transparent',
-                  fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)',
-                  fontWeight: 600, letterSpacing: '0.08em',
-                  color: 'var(--text-primary)', cursor: 'pointer',
-                  transition: 'background 0.15s',
-                }}
-              >
-                {lang === 'vi' ? 'VI' : 'EN'}
-              </button>
+              {/* Lang toggle — segmented VI | EN */}
+              <div style={{
+                display: 'flex', border: '1px solid var(--border-base)',
+                overflow: 'hidden', borderRadius: 0, flexShrink: 0,
+              }}>
+                {(['vi', 'en'] as const).map(l => (
+                  <button
+                    key={l}
+                    onClick={() => setLang(l)}
+                    style={{
+                      padding: '4px 9px',
+                      border: 'none',
+                      background: lang === l ? 'var(--text-primary)' : 'transparent',
+                      color: lang === l ? 'var(--text-inverse)' : 'var(--text-muted)',
+                      fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)',
+                      fontWeight: lang === l ? 700 : 500, letterSpacing: '0.08em',
+                      cursor: lang === l ? 'default' : 'pointer',
+                      transition: 'background 0.15s, color 0.15s',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {l.toUpperCase()}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </header>
