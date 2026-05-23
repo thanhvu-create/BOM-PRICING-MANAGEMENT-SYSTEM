@@ -7,6 +7,8 @@ const STORE_PRICE_MAP: Record<string, string[]> = {
   ADM: ['3)ADM1 -P', '4)ADM2 -P', 'ADM-MH'],
 }
 
+const CC = { headers: { 'Cache-Control': 'public, max-age=120, s-maxage=120, stale-while-revalidate=600' } }
+
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -21,73 +23,71 @@ export async function GET() {
     const isAdminOrManager = ['Admin', 'Manager'].includes(role)
 
     const db = createServiceClient()
-    let query = db
-      .from('bom')
-      .select('bom_id, date, product_type, model, sell_price, discount_pct, sales_person, store, price_list_type')
-      .order('date', { ascending: false })
 
-    // Non-admin/manager with a specific store → filter by price_list_type
-    if (!isAdminOrManager && userStore && STORE_PRICE_MAP[userStore]) {
-      query = query.in('price_list_type', STORE_PRICE_MAP[userStore])
-    }
-
-    const { data: rows, error } = await query
-    if (error) throw error
-
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
-    const thisMonth = today.substring(0, 7)
-
-    let totalBOMs = 0, todayBOMs = 0, monthBOMs = 0, totalValue = 0, discountedCount = 0
-    const storeMap: Record<string, { count: number; value: number }> = {}
-    const ptMap: Record<string, number> = {}
-    const spMap: Record<string, { count: number; value: number }> = {}
-    const recentArr: any[] = []
-
-    for (const r of (rows || [])) {
-      totalBOMs++
-      const d = String(r.date || '').substring(0, 10)
-      if (d === today) todayBOMs++
-      if (d.substring(0, 7) === thisMonth) monthBOMs++
-      const sell = Number(r.sell_price) || 0
-      totalValue += sell
-      if (Number(r.discount_pct) > 0) discountedCount++
-
-      const store = String(r.store || '—')
-      if (!storeMap[store]) storeMap[store] = { count: 0, value: 0 }
-      storeMap[store].count++; storeMap[store].value += sell
-
-      const pt = String(r.product_type || '—')
-      ptMap[pt] = (ptMap[pt] || 0) + 1
-
-      const sp = String(r.sales_person || '—')
-      if (!spMap[sp]) spMap[sp] = { count: 0, value: 0 }
-      spMap[sp].count++; spMap[sp].value += sell
-
-      recentArr.push({ bom_id: r.bom_id, date: d, model: r.model, store, sell_price: sell })
-    }
-
-    const base = { totalBOMs, todayBOMs, monthBOMs, totalValue: 0, avgSellPrice: 0, discountedCount: 0, byStore: [], byProductType: [], bySalesPerson: [], recentBOMs: [] }
-
+    // Admin/Manager: dùng RPC aggregates — không fetch raw rows
     if (isAdminOrManager) {
-      const CC = { headers: { 'Cache-Control': 'public, max-age=120, s-maxage=120, stale-while-revalidate=600' } }
+      const [kpiRes, byStoreRes, byTypeRes, bySalesRes, trendRes, recentRes] = await Promise.all([
+        db.rpc('stats_kpi'),
+        db.rpc('stats_by_store'),
+        db.rpc('stats_by_type'),
+        db.rpc('stats_by_sales'),
+        db.rpc('stats_daily_trend'),
+        db.from('bom')
+          .select('bom_id, date, model, store, sell_price')
+          .order('date', { ascending: false })
+          .limit(5),
+      ])
+
+      if (kpiRes.error) throw kpiRes.error
+
+      const kpi = kpiRes.data as {
+        total_boms: number; total_value: number; avg_value: number
+        today_count: number; month_count: number; discounted: number
+      }
+
       return NextResponse.json({
         data: {
-          ...base,
-          totalValue,
-          avgSellPrice: totalBOMs > 0 ? totalValue / totalBOMs : 0,
-          discountedCount,
-          byStore:       Object.entries(storeMap).map(([s, v]) => ({ store: s, count: v.count, value: v.value })).sort((a, b) => b.count - a.count),
-          byProductType: Object.entries(ptMap).map(([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count).slice(0, 5),
-          bySalesPerson: Object.entries(spMap).map(([name, v]) => ({ name, count: v.count, value: v.value })).sort((a, b) => b.count - a.count).slice(0, 5),
-          recentBOMs:    recentArr.slice(0, 5),
+          totalBOMs:      kpi.total_boms    ?? 0,
+          todayBOMs:      kpi.today_count   ?? 0,
+          monthBOMs:      kpi.month_count   ?? 0,
+          totalValue:     kpi.total_value   ?? 0,
+          avgSellPrice:   kpi.avg_value     ?? 0,
+          discountedCount: kpi.discounted   ?? 0,
+          byStore:        (byStoreRes.data  ?? []).map((r: any) => ({ store: r.store, count: Number(r.count), value: Number(r.total_value) })),
+          byProductType:  (byTypeRes.data   ?? []).map((r: any) => ({ type: r.product_type, count: Number(r.count) })),
+          bySalesPerson:  (bySalesRes.data  ?? []).map((r: any) => ({ name: r.name, count: Number(r.count), value: Number(r.total_value) })),
+          recentBOMs:     (recentRes.data   ?? []).map((r: any) => ({ bom_id: r.bom_id, date: String(r.date || '').substring(0, 10), model: r.model, store: r.store || '—', sell_price: Number(r.sell_price) })),
+          dailyTrend:     (trendRes.data    ?? []).map((r: any) => ({ date: r.day, count: Number(r.count), value: Number(r.total_value) })),
         }
       }, CC)
     }
 
-    // Sales / Sales Supervisor / Order: chỉ trả về 3 KPI counts
-    return NextResponse.json({ data: base }, {
-      headers: { 'Cache-Control': 'public, max-age=120, s-maxage=120, stale-while-revalidate=600' },
-    })
+    // Sales / Sales Supervisor / Order: chỉ cần 3 KPI counts, filter theo store
+    let query = db
+      .from('bom')
+      .select('date, price_list_type', { count: 'exact' })
+
+    if (userStore && STORE_PRICE_MAP[userStore]) {
+      query = query.in('price_list_type', STORE_PRICE_MAP[userStore])
+    }
+
+    const { data: rows, count: totalBOMs } = await query
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
+    const thisMonth = today.substring(0, 7)
+    let todayBOMs = 0, monthBOMs = 0
+    for (const r of rows ?? []) {
+      const d = String(r.date || '').substring(0, 10)
+      if (d === today) todayBOMs++
+      if (d.substring(0, 7) === thisMonth) monthBOMs++
+    }
+
+    return NextResponse.json({
+      data: {
+        totalBOMs: totalBOMs ?? 0, todayBOMs, monthBOMs,
+        totalValue: 0, avgSellPrice: 0, discountedCount: 0,
+        byStore: [], byProductType: [], bySalesPerson: [], recentBOMs: [], dailyTrend: [],
+      }
+    }, CC)
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
