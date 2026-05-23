@@ -48,10 +48,7 @@ export default function DashboardPage() {
     setError('')
     try {
       const r = await fetch('/api/dashboard')
-      if (!r.ok) {
-        if (r.status === 403) { setStats(null); return }
-        throw new Error('Failed to load')
-      }
+      if (!r.ok) throw new Error('Failed to load')
       const d = await r.json()
       setStats(d.data)
     } catch (e: any) {
