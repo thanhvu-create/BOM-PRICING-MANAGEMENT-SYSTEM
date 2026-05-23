@@ -52,6 +52,8 @@ function Modal({ title, onClose, children, width = 520 }: { title: string; onClo
 }
 
 /* ── STONE MASTER TAB ────────────────────────────────────────── */
+const STONE_PAGE_SIZE = 50
+
 function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role = '' }: { triggerAdd?: number; triggerSync?: number; onSyncingChange?: (v: boolean) => void; role?: string }) {
   const { t } = useLang()
   const isOrderView = role === 'Order'
@@ -66,6 +68,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
   const { toast } = useToast()
   const [formError, setFormError] = useState('')
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
   const [nameLang, setNameLang] = useState<'vi' | 'en'>('vi')
   const [deleteStoneRow, setDeleteStoneRow] = useState<StoneRow | null>(null)
   const [dd, setDd] = useState<{ categories: DDOption[]; types: DDOption[]; shapes: DDOption[]; colors: DDOption[]; qualities: DDOption[]; definitions: { en_name: string; vn_name: string }[] } | null>(null)
@@ -76,18 +79,24 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
     return r.master_code?.toLowerCase().includes(q) || r.grade_id?.toLowerCase().includes(q) || r.display_name?.toLowerCase().includes(q) || r.full_name_vi?.toLowerCase().includes(q)
   })
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / STONE_PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const paginated = filtered.slice((safePage - 1) * STONE_PAGE_SIZE, safePage * STONE_PAGE_SIZE)
+
   async function load() {
     setLoading(true)
     try {
       const [rRows, rDd] = await Promise.all([fetch('/api/master/stone').then(r => r.json()), fetch('/api/master/dropdowns').then(r => r.json())])
       setRows(rRows.data || [])
       setDd(rDd)
+      setPage(1)
     } catch {} finally { setLoading(false) }
   }
 
   useEffect(() => { load() }, [])
   useEffect(() => { if (triggerAdd > 0) openAdd() }, [triggerAdd])
   useEffect(() => { if (triggerSync > 0) syncAll() }, [triggerSync])
+  useEffect(() => { setPage(1) }, [search])
 
   function defaultForm(): Partial<StoneRow> {
     return { category: '', type: '', shape_code: '', color: '', quality: '', pricing_unit: 'ct', measurement_type: 'mm', min_size: 0, max_size: 99, base_price: 0, mk: 0, selling_price: 0, display_name: '', full_name_vi: '', full_name_en: '' }
@@ -238,11 +247,11 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
             <tbody>
               {loading ? <tr><td colSpan={isOrderView ? 8 : 12} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}><i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}</td></tr>
                 : filtered.length === 0 ? <tr><td colSpan={isOrderView ? 8 : 12} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>{t('noData')}</td></tr>
-                : filtered.map((r, i) => (
+                : paginated.map((r, i) => (
                   <tr key={i}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                     onMouseLeave={e => (e.currentTarget.style.background = '')}>
-                    <td style={{ ...tdc, textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{i + 1}</td>
+                    <td style={{ ...tdc, textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{(safePage - 1) * STONE_PAGE_SIZE + i + 1}</td>
                     <td style={tdc}>
                       <span style={{ background: 'var(--text-primary)', color: 'var(--text-inverse)', padding: '2px 8px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)' }}>{r.master_code}</span>
                     </td>
@@ -273,13 +282,30 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
       </div>
 
       {/* Pagination */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-        <span>1–{filtered.length} / {filtered.length} records</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button style={{ background: 'none', border: '1px solid var(--border-base)', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 'var(--text-xs)' }}>‹</button>
-          <button style={{ background: 'none', border: '1px solid var(--border-base)', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 'var(--text-xs)' }}>›</button>
+      {filtered.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+          <span>
+            {(safePage - 1) * STONE_PAGE_SIZE + 1}–{Math.min(safePage * STONE_PAGE_SIZE, filtered.length)} / {filtered.length} records
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={safePage === 1}
+              style={{ background: 'none', border: '1px solid var(--border-base)', borderRadius: 0, padding: '3px 10px', cursor: safePage === 1 ? 'default' : 'pointer', color: safePage === 1 ? 'var(--text-muted)' : 'var(--text-secondary)', fontSize: 'var(--text-xs)', opacity: safePage === 1 ? 0.4 : 1 }}>
+              ‹
+            </button>
+            <span style={{ minWidth: 70, textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
+              {safePage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={safePage === totalPages}
+              style={{ background: 'none', border: '1px solid var(--border-base)', borderRadius: 0, padding: '3px 10px', cursor: safePage === totalPages ? 'default' : 'pointer', color: safePage === totalPages ? 'var(--text-muted)' : 'var(--text-secondary)', fontSize: 'var(--text-xs)', opacity: safePage === totalPages ? 0.4 : 1 }}>
+              ›
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {deleteStoneRow && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
