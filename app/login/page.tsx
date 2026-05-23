@@ -10,6 +10,7 @@ export default function LoginPage() {
   const { toast } = useToast()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -48,6 +49,10 @@ export default function LoginPage() {
         return
       }
 
+      localStorage.setItem(
+        'bom_session_expiry',
+        rememberMe ? 'permanent' : String(Date.now() + 8 * 3600 * 1000)
+      )
       toast(`Welcome, ${username}!`, 'success')
       router.push('/dashboard')
       router.refresh()
@@ -149,6 +154,20 @@ export default function LoginPage() {
               autoComplete="current-password"
               className="input-underline"
             />
+          </div>
+
+          {/* Remember me */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.5rem', marginTop: '-0.75rem' }}>
+            <input
+              id="remember-me"
+              type="checkbox"
+              checked={rememberMe}
+              onChange={e => setRememberMe(e.target.checked)}
+              style={{ width: 14, height: 14, accentColor: 'var(--color-primary)', cursor: 'pointer', flexShrink: 0 }}
+            />
+            <label htmlFor="remember-me" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', cursor: 'pointer', userSelect: 'none' }}>
+              Keep me signed in
+            </label>
           </div>
 
           {/* Error */}

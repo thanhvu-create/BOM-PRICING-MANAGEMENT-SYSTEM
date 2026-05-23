@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import DashboardShell from '@/components/shared/DashboardShell'
+import SessionGuard from '@/components/shared/SessionGuard'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -17,6 +18,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <DashboardShell user={profile ?? { username: user.email ?? '', role: 'Sales', store: '' }}>
+      <SessionGuard />
       {children}
     </DashboardShell>
   )
