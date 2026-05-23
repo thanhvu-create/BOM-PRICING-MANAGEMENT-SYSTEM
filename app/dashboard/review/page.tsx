@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useUser } from '@/components/shared/UserContext'
 import { useLang } from '@/components/shared/I18nContext'
 import { useToast } from '@/components/shared/ToastContext'
-import { fetchDriveDataUri } from '@/lib/driveToken'
+import { fetchDriveDataUri, fetchDriveBlob } from '@/lib/driveToken'
 
 /* ── TYPES ─────────────────────────────────────────────────── */
 interface BomRow {
@@ -92,6 +92,39 @@ async function fetchDataUri(url: string): Promise<string> {
     }
   } catch {}
   return ''
+}
+
+const blobCache = new Map<string, string>()
+
+/** Returns the best lightbox src — uses cached OAuth blob if available, else high-res thumbnail */
+function getLightboxSrc(url: string): string {
+  const fileId = extractDriveId(url)
+  if (fileId && blobCache.has(fileId)) return blobCache.get(fileId)!
+  return getDriveThumbnailUrl(url, 1600) || url
+}
+
+/** Smart Drive image component: shows thumbnail URL instantly, falls back to OAuth blob for private files */
+function DriveImage({ url, size = 200, style, onClick, alt = '' }: {
+  url: string; size?: number; style?: React.CSSProperties; onClick?: () => void; alt?: string
+}) {
+  const fileId = extractDriveId(url)
+  const initSrc = fileId && blobCache.has(fileId) ? blobCache.get(fileId)! : (getDriveThumbnailUrl(url, size) || '')
+  const [src, setSrc] = useState(initSrc)
+  const triedRef = useRef(false)
+
+  const handleError = useCallback(async () => {
+    if (triedRef.current) { setSrc(''); return }
+    triedRef.current = true
+    const fid = extractDriveId(url)
+    if (!fid) { setSrc(''); return }
+    if (blobCache.has(fid)) { setSrc(blobCache.get(fid)!); return }
+    const blobUrl = await fetchDriveBlob(fid)
+    if (blobUrl) { blobCache.set(fid, blobUrl); setSrc(blobUrl); return }
+    setSrc('')
+  }, [url])
+
+  if (!src) return null
+  return <img src={src} alt={alt} style={style} onClick={onClick} onError={handleError} />
 }
 
 /* ── COMPONENT ───────────────────────────────────────────────*/
@@ -610,10 +643,8 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                   {/* Thumbnail */}
                   <td style={{ ...td, width: 48, padding: '4px 6px', textAlign: 'center' }}>
                     {b.img1
-                      ? <img src={getDriveThumbnailUrl(b.img1, 80) || ''}
-                          alt="" onClick={() => openDetail(b.bom_id)}
-                          style={{ width: 36, height: 36, objectFit: 'cover', cursor: 'pointer', border: '1px solid var(--border-light)', display: 'block' }}
-                          onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                      ? <DriveImage url={b.img1} size={80} onClick={() => openDetail(b.bom_id)}
+                          style={{ width: 36, height: 36, objectFit: 'cover', cursor: 'pointer', border: '1px solid var(--border-light)', display: 'block' }} />
                       : null
                     }
                   </td>
@@ -772,11 +803,10 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                 return (
                   <div>
                     {/* Logo */}
-                    {h.logoUrl && getDriveThumbnailUrl(h.logoUrl) && (
+                    {h.logoUrl && (
                       <div style={{ marginBottom: 16 }}>
-                        <img src={getDriveThumbnailUrl(h.logoUrl, 560) || ''} alt="Logo"
-                             style={{ maxHeight: 110, maxWidth: 280, objectFit: 'contain' }}
-                             onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                        <DriveImage url={h.logoUrl} size={560} alt="Logo"
+                             style={{ maxHeight: 110, maxWidth: 280, objectFit: 'contain' }} />
                       </div>
                     )}
 
@@ -809,11 +839,8 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                       {(h.img1 || h.img2 || h.img3) && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {[h.img1, h.img2, h.img3].filter(Boolean).map((url, i) => (
-                            getDriveThumbnailUrl(url as string)
-                              ? <img key={i} src={getDriveThumbnailUrl(url as string, 200) || ''} alt={`img${i+1}`}
-                                  style={{ width: 80, height: 80, objectFit: 'cover', border: '1px solid var(--border-base)' }}
-                                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
-                              : null
+                            <DriveImage key={i} url={url as string} size={200} alt={`img${i+1}`}
+                              style={{ width: 80, height: 80, objectFit: 'cover', border: '1px solid var(--border-base)' }} />
                           ))}
                         </div>
                       )}
@@ -968,12 +995,9 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                       {(h.img1 || h.img2 || h.img3) && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
                           {[h.img1, h.img2, h.img3].filter(Boolean).map((url: string, i: number) => (
-                            getDriveThumbnailUrl(url)
-                              ? <img key={i} src={getDriveThumbnailUrl(url, 144) || ''} alt={`img${i+1}`}
-                                  onClick={() => setLightboxSrc(getDriveThumbnailUrl(url, 1600) || url)}
-                                  style={{ width: 72, height: 72, objectFit: 'cover', border: '1px solid var(--border-base)', cursor: 'zoom-in', borderRadius: 2 }}
-                                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
-                              : null
+                            <DriveImage key={i} url={url} size={144} alt={`img${i+1}`}
+                              onClick={() => setLightboxSrc(getLightboxSrc(url))}
+                              style={{ width: 72, height: 72, objectFit: 'cover', border: '1px solid var(--border-base)', cursor: 'zoom-in', borderRadius: 2 }} />
                           ))}
                         </div>
                       )}
