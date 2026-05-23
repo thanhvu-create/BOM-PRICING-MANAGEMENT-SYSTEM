@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useUser } from '@/components/shared/UserContext'
 import { useLang } from '@/components/shared/I18nContext'
 import { useToast } from '@/components/shared/ToastContext'
-import { fetchDriveDataUri, onTokenChange } from '@/lib/driveToken'
+import { fetchDriveDataUri } from '@/lib/driveToken'
 
 /* ── TYPES ─────────────────────────────────────────────────── */
 interface BomRow {
@@ -53,6 +53,47 @@ const inputStyle: React.CSSProperties = {
 }
 const PAGE_SIZE = 20
 
+/* ── IMAGE HELPERS (module-level — outside component for stable refs) ── */
+const dataUriCache = new Map<string, string>()
+
+function extractDriveId(url: string): string | null {
+  if (!url) return null
+  if (/^[a-zA-Z0-9_-]{20,}$/.test(url.trim())) return url.trim()
+  const m =
+    url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+    url.match(/thumbnail\?id=([a-zA-Z0-9_-]+)/) ||
+    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
+    url.match(/\/d\/([a-zA-Z0-9_-]+)/)
+  return m?.[1] || null
+}
+
+/** Returns a direct Drive thumbnail URL — works as native <img src> for public files, no proxy needed */
+function getDriveThumbnailUrl(url: string, size = 400): string | null {
+  const fileId = extractDriveId(url)
+  if (!fileId) return null
+  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${size}`
+}
+
+/** Fetches a data: URI (required for print popups). Uses module-level cache to avoid re-fetching. */
+async function fetchDataUri(url: string): Promise<string> {
+  if (!url) return ''
+  const fileId = extractDriveId(url)
+  if (!fileId) return ''
+  if (dataUriCache.has(fileId)) return dataUriCache.get(fileId)!
+  const driveUri = await fetchDriveDataUri(fileId)
+  if (driveUri) { dataUriCache.set(fileId, driveUri); return driveUri }
+  try {
+    const r = await fetch(`/api/images/proxy?fileId=${fileId}`)
+    const d = await r.json()
+    if (d.success) {
+      const uri = `data:${d.contentType};base64,${d.base64}`
+      dataUriCache.set(fileId, uri)
+      return uri
+    }
+  } catch {}
+  return ''
+}
+
 /* ── COMPONENT ───────────────────────────────────────────────*/
 export default function ReviewPage() {
   const { role } = useUser()
@@ -79,7 +120,6 @@ export default function ReviewPage() {
   // Detail modal
   const [detailBomId, setDetailBomId] = useState<string | null>(null)
   const [detailData, setDetailData] = useState<BomDetail | null>(null)
-  const [detailImages, setDetailImages] = useState<Record<string, string>>({})
   const [showDetailVnd, setShowDetailVnd] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
 
@@ -87,7 +127,6 @@ export default function ReviewPage() {
   const [quotBomId, setQuotBomId] = useState<string | null>(null)
   const [quotData, setQuotData] = useState<BomDetail | null>(null)
   const [quotLoading, setQuotLoading] = useState(false)
-  const [quotImages, setQuotImages] = useState<Record<string, string>>({})
 
   // Discount modal
   const [discountBom, setDiscountBom] = useState<BomRow | null>(null)
@@ -106,9 +145,6 @@ export default function ReviewPage() {
 
   // Client-side cache: tránh re-fetch khi mở lại cùng BOM
   const detailCache = useRef<Map<string, BomDetail>>(new Map())
-
-  // Table row thumbnails (async load after render)
-  const [thumbUrls, setThumbUrls] = useState<Record<string, string>>({})
 
   // Highlight newly saved/edited BOM row
   const [highlightedBomId, setHighlightedBomId] = useState<string | null>(null)
@@ -210,66 +246,7 @@ export default function ReviewPage() {
     } catch { update(tid, 'Failed to load BOM detail', 'danger') }
     finally { setDetailLoading(false) }
   }
-  function closeDetail() { setDetailBomId(null); setDetailData(null); setDetailImages({}); setShowDetailVnd(false) }
-
-  useEffect(() => {
-    if (!detailData) { setDetailImages({}); return }
-    const h = detailData.header
-    const urls = [h.img1, h.img2, h.img3].filter(Boolean) as string[]
-    if (urls.length === 0) return
-    const load = async () => {
-      const results: Record<string, string> = {}
-      await Promise.all(urls.map(async url => {
-        const uri = await fetchDataUri(url)
-        if (uri) results[url] = uri
-      }))
-      setDetailImages(results)
-    }
-    load()
-    // Re-load images when Drive token becomes available
-    return onTokenChange(load)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detailData])
-
-  /* ── Quotation images async load ─── */
-  useEffect(() => {
-    if (!quotData) { setQuotImages({}); return }
-    const h = quotData.header
-    const urls = [h.logoUrl, h.img1, h.img2, h.img3].filter(Boolean) as string[]
-    if (urls.length === 0) return
-    const load = async () => {
-      const results: Record<string, string> = {}
-      await Promise.all(urls.map(async url => {
-        const uri = await fetchDataUri(url)
-        if (uri) results[url] = uri
-      }))
-      setQuotImages(results)
-    }
-    load()
-    // Re-load images when Drive token becomes available
-    return onTokenChange(load)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quotData])
-
-  /* ── Thumbnail async load for table rows (GAS exact: async after render, 📷 placeholder) ── */
-  useEffect(() => {
-    const rows = paged.filter(b => b.img1 && !thumbUrls[b.bom_id])
-    if (rows.length === 0) return
-    const loadThumbs = () => {
-      // Re-fetch all visible rows (including already-loaded ones) when token changes
-      paged.filter(b => b.img1).forEach(async b => {
-        const uri = await fetchDataUri(b.img1)
-        if (uri) setThumbUrls(prev => ({ ...prev, [b.bom_id]: uri }))
-      })
-    }
-    rows.forEach(async b => {
-      const uri = await fetchDataUri(b.img1)
-      if (uri) setThumbUrls(prev => ({ ...prev, [b.bom_id]: uri }))
-    })
-    // Re-load thumbnails when Drive token becomes available
-    return onTokenChange(loadThumbs)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paged])
+  function closeDetail() { setDetailBomId(null); setDetailData(null); setShowDetailVnd(false) }
 
   /* ── Quotation modal ─── */
   async function openQuotation(bomId: string) {
@@ -287,7 +264,7 @@ export default function ReviewPage() {
     } catch { update(tid, 'Failed to load quotation', 'danger') }
     finally { setQuotLoading(false) }
   }
-  function closeQuotation() { setQuotBomId(null); setQuotData(null); setQuotImages({}) }
+  function closeQuotation() { setQuotBomId(null); setQuotData(null) }
 
   /* ── Discount modal ─── */
   function getMaxDisc() {
@@ -365,30 +342,6 @@ export default function ReviewPage() {
       detailCache.current.delete(bomId)
       loadBoms()
     } catch { update(tid, 'Delete failed', 'danger') }
-  }
-
-  /* ── Image proxy helpers for print ─── */
-  function extractDriveId(url: string): string | null {
-    if (!url) return null
-    const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/)
-    const pathMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/)
-    return idMatch?.[1] || pathMatch?.[1] || null
-  }
-
-  async function fetchDataUri(url: string): Promise<string> {
-    if (!url) return ''
-    const fileId = extractDriveId(url)
-    if (!fileId) return ''
-    // Try client-side Drive API first (works for private files when user is authenticated)
-    const driveUri = await fetchDriveDataUri(fileId)
-    if (driveUri) return driveUri
-    // Fall back to server proxy (works for public "Anyone with link" files)
-    try {
-      const r = await fetch(`/api/images/proxy?fileId=${fileId}`)
-      const d = await r.json()
-      if (d.success) return `data:${d.contentType};base64,${d.base64}`
-    } catch {}
-    return ''
   }
 
   /* ── Print Quotation ─── */
@@ -656,12 +609,12 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                   onMouseLeave={e => { e.currentTarget.style.background = b.bom_id === highlightedBomId ? '#F5EDD8' : '' }}>
                   {/* Thumbnail */}
                   <td style={{ ...td, width: 48, padding: '4px 6px', textAlign: 'center' }}>
-                    {thumbUrls[b.bom_id]
-                      ? <img src={thumbUrls[b.bom_id]} alt="" onClick={() => openDetail(b.bom_id)}
-                          style={{ width: 36, height: 36, objectFit: 'cover', cursor: 'pointer', border: '1px solid var(--border-light)', display: 'block' }} />
-                      : b.img1
-                        ? <span style={{ fontSize: 18, cursor: 'pointer', display: 'block' }} onClick={() => openDetail(b.bom_id)}>📷</span>
-                        : null
+                    {b.img1
+                      ? <img src={getDriveThumbnailUrl(b.img1, 80) || ''}
+                          alt="" onClick={() => openDetail(b.bom_id)}
+                          style={{ width: 36, height: 36, objectFit: 'cover', cursor: 'pointer', border: '1px solid var(--border-light)', display: 'block' }}
+                          onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                      : null
                     }
                   </td>
                   <td style={{ ...td, color: 'var(--text-secondary)', fontSize: 'var(--text-xs)', whiteSpace: 'nowrap' }}>{b.date}</td>
@@ -819,9 +772,11 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                 return (
                   <div>
                     {/* Logo */}
-                    {h.logoUrl && quotImages[h.logoUrl] && (
+                    {h.logoUrl && getDriveThumbnailUrl(h.logoUrl) && (
                       <div style={{ marginBottom: 16 }}>
-                        <img src={quotImages[h.logoUrl]} alt="Logo" style={{ maxHeight: 110, maxWidth: 280, objectFit: 'contain' }} />
+                        <img src={getDriveThumbnailUrl(h.logoUrl, 560) || ''} alt="Logo"
+                             style={{ maxHeight: 110, maxWidth: 280, objectFit: 'contain' }}
+                             onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
                       </div>
                     )}
 
@@ -854,12 +809,11 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                       {(h.img1 || h.img2 || h.img3) && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {[h.img1, h.img2, h.img3].filter(Boolean).map((url, i) => (
-                            quotImages[url]
-                              ? <img key={i} src={quotImages[url]} alt={`img${i+1}`}
-                                  style={{ width: 80, height: 80, objectFit: 'cover', border: '1px solid var(--border-base)' }} />
-                              : <div key={i} style={{ width: 80, height: 80, border: '1px solid var(--border-base)', background: 'var(--bg-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 18 }}>
-                                  <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 14 }} />
-                                </div>
+                            getDriveThumbnailUrl(url as string)
+                              ? <img key={i} src={getDriveThumbnailUrl(url as string, 200) || ''} alt={`img${i+1}`}
+                                  style={{ width: 80, height: 80, objectFit: 'cover', border: '1px solid var(--border-base)' }}
+                                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                              : null
                           ))}
                         </div>
                       )}
@@ -1014,13 +968,12 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                       {(h.img1 || h.img2 || h.img3) && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
                           {[h.img1, h.img2, h.img3].filter(Boolean).map((url: string, i: number) => (
-                            detailImages[url]
-                              ? <img key={i} src={detailImages[url]} alt={`img${i+1}`}
-                                  onClick={() => setLightboxSrc(detailImages[url])}
-                                  style={{ width: 72, height: 72, objectFit: 'cover', border: '1px solid var(--border-base)', cursor: 'zoom-in', borderRadius: 2 }} />
-                              : <div key={i} style={{ width: 72, height: 72, border: '1px solid var(--border-base)', background: 'var(--bg-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                                  <i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 14 }} />
-                                </div>
+                            getDriveThumbnailUrl(url)
+                              ? <img key={i} src={getDriveThumbnailUrl(url, 144) || ''} alt={`img${i+1}`}
+                                  onClick={() => setLightboxSrc(getDriveThumbnailUrl(url, 1600) || url)}
+                                  style={{ width: 72, height: 72, objectFit: 'cover', border: '1px solid var(--border-base)', cursor: 'zoom-in', borderRadius: 2 }}
+                                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+                              : null
                           ))}
                         </div>
                       )}
