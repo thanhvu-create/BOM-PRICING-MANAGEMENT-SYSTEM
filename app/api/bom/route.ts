@@ -17,8 +17,10 @@ export async function GET() {
 
     const db = createServiceClient()
     const profile = await getUserProfile(user.id, user.email)
-    const role = profile?.role || ''
-    const store = profile?.store || ''
+    if (!profile) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const role = profile.role
+    const store = profile.store || ''
 
     // List view: select only columns needed for table + thumbnail. img2/img3 loaded on-demand in detail modal.
     let query = db.from('bom')
@@ -36,7 +38,8 @@ export async function GET() {
       headers: { 'Cache-Control': 'no-store' },
     })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('[GET /api/bom]', err)
+    return NextResponse.json({ error: 'Đã xảy ra lỗi, vui lòng thử lại' }, { status: 500 })
   }
 }
 
@@ -55,6 +58,29 @@ export async function POST(request: Request) {
     const payload = await request.json()
     const { header, golds, stones, calculatedCosts } = payload
 
+    // Numeric validation
+    const discountPct = Number(payload.discountPct) || 0
+    if (!isFinite(discountPct) || discountPct < 0 || discountPct > 100) {
+      return NextResponse.json({ error: 'discountPct không hợp lệ' }, { status: 400 })
+    }
+    const laborHours = Number(header?.laborHours) || 0
+    if (!isFinite(laborHours) || laborHours < 0 || laborHours > 9999) {
+      return NextResponse.json({ error: 'laborHours không hợp lệ' }, { status: 400 })
+    }
+    for (const s of stones || []) {
+      const qty = Number(s.qty) || 0
+      const ctw = Number(s.ctw1pc) || 0
+      if (!isFinite(qty) || qty < 0 || !isFinite(ctw) || ctw < 0) {
+        return NextResponse.json({ error: 'Số lượng/carat đá không hợp lệ' }, { status: 400 })
+      }
+    }
+    for (const g of golds || []) {
+      const w = Number(g.weight) || 0
+      if (w !== 0 && !isFinite(w)) {
+        return NextResponse.json({ error: 'Trọng lượng vàng không hợp lệ' }, { status: 400 })
+      }
+    }
+
     // Generate BOM ID
     const { data: bomId } = await db.rpc('generate_bom_id', {
       p_date: header.date,
@@ -62,7 +88,6 @@ export async function POST(request: Request) {
     })
 
     const costs = calculatedCosts || {}
-    const discountPct = Number(payload.discountPct) || 0
     const discountPrice = discountPct > 0
       ? Math.round((costs.sellPrice || 0) * (1 - discountPct / 100) * 100) / 100
       : 0
@@ -76,7 +101,7 @@ export async function POST(request: Request) {
       model:           header.model || '',
       total_stone_qty: (stones || []).reduce((s: number, r: any) => s + (Number(r.qty) || 0), 0),
       total_stone_ctw: (stones || []).reduce((s: number, r: any) => s + (Number(r.ctw1pc) || 0) * (Number(r.qty) || 0), 0),
-      labor_hours:     Number(header.laborHours) || 0,
+      labor_hours:     laborHours,
       price_list_type: header.priceListType || '',
       sp_type:         header.spType || '',
       cost_gold:       costs.costGold || 0,
@@ -152,6 +177,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ bomId })
   } catch (err: any) {
     console.error('[POST /api/bom]', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: 'Đã xảy ra lỗi, vui lòng thử lại' }, { status: 500 })
   }
 }

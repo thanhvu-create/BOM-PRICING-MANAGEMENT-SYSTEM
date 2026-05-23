@@ -16,8 +16,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq('id', user.id)
     .single()
 
+  if (!profile) redirect('/login')
+
   return (
-    <DashboardShell user={profile ?? { username: user.email ?? '', role: 'Sales', store: '' }}>
+    <DashboardShell user={profile}>
       <SessionGuard />
       {children}
     </DashboardShell>

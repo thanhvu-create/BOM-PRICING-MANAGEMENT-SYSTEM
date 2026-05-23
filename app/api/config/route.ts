@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     .from('sys_config')
     .upsert({ key, value: String(value), updated_at: new Date().toISOString() })
 
-  if (error) return NextResponse.json({ success: false, message: error.message })
+  if (error) return NextResponse.json({ success: false, message: 'Đã xảy ra lỗi, vui lòng thử lại' })
 
   const profile = await getUserProfile(user.id, user.email)
   logAction({

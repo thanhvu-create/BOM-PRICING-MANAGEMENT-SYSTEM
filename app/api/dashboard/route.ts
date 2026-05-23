@@ -89,6 +89,7 @@ export async function GET() {
       }
     }, CC)
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('[GET /api/dashboard]', err)
+    return NextResponse.json({ error: 'Đã xảy ra lỗi, vui lòng thử lại' }, { status: 500 })
   }
 }

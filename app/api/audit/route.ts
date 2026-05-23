@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient, getUserProfile } from '@/lib/supabase/server'
 
+const VALID_ENTITIES = new Set(['bom', 'gold', 'user', 'config', 'stone', 'mk', 'dm', 'audit'])
+const VALID_ACTIONS  = new Set(['CREATE', 'UPDATE', 'DELETE', 'CALCULATE'])
+
 // GET /api/audit?actor=&entity=&action=&from=&to=&page=&pageSize=
 export async function GET(req: NextRequest) {
   try {
@@ -14,13 +17,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Admin hoặc Manager mới có quyền xem nhật ký' }, { status: 403 })
 
     const { searchParams } = new URL(req.url)
-    const actor    = searchParams.get('actor')    || ''
-    const entity   = searchParams.get('entity')   || ''
-    const action   = searchParams.get('action')   || ''
+
+    // Sanitize actor: only allow safe characters, max 50 chars
+    const actorRaw = searchParams.get('actor') || ''
+    const actor = actorRaw.replace(/[^a-zA-Z0-9._@\-]/g, '').slice(0, 50)
+
+    // Whitelist entity and action
+    const entityRaw = searchParams.get('entity') || ''
+    const entity = VALID_ENTITIES.has(entityRaw) ? entityRaw : ''
+
+    const actionRaw = searchParams.get('action') || ''
+    const action = VALID_ACTIONS.has(actionRaw) ? actionRaw : ''
+
     const from     = searchParams.get('from')     || ''
     const to       = searchParams.get('to')       || ''
     const page     = Math.max(1, parseInt(searchParams.get('page') || '1'))
-    const pageSize = Math.min(200, parseInt(searchParams.get('pageSize') || '50'))
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '50')))
 
     let query = db
       .from('audit_log')
@@ -39,6 +51,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ data: data ?? [], total: count ?? 0, page, pageSize })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('[GET /api/audit]', err)
+    return NextResponse.json({ error: 'Đã xảy ra lỗi, vui lòng thử lại' }, { status: 500 })
   }
 }

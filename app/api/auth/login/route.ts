@@ -7,17 +7,23 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 
+const INVALID_CREDS = { error: 'Tên đăng nhập hoặc mật khẩu không đúng' }
+
 export async function POST(request: Request) {
   try {
     const { username } = await request.json()
 
-    if (!username) {
-      return NextResponse.json({ error: 'Username required' }, { status: 400 })
+    if (!username || typeof username !== 'string') {
+      return NextResponse.json(INVALID_CREDS, { status: 401 })
+    }
+
+    // Validate format — block obviously invalid inputs before hitting DB
+    if (!/^[a-zA-Z0-9._@\-]{2,50}$/.test(username.trim())) {
+      return NextResponse.json(INVALID_CREDS, { status: 401 })
     }
 
     const db = createServiceClient()
 
-    // Bước 1: tìm user id từ public.users theo username
     const { data: profile, error: profileError } = await db
       .from('users')
       .select('id')
@@ -25,21 +31,20 @@ export async function POST(request: Request) {
       .single()
 
     if (profileError || !profile) {
-      console.error('[login] profile lookup error:', profileError)
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+      console.error('[login] profile lookup:', profileError?.message)
+      return NextResponse.json(INVALID_CREDS, { status: 401 })
     }
 
-    // Bước 2: lấy email từ auth.users theo id
     const { data: authUser, error: authError } = await db.auth.admin.getUserById(profile.id)
 
     if (authError || !authUser?.user?.email) {
-      console.error('[login] auth user lookup error:', authError)
-      return NextResponse.json({ error: 'Auth user not found' }, { status: 404 })
+      console.error('[login] auth lookup:', authError?.message)
+      return NextResponse.json(INVALID_CREDS, { status: 401 })
     }
 
     return NextResponse.json({ email: authUser.user.email })
   } catch (err) {
     console.error('[login] unexpected error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Đã xảy ra lỗi, vui lòng thử lại' }, { status: 500 })
   }
 }
