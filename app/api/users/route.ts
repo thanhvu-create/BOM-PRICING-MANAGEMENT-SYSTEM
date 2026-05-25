@@ -38,19 +38,19 @@ export async function POST(request: Request) {
     const { email, password, role, store } = await request.json()
     if (!email || !password) return NextResponse.json({ error: 'email và password bắt buộc' }, { status: 400 })
 
-    const username = email.trim().toLowerCase().split('@')[0]
+    const normalizedEmail = email.trim().toLowerCase()
 
     const { data: authData, error: authErr } = await db.auth.admin.createUser({
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       password,
       email_confirm: true,
     })
     if (authErr) throw authErr
 
-    // Insert vào public.users
+    // Insert vào public.users — username lưu full email
     const { error: profileErr } = await db.from('users').insert([{
       id:       authData.user.id,
-      username,
+      username: normalizedEmail,
       role:     role || 'Sales',
       store:    store || '',
     }])
