@@ -52,8 +52,6 @@ function Modal({ title, onClose, children, width = 520 }: { title: string; onClo
 }
 
 /* ── STONE MASTER TAB ────────────────────────────────────────── */
-const STONE_PAGE_SIZE = 50
-
 function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role = '' }: { triggerAdd?: number; triggerSync?: number; onSyncingChange?: (v: boolean) => void; role?: string }) {
   const { t } = useLang()
   const isOrderView = role === 'Order'
@@ -69,6 +67,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
   const [formError, setFormError] = useState('')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(50)
   const [nameLang, setNameLang] = useState<'vi' | 'en'>('vi')
   const [deleteStoneRow, setDeleteStoneRow] = useState<StoneRow | null>(null)
   const [dd, setDd] = useState<{ categories: DDOption[]; types: DDOption[]; shapes: DDOption[]; colors: DDOption[]; qualities: DDOption[]; definitions: { en_name: string; vn_name: string }[] } | null>(null)
@@ -79,9 +78,9 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
     return r.master_code?.toLowerCase().includes(q) || r.grade_id?.toLowerCase().includes(q) || r.display_name?.toLowerCase().includes(q) || r.full_name_vi?.toLowerCase().includes(q)
   })
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / STONE_PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const safePage = Math.min(page, totalPages)
-  const paginated = filtered.slice((safePage - 1) * STONE_PAGE_SIZE, safePage * STONE_PAGE_SIZE)
+  const paginated = filtered.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   async function load() {
     setLoading(true)
@@ -251,7 +250,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
                   <tr key={i}
                     onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                     onMouseLeave={e => (e.currentTarget.style.background = '')}>
-                    <td style={{ ...tdc, textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{(safePage - 1) * STONE_PAGE_SIZE + i + 1}</td>
+                    <td style={{ ...tdc, textAlign: 'center', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>{(safePage - 1) * pageSize + i + 1}</td>
                     <td style={tdc}>
                       <span style={{ background: 'var(--text-primary)', color: 'var(--text-inverse)', padding: '2px 8px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)' }}>{r.master_code}</span>
                     </td>
@@ -284,23 +283,28 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
       {/* Pagination */}
       {filtered.length > 0 && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
-          <span>
-            {(safePage - 1) * STONE_PAGE_SIZE + 1}–{Math.min(safePage * STONE_PAGE_SIZE, filtered.length)} / {filtered.length} records
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>{(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, filtered.length)} / {filtered.length} records</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <select
+              value={pageSize}
+              onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}
+              style={{ border: '1px solid var(--border-base)', borderRadius: 0, background: 'var(--bg-surface)', padding: '3px 6px', fontSize: 'var(--text-xs)', color: 'var(--text-primary)', outline: 'none' }}
+            >
+              <option value={20}>20 / page</option>
+              <option value={50}>50 / page</option>
+              <option value={100}>100 / page</option>
+            </select>
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={safePage === 1}
-              style={{ background: 'none', border: '1px solid var(--border-base)', borderRadius: 0, padding: '3px 10px', cursor: safePage === 1 ? 'default' : 'pointer', color: safePage === 1 ? 'var(--text-muted)' : 'var(--text-secondary)', fontSize: 'var(--text-xs)', opacity: safePage === 1 ? 0.4 : 1 }}>
+              style={{ background: 'none', border: '1px solid var(--border-base)', borderRadius: 0, padding: '3px 8px', cursor: safePage === 1 ? 'default' : 'pointer', color: 'var(--text-secondary)', fontSize: 'var(--text-xs)', opacity: safePage === 1 ? 0.4 : 1 }}>
               ‹
             </button>
-            <span style={{ minWidth: 70, textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
-              {safePage} / {totalPages}
-            </span>
+            <span style={{ fontFamily: 'var(--font-mono)', minWidth: 50, textAlign: 'center' }}>{safePage} / {totalPages}</span>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={safePage === totalPages}
-              style={{ background: 'none', border: '1px solid var(--border-base)', borderRadius: 0, padding: '3px 10px', cursor: safePage === totalPages ? 'default' : 'pointer', color: safePage === totalPages ? 'var(--text-muted)' : 'var(--text-secondary)', fontSize: 'var(--text-xs)', opacity: safePage === totalPages ? 0.4 : 1 }}>
+              style={{ background: 'none', border: '1px solid var(--border-base)', borderRadius: 0, padding: '3px 8px', cursor: safePage === totalPages ? 'default' : 'pointer', color: 'var(--text-secondary)', fontSize: 'var(--text-xs)', opacity: safePage === totalPages ? 0.4 : 1 }}>
               ›
             </button>
           </div>

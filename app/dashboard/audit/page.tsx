@@ -531,24 +531,24 @@ export default function AuditPage() {
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div style={s.pagRow}>
-              <span>{((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} / {total} {t('records')}</span>
-              <button
-                style={{ ...s.btnOutline, alignSelf: 'auto', padding: '4px 12px' }}
-                disabled={page <= 1}
-                onClick={() => fetchLogs(page - 1)}
-              >
-                ← Trước
-              </button>
-              <span>{t('page')} {page} / {totalPages}</span>
-              <button
-                style={{ ...s.btnOutline, alignSelf: 'auto', padding: '4px 12px' }}
-                disabled={page >= totalPages}
-                onClick={() => fetchLogs(page + 1)}
-              >
-                Tiếp →
-              </button>
+          {totalPages >= 1 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>
+              <span>{((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} / {total} records</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  disabled={page <= 1}
+                  onClick={() => fetchLogs(page - 1)}
+                  style={{ background: 'none', border: '1px solid var(--border-base)', borderRadius: 0, padding: '3px 8px', cursor: page <= 1 ? 'default' : 'pointer', color: 'var(--text-secondary)', fontSize: 'var(--text-xs)', opacity: page <= 1 ? 0.4 : 1 }}>
+                  ‹
+                </button>
+                <span style={{ fontFamily: 'var(--font-mono)', minWidth: 50, textAlign: 'center' }}>{page} / {totalPages}</span>
+                <button
+                  disabled={page >= totalPages}
+                  onClick={() => fetchLogs(page + 1)}
+                  style={{ background: 'none', border: '1px solid var(--border-base)', borderRadius: 0, padding: '3px 8px', cursor: page >= totalPages ? 'default' : 'pointer', color: 'var(--text-secondary)', fontSize: 'var(--text-xs)', opacity: page >= totalPages ? 0.4 : 1 }}>
+                  ›
+                </button>
+              </div>
             </div>
           )}
         </div>
