@@ -41,19 +41,20 @@ export async function GET() {
 
       if (kpiRes.error) throw kpiRes.error
 
-      const kpi = kpiRes.data as {
+      const kpiRow = Array.isArray(kpiRes.data) ? kpiRes.data[0] : kpiRes.data
+      const kpi = (kpiRow ?? {}) as {
         total_boms: number; total_value: number; avg_value: number
         today_count: number; month_count: number; discounted: number
       }
 
       return NextResponse.json({
         data: {
-          totalBOMs:      kpi.total_boms    ?? 0,
-          todayBOMs:      kpi.today_count   ?? 0,
-          monthBOMs:      kpi.month_count   ?? 0,
-          totalValue:     kpi.total_value   ?? 0,
-          avgSellPrice:   kpi.avg_value     ?? 0,
-          discountedCount: kpi.discounted   ?? 0,
+          totalBOMs:      Number(kpi.total_boms)  || 0,
+          todayBOMs:      Number(kpi.today_count) || 0,
+          monthBOMs:      Number(kpi.month_count) || 0,
+          totalValue:     Number(kpi.total_value) || 0,
+          avgSellPrice:   Number(kpi.avg_value)   || 0,
+          discountedCount: Number(kpi.discounted) || 0,
           byStore:        (byStoreRes.data  ?? []).map((r: any) => ({ store: r.store, count: Number(r.count), value: Number(r.total_value) })),
           byProductType:  (byTypeRes.data   ?? []).map((r: any) => ({ type: r.product_type, count: Number(r.count) })),
           bySalesPerson:  (bySalesRes.data  ?? []).map((r: any) => ({ name: r.name, count: Number(r.count), value: Number(r.total_value) })),
