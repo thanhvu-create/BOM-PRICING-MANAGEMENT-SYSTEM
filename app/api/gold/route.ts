@@ -27,7 +27,7 @@ export async function GET() {
       .from('gold_material').select('*').order('price_date', { ascending: false })
     if (error) throw error
     return NextResponse.json({ data: data || [] }, {
-      headers: { 'Cache-Control': 'public, max-age=300, s-maxage=300' },
+      headers: { 'Cache-Control': 'no-store' },
     })
   } catch (err: any) {
     console.error('[gold route]', err)

@@ -76,7 +76,7 @@ export default function GoldPage() {
     setLoading(true); setError('')
     const tid = toast('Loading gold prices...', 'loading')
     try {
-      const r = await fetch('/api/gold')
+      const r = await fetch('/api/gold?t=' + Date.now())
       const d = await r.json()
       setRows(d.data || [])
       update(tid, 'Gold prices loaded', 'success')
