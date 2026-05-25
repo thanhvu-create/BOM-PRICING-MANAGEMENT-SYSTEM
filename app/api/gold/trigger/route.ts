@@ -4,6 +4,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
+import { logAction } from '@/lib/audit'
 
 const OZ = 31.103
 
@@ -104,12 +105,16 @@ async function fetchMetalPrices(): Promise<{ goldOz: number; ptOz: number; agOz:
 
 export async function GET(req: NextRequest) {
   try {
-    // Optional secret check
-    const secret = process.env.AMARK_FETCH_SECRET
-    if (secret) {
-      const auth = req.headers.get('authorization') || req.headers.get('x-amark-secret') || ''
-      const qsec = req.nextUrl.searchParams.get('secret') || ''
-      if (auth !== `Bearer ${secret}` && qsec !== secret) {
+    // Auth: accept Vercel CRON_SECRET (auto-injected by Vercel) OR custom AMARK_FETCH_SECRET
+    const cronSecret   = process.env.CRON_SECRET
+    const customSecret = process.env.AMARK_FETCH_SECRET
+    if (cronSecret || customSecret) {
+      const authHeader = req.headers.get('authorization') || ''
+      const xSecret    = req.headers.get('x-amark-secret') || ''
+      const qsec       = req.nextUrl.searchParams.get('secret') || ''
+      const validCron   = cronSecret   && authHeader === `Bearer ${cronSecret}`
+      const validCustom = customSecret && (authHeader === `Bearer ${customSecret}` || xSecret === customSecret || qsec === customSecret)
+      if (!validCron && !validCustom) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }
     }
@@ -174,8 +179,27 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error
 
+    logAction({
+      actor:    'system',
+      role:     'system',
+      action:   'CREATE',
+      entity:   'gold',
+      entityId: today,
+      summary:  `[Auto Trigger] Thêm giá vàng ngày ${today} — Gold: $${goldOz.toFixed(2)}/oz (${source})`,
+      diff:     { after: { price_date: today, amark_gold_oz: goldOz, source } },
+    })
+
     return NextResponse.json({ success: true, date: today, goldOz, ptOz, agOz, lossFactor, karatPrices, source })
   } catch (err: any) {
+    logAction({
+      actor:    'system',
+      role:     'system',
+      action:   'UPDATE',
+      entity:   'gold',
+      entityId: 'trigger-error',
+      summary:  `[Auto Trigger] FAILED — ${err.message}`,
+    })
+    console.error('[gold/trigger]', err.message)
     return NextResponse.json({ success: false, message: err.message }, { status: 500 })
   }
 }
