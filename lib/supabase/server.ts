@@ -30,17 +30,25 @@ export function createServiceClient() {
   )
 }
 
-// Lookup user profile — single query using OR to avoid 2 round-trips.
+// Lookup user profile — try by UUID first, fallback to email match
 export async function getUserProfile(userId: string, userEmail: string | undefined) {
   const db = createServiceClient()
-  const { data: rows } = await db
+
+  const { data: byId } = await db
     .from('users')
     .select('username, role, store, id')
-    .or(userEmail ? `id.eq.${userId},username.eq.${userEmail}` : `id.eq.${userId}`)
+    .eq('id', userId)
+    .single()
 
-  if (!rows || rows.length === 0) return null
-  // Prefer exact id match; fall back to username match
-  const byId = rows.find(r => r.id === userId)
-  const result = byId ?? rows[0]
-  return result as { username: string; role: string; store: string } | null
+  if (byId) return byId as { username: string; role: string; store: string }
+
+  if (!userEmail) return null
+
+  const { data: byEmail } = await db
+    .from('users')
+    .select('username, role, store, id')
+    .eq('username', userEmail)
+    .single()
+
+  return (byEmail ?? null) as { username: string; role: string; store: string } | null
 }
