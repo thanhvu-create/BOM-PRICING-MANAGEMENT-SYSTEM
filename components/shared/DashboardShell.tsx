@@ -345,7 +345,7 @@ function DashboardContent({ user, children }: Props) {
 
         {/* ── MOBILE NAV PANEL ────────────────────────── */}
         {mobileOpen && (
-          <div style={{
+          <div className="mobile-nav-enter" style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
             background: 'var(--bg-surface)', zIndex: 200,
             display: 'flex', flexDirection: 'column', padding: '1.5rem',
@@ -430,7 +430,9 @@ function DashboardContent({ user, children }: Props) {
 
         {/* ── CONTENT ────────────────────────────────────── */}
         <main className="main-content">
-          {children}
+          <div key={pathname} className="page-enter">
+            {children}
+          </div>
         </main>
 
         <style>{`

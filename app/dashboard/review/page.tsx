@@ -771,9 +771,9 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
 
       {/* ── QUOTATION MODAL ──────────────────────────────────── */}
       {quotBomId && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={e => e.target === e.currentTarget && closeQuotation()}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 660, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+          <div className="modal-panel" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', width: '100%', maxWidth: 660, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
             <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>
@@ -926,9 +926,9 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
 
       {/* ── DETAIL MODAL ─────────────────────────────────────── */}
       {detailBomId && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={e => e.target === e.currentTarget && closeDetail()}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 860, maxHeight: '90vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+          <div className="modal-panel" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', width: '100%', maxWidth: 860, maxHeight: '90vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
 
             {/* Close button — floating top-right */}
             <button onClick={closeDetail} style={{ position: 'absolute', top: 10, right: 12, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 20, zIndex: 1, lineHeight: 1 }}>
@@ -1187,9 +1187,9 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
 
       {/* ── DISCOUNT MODAL ───────────────────────────────────── */}
       {discountBom && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={e => e.target === e.currentTarget && closeDiscount()}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, padding: '1.5rem', width: 400, maxWidth: '100%' }}>
+          <div className="modal-panel-sm" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', padding: '1.5rem', width: 400, maxWidth: '100%' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>{t('applyDiscountTitle')}</h3>
               <button onClick={closeDiscount} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 18 }}>
@@ -1255,8 +1255,8 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
       )}
       {/* ── DELETE CONFIRM DIALOG ──────────────────────────── */}
       {deleteBomId && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="modal-panel-sm" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', width: '100%', maxWidth: 400 }}>
             <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0, color: 'var(--text-primary)' }}>{t('confirmDelete')}</h3>
             </div>

@@ -293,10 +293,10 @@ export default function GoldPage() {
               <i className="fa-solid fa-table-columns" style={{ fontSize: 11 }} />{t('btnKaratCols')} <i className="fa-solid fa-chevron-down" style={{ fontSize: 9 }} />
             </button>
             {showKaratPanel && (
-              <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, background: '#fff', border: '1px solid var(--border-base)', borderRadius: 2, padding: '12px', width: 280, zIndex: 100, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+              <div className="dropdown-hp" style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, background: 'var(--bg-surface)', border: '1px solid var(--border-base)', padding: '12px', width: 280, zIndex: 100, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                   {activeKarats.filter(k => k !== 'PT' && k !== 'AG').map(k => (
-                    <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#947545', color: '#fff', padding: '3px 8px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)' }}>
+                    <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--text-primary)', color: 'var(--bg-surface)', padding: '3px 8px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)' }}>
                       {k}
                       <button onClick={() => handleRemoveKarat(k)} disabled={karatWorking}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', padding: 0, fontSize: 11, lineHeight: 1, opacity: 0.8 }}>
@@ -380,7 +380,7 @@ export default function GoldPage() {
               }
 
               return (
-                <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, padding: '1rem', width: 290, zIndex: 100, boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}>
+                <div className="dropdown-hp" style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, background: 'var(--bg-surface)', border: '1px solid var(--border-base)', padding: '1rem', width: 290, zIndex: 100, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
 
                   {/* Status row + toggle */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid var(--border-light)' }}>
@@ -588,24 +588,24 @@ export default function GoldPage() {
 
       {/* MODAL */}
       {modal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={e => e.target === e.currentTarget && closeModal()}>
-          <div style={{ background: '#fff', borderRadius: 8, width: '100%', maxWidth: 760, boxShadow: '0 8px 40px rgba(0,0,0,0.18)', overflow: 'hidden' }}>
+          <div className="modal-panel" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', width: '100%', maxWidth: 760, overflow: 'hidden' }}>
 
             {/* Header */}
-            <div style={{ background: '#F5F1EC', padding: '1.25rem 1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E8E0D6' }}>
+            <div style={{ background: 'var(--bg-muted)', padding: '1.25rem 1.75rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-base)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <i className="fa-solid fa-coins" style={{ color: '#947545', fontSize: 18 }} />
-                <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', fontWeight: 400, margin: 0, color: '#2C2A27' }}>
+                <i className="fa-solid fa-coins" style={{ color: 'var(--text-muted)', fontSize: 18 }} />
+                <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.3rem', fontWeight: 400, margin: 0, color: 'var(--text-primary)' }}>
                   {modal === 'add' ? t('modalAddGold') : `${t('modalEditGold')} ${editRow?.price_date}`}
                 </h3>
               </div>
-              <button onClick={closeModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#888', fontSize: 20, lineHeight: 1 }}>×</button>
+              <button onClick={closeModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 20, lineHeight: 1 }}>×</button>
             </div>
 
             <div style={{ padding: '1.5rem 1.75rem' }}>
               {formError && (
-                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 4, padding: '8px 12px', marginBottom: '1rem', color: '#B91C1C', fontSize: 'var(--text-sm)' }}>
+                <div style={{ borderLeft: '2px solid var(--color-danger)', padding: '8px 12px', marginBottom: '1rem', color: 'var(--color-danger)', fontSize: 'var(--text-sm)', background: 'var(--bg-muted)' }}>
                   {formError}
                 </div>
               )}
@@ -613,42 +613,42 @@ export default function GoldPage() {
               {/* Row 1: Date + Loss Factor */}
               <div className="form-grid-2" style={{ marginBottom: '1.25rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>Date *</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 400, letterSpacing: '0.14em', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase' }}>Date *</label>
                   <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} readOnly={modal === 'edit'}
-                    style={{ width: '100%', border: '1px solid #D1C9BE', borderRadius: 4, padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: '#2C2A27', outline: 'none', boxSizing: 'border-box', background: modal === 'edit' ? '#F9F7F5' : '#fff' }} />
+                    style={{ width: '100%', border: '1px solid var(--border-base)', padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box', background: modal === 'edit' ? 'var(--bg-muted)' : 'var(--bg-surface)' }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>Loss Factor</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 400, letterSpacing: '0.14em', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase' }}>Loss Factor</label>
                   <input type="number" value={fLF} onChange={e => setFLF(e.target.value)} step="0.001" min="1"
-                    style={{ width: '100%', border: '1px solid #D1C9BE', borderRadius: 4, padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: '#2C2A27', outline: 'none', boxSizing: 'border-box' }} />
+                    style={{ width: '100%', border: '1px solid var(--border-base)', padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
                 </div>
               </div>
 
               {/* Section: Amark Price */}
               <div style={{ marginBottom: '1.25rem' }}>
-                <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', textTransform: 'uppercase', marginBottom: 10 }}>{t('labelAmarkSection')}</p>
+                <p style={{ fontSize: 11, fontWeight: 400, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 10 }}>{t('labelAmarkSection')}</p>
                 <div className="form-grid-3">
                   <div>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>Gold (oz) *</label>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 400, letterSpacing: '0.14em', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase' }}>Gold (oz) *</label>
                     <input type="number" value={fGoldOz} onChange={e => setFGoldOz(e.target.value)} placeholder="0.00" step="0.01"
-                      style={{ width: '100%', border: '1px solid #D1C9BE', borderRadius: 4, padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: '#2C2A27', outline: 'none', boxSizing: 'border-box' }} />
+                      style={{ width: '100%', border: '1px solid var(--border-base)', padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>Platinum (oz)</label>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 400, letterSpacing: '0.14em', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase' }}>Platinum (oz)</label>
                     <input type="number" value={fPtOz} onChange={e => setFPtOz(e.target.value)} placeholder="0.00" step="0.01"
-                      style={{ width: '100%', border: '1px solid #D1C9BE', borderRadius: 4, padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: '#2C2A27', outline: 'none', boxSizing: 'border-box' }} />
+                      style={{ width: '100%', border: '1px solid var(--border-base)', padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', marginBottom: 6, textTransform: 'uppercase' }}>Silver (oz)</label>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 400, letterSpacing: '0.14em', color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase' }}>Silver (oz)</label>
                     <input type="number" value={fAgOz} onChange={e => setFAgOz(e.target.value)} placeholder="0.00" step="0.01"
-                      style={{ width: '100%', border: '1px solid #D1C9BE', borderRadius: 4, padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: '#2C2A27', outline: 'none', boxSizing: 'border-box' }} />
+                      style={{ width: '100%', border: '1px solid var(--border-base)', padding: '8px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
                   </div>
                 </div>
               </div>
 
               {/* Section: Auto-Calculated */}
               <div style={{ marginBottom: '1rem' }}>
-                <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: '#888', textTransform: 'uppercase', marginBottom: 10 }}>{t('labelAutoCalc')}</p>
+                <p style={{ fontSize: 11, fontWeight: 400, letterSpacing: '0.14em', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 10 }}>{t('labelAutoCalc')}</p>
                 <div className="grid-4col">
                   {previewEntries.map(({ label, value }) => {
                     const formula = label === 'AG'
@@ -659,12 +659,12 @@ export default function GoldPage() {
                     const numVal = value === '—' ? '0.000' : value.replace('$', '').replace(' /gr', '')
                     return (
                       <div key={label}>
-                        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#2E8B8B', marginBottom: 4 }}>
+                        <div style={{ fontSize: 11, fontWeight: 400, letterSpacing: '0.14em', color: 'var(--text-secondary)', marginBottom: 4 }}>
                           {label === 'AG' ? 'SILVER' : label === 'PT' ? 'PLATINUM' : label} /GR
                         </div>
                         <input readOnly value={numVal}
-                          style={{ width: '100%', border: '1px solid #D1C9BE', borderRadius: 4, padding: '7px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: '#2C2A27', background: '#F9F7F5', boxSizing: 'border-box', outline: 'none' }} />
-                        <div style={{ fontSize: 10, color: '#AAA', marginTop: 3, fontFamily: 'var(--font-mono)' }}>{formula}</div>
+                          style={{ width: '100%', border: '1px solid var(--border-base)', padding: '7px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', background: 'var(--bg-muted)', boxSizing: 'border-box', outline: 'none' }} />
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3, fontFamily: 'var(--font-mono)' }}>{formula}</div>
                       </div>
                     )
                   })}
@@ -672,12 +672,12 @@ export default function GoldPage() {
                     const formula = k === 'AG' ? 'Ag_oz / 31.103 × LF' : k === 'PT' ? 'PT_oz / 31.103 × LF' : `Gold_oz / 31.103 × (${parseInt(k)}/24) × LF`
                     return (
                       <div key={k}>
-                        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#2E8B8B', marginBottom: 4 }}>
+                        <div style={{ fontSize: 11, fontWeight: 400, letterSpacing: '0.14em', color: 'var(--text-secondary)', marginBottom: 4 }}>
                           {k === 'AG' ? 'SILVER' : k === 'PT' ? 'PLATINUM' : k} /GR
                         </div>
                         <input readOnly value="0.000"
-                          style={{ width: '100%', border: '1px solid #D1C9BE', borderRadius: 4, padding: '7px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: '#2C2A27', background: '#F9F7F5', boxSizing: 'border-box', outline: 'none' }} />
-                        <div style={{ fontSize: 10, color: '#AAA', marginTop: 3, fontFamily: 'var(--font-mono)' }}>{formula}</div>
+                          style={{ width: '100%', border: '1px solid var(--border-base)', padding: '7px 10px', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', background: 'var(--bg-muted)', boxSizing: 'border-box', outline: 'none' }} />
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3, fontFamily: 'var(--font-mono)' }}>{formula}</div>
                       </div>
                     )
                   })}
@@ -688,8 +688,8 @@ export default function GoldPage() {
               {modal === 'add' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                   <input type="checkbox" id="gm_overwrite" checked={fOverwrite} onChange={e => setFOverwrite(e.target.checked)}
-                    style={{ width: 14, height: 14, cursor: 'pointer', accentColor: '#947545' }} />
-                  <label htmlFor="gm_overwrite" style={{ fontSize: 'var(--text-xs)', color: '#888', cursor: 'pointer' }}>
+                    style={{ width: 14, height: 14, cursor: 'pointer', accentColor: 'var(--accent)' }} />
+                  <label htmlFor="gm_overwrite" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     {t('labelOverwrite')}
                   </label>
                 </div>
@@ -697,13 +697,11 @@ export default function GoldPage() {
             </div>
 
             {/* Footer */}
-            <div style={{ background: '#F5F1EC', padding: '1rem 1.75rem', display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid #E8E0D6' }}>
-              <button onClick={closeModal}
-                style={{ background: '#fff', border: '1px solid #D1C9BE', borderRadius: 4, padding: '9px 22px', cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#555' }}>
+            <div style={{ background: 'var(--bg-muted)', padding: '1rem 1.75rem', display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid var(--border-base)' }}>
+              <button onClick={closeModal} className="btn-outline" style={{ padding: '9px 22px' }}>
                 {t('cancel')}
               </button>
-              <button onClick={handleSave} disabled={saving}
-                style={{ background: '#1A1814', border: '1px solid #1A1814', borderRadius: 4, padding: '9px 22px', cursor: saving ? 'not-allowed' : 'pointer', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#fff', opacity: saving ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button onClick={handleSave} disabled={saving} className="btn-primary" style={{ padding: '9px 22px', opacity: saving ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: 6 }}>
                 {saving ? <><i className="fa-solid fa-circle-notch fa-spin" />{t('saving')}</> : <><i className="fa-solid fa-floppy-disk" />{t('save')}</>}
               </button>
             </div>
@@ -714,8 +712,8 @@ export default function GoldPage() {
 
       {/* DELETE GOLD ROW CONFIRM */}
       {deleteGoldRow && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: 380, maxWidth: '100%', padding: '1.5rem' }}>
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="modal-panel-sm" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', width: 380, maxWidth: '100%', padding: '1.5rem' }}>
             <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>{t('confirmDelete')}</h3>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
               {t('delete')} <strong>{deleteGoldRow.price_date}</strong>? {t('cannotUndo')}
@@ -730,8 +728,8 @@ export default function GoldPage() {
 
       {/* REMOVE KARAT COLUMN CONFIRM */}
       {removeKaratLabel && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: 380, maxWidth: '100%', padding: '1.5rem' }}>
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="modal-panel-sm" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', width: 380, maxWidth: '100%', padding: '1.5rem' }}>
             <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>{t('confirmDelete')}</h3>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
               {t('delete')} <strong>{removeKaratLabel}</strong>? {t('cannotUndo')}

@@ -113,7 +113,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="grid-4col" style={{ marginBottom: '1.5rem' }}>
+      <div className="grid-4col cards-stagger" style={{ marginBottom: '1.5rem' }}>
         {[
           { icon: 'fa-file-invoice-dollar', label: t('dashTotalBoms'),  value: (stats?.totalBOMs ?? 0).toLocaleString(),      sub: t('dashAllTime'), heading: true },
           { icon: 'fa-calendar-day',        label: t('dashTodayBoms'), value: (stats?.todayBOMs ?? 0).toLocaleString(),      sub: t('dashAllTime'), heading: true },

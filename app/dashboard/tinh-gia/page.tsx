@@ -777,7 +777,7 @@ export default function TinhGiaPage() {
 
       {/* ── STEP 1: HEADER ── */}
       {step === 1 && (
-        <div style={card}>
+        <div className="step-enter" style={card}>
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <i className="fa-regular fa-file" style={{ color: 'var(--text-secondary)', fontSize: 13 }} />
             <p style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>BOM Info (Header)</p>
@@ -887,7 +887,7 @@ export default function TinhGiaPage() {
 
       {/* ── STEP 2: GOLD ── */}
       {step === 2 && (
-        <div style={card}>
+        <div className="step-enter" style={card}>
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <p style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <i className="fa-solid fa-coins" style={{ color: 'var(--text-secondary)', fontSize: 14 }} />Gold Materials
@@ -995,7 +995,7 @@ export default function TinhGiaPage() {
 
       {/* ── STEP 3: STONES ── */}
       {step === 3 && (
-        <div style={card}>
+        <div className="step-enter" style={card}>
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <p style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <i className="fa-solid fa-gem" style={{ color: 'var(--text-secondary)', fontSize: 13 }} />Stone Materials
@@ -1059,7 +1059,7 @@ export default function TinhGiaPage() {
                         onBlur={() => setTimeout(() => setStoneDropdowns(prev => ({ ...prev, [r.id]: false })), 200)}
                       />
                       {stoneDropdowns[r.id] && (
-                        <div style={{
+                        <div className="dropdown-hp" style={{
                           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 9999,
                           background: 'var(--bg-surface)', border: '1px solid var(--border-base)',
                           maxHeight: 220, overflowY: 'auto',
@@ -1175,7 +1175,7 @@ export default function TinhGiaPage() {
 
       {/* ── STEP 4: BÁO GIÁ ── */}
       {step === 4 && (
-        <div>
+        <div className="step-enter">
           {calcError && (
             <div style={{ borderLeft: '2px solid var(--color-danger)', padding: '10px 14px', marginBottom: '1rem', color: 'var(--color-danger)', fontSize: 'var(--text-sm)', background: '#FAF2F2' }}>
               <i className="fa-solid fa-triangle-exclamation" style={{ marginRight: 8 }} />{calcError}
@@ -1425,8 +1425,8 @@ export default function TinhGiaPage() {
       {/* ── CONFIRM RESET DIALOG ── */}
 
       {confirmVisible && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 400 }}>
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="modal-panel-sm" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', width: '100%', maxWidth: 400 }}>
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0, color: 'var(--text-primary)' }}>
                 {t('confirm')} Reset
@@ -1467,9 +1467,9 @@ export default function TinhGiaPage() {
 
       {/* ── STONE TYPE LIST MODAL ── */}
       {showStoneTypes && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={e => e.target === e.currentTarget && setShowStoneTypes(false)}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: '100%', maxWidth: 780, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+          <div className="modal-panel" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', width: '100%', maxWidth: 780, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0 }}>{t('stoneTypeListTitle')}</h3>
               <button onClick={() => setShowStoneTypes(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 20 }}>

@@ -224,6 +224,81 @@ td input:focus, td select:focus, td textarea:focus {
 /* ── Pulse dot ── */
 @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
 
+/* ══════════════════════════════════════════════════════════════
+   ANIMATION SYSTEM
+   Easing: ease-out — feels natural entering, no bouncing
+   Duration: 150–220ms — fast enough not to feel slow, slow enough to register
+   HP spec: composed, not eager. Only opacity + transform, never layout.
+══════════════════════════════════════════════════════════════ */
+
+@keyframes backdropIn { from { opacity:0 } to { opacity:1 } }
+@keyframes panelIn    { from { opacity:0; transform:translateY(14px) scale(0.98) } to { opacity:1; transform:none } }
+@keyframes panelSmIn  { from { opacity:0; transform:translateY(8px) scale(0.97) }  to { opacity:1; transform:none } }
+@keyframes pageEnter  { from { opacity:0; transform:translateY(8px) }              to { opacity:1; transform:none } }
+@keyframes stepIn     { from { opacity:0; transform:translateY(6px) }              to { opacity:1; transform:none } }
+@keyframes navSlideIn { from { opacity:0; transform:translateX(-14px) }            to { opacity:1; transform:none } }
+@keyframes dropdownIn { from { opacity:0; transform:scaleY(0.86) }                 to { opacity:1; transform:none } }
+@keyframes cardEnter  { from { opacity:0; transform:translateY(10px) }             to { opacity:1; transform:none } }
+
+/* Modal backdrop — always fade in */
+.modal-backdrop {
+  animation: backdropIn 0.18s ease-out forwards;
+}
+/* Modal panel — large (detail, quotation, stone list, edit forms) */
+.modal-panel {
+  animation: panelIn 0.22s ease-out forwards;
+}
+/* Modal panel — small confirm dialogs */
+.modal-panel-sm {
+  animation: panelSmIn 0.17s ease-out forwards;
+}
+/* Page content — rerenders on route change (key={pathname}) */
+.page-enter {
+  animation: pageEnter 0.20s ease-out forwards;
+}
+/* Step panels in multi-step form */
+.step-enter {
+  animation: stepIn 0.18s ease-out forwards;
+}
+/* Mobile nav drawer */
+.mobile-nav-enter {
+  animation: navSlideIn 0.20s ease-out forwards;
+}
+/* Autocomplete dropdown */
+.dropdown-hp {
+  transform-origin: top center;
+  animation: dropdownIn 0.14s ease-out forwards;
+}
+
+/* Staggered card grid — apply to the grid wrapper */
+.cards-stagger > * {
+  animation: cardEnter 0.22s ease-out both;
+}
+.cards-stagger > *:nth-child(1) { animation-delay: 0.03s }
+.cards-stagger > *:nth-child(2) { animation-delay: 0.07s }
+.cards-stagger > *:nth-child(3) { animation-delay: 0.11s }
+.cards-stagger > *:nth-child(4) { animation-delay: 0.15s }
+.cards-stagger > *:nth-child(5) { animation-delay: 0.19s }
+.cards-stagger > *:nth-child(6) { animation-delay: 0.23s }
+
+/* Button pressed micro-feedback */
+.btn-primary:active { transform: scale(0.98); }
+.btn-outline:active  { transform: scale(0.98); }
+
+/* Nav link hover — smoother than default */
+a, button { transition: color 0.15s, background 0.15s, border-color 0.15s, opacity 0.15s; }
+
+/* Accessibility: respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop, .modal-panel, .modal-panel-sm,
+  .page-enter, .step-enter, .mobile-nav-enter,
+  .dropdown-hp, .cards-stagger > * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 /* ── Responsive Utilities ── */
 
 /* Table scroll wrapper */

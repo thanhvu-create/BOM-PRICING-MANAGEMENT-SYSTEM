@@ -377,8 +377,8 @@ export default function MKPage() {
 
       {/* DELETE CONFIRM */}
       {deleteRow && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, width: 380, padding: '1.5rem' }}>
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="modal-panel-sm" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', width: 380, padding: '1.5rem' }}>
             <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: '0 0 0.75rem' }}>{t('confirmDelete')}</h3>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>{t('cannotUndo')}</p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
@@ -391,10 +391,10 @@ export default function MKPage() {
 
       {/* MODAL */}
       {modal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
           onClick={e => e.target === e.currentTarget && closeModal()}>
-          <div style={{
-            background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4,
+          <div className="modal-panel" style={{
+            background: 'var(--bg-surface)', border: '1px solid var(--border-base)',
             width: activeKey === 'store_markup' ? 'min(92vw, 720px)' : activeSheet.columns.length > 3 ? 'min(90vw, 560px)' : 'min(90vw, 460px)',
             maxHeight: '88vh', display: 'flex', flexDirection: 'column',
           }}>
