@@ -70,7 +70,7 @@ export default function UsersPage() {
   const [formError, setFormError] = useState('')
 
   // Add form fields
-  const [fUsername, setFUsername] = useState('')
+  const [fUsername, setFUsername] = useState('') // email
   const [fPassword, setFPassword] = useState('')
   const [fRole, setFRole] = useState('Sales')
   const [fStore, setFStore] = useState('')
@@ -113,7 +113,7 @@ export default function UsersPage() {
     try {
       const r = await fetch('/api/users', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: fUsername.trim(), password: fPassword, role: fRole, store: fStore }),
+        body: JSON.stringify({ email: fUsername.trim(), password: fPassword, role: fRole, store: fStore }),
       })
       const d = await r.json()
       if (!r.ok) { setFormError(d.error || 'Failed to create user'); update(tid, d.error || 'Create failed', 'danger'); return }
@@ -208,12 +208,13 @@ export default function UsersPage() {
 
           <div className="add-user-form-row">
             <div>
-              <label style={labelStyle}>{t('labelUsername')} *</label>
+              <label style={labelStyle}>Email *</label>
               <input
+                type="email"
                 style={inputStyle}
                 value={fUsername}
                 onChange={e => setFUsername(e.target.value)}
-                placeholder="username"
+                placeholder="ten@ctyhp.vn"
                 onKeyDown={e => e.key === 'Enter' && handleAdd()}
               />
             </div>

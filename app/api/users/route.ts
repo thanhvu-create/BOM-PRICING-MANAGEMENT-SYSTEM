@@ -35,13 +35,13 @@ export async function POST(request: Request) {
     if (actorProfile?.role !== 'Admin')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const { username, password, role, store } = await request.json()
-    if (!username || !password) return NextResponse.json({ error: 'username và password bắt buộc' }, { status: 400 })
+    const { email, password, role, store } = await request.json()
+    if (!email || !password) return NextResponse.json({ error: 'email và password bắt buộc' }, { status: 400 })
 
-    // Tạo auth user với email = username@bom.internal
-    const email = `${username.toLowerCase().trim()}@bom.internal`
+    const username = email.trim().toLowerCase().split('@')[0]
+
     const { data: authData, error: authErr } = await db.auth.admin.createUser({
-      email,
+      email: email.trim().toLowerCase(),
       password,
       email_confirm: true,
     })
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     // Insert vào public.users
     const { error: profileErr } = await db.from('users').insert([{
       id:       authData.user.id,
-      username: username.trim(),
+      username,
       role:     role || 'Sales',
       store:    store || '',
     }])
