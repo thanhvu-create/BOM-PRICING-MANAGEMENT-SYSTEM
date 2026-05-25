@@ -65,9 +65,9 @@ export async function POST(request: Request) {
       role:     'Admin',
       action:   'CREATE',
       entity:   'user',
-      entityId: username.trim(),
-      summary:  `Tạo user "${username.trim()}" — Role: ${role || 'Sales'}, Store: ${store || 'All'}`,
-      diff:     { after: { username: username.trim(), role: role || 'Sales', store: store || '' } },
+      entityId: normalizedEmail,
+      summary:  `Tạo user "${normalizedEmail}" — Role: ${role || 'Sales'}, Store: ${store || 'All'}`,
+      diff:     { after: { username: normalizedEmail, role: role || 'Sales', store: store || '' } },
     })
 
     return NextResponse.json({ success: true })
