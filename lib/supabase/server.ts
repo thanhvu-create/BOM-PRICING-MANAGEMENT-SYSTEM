@@ -33,7 +33,7 @@ export function createServiceClient() {
 // Lookup user profile — single query using OR to avoid 2 round-trips.
 export async function getUserProfile(userId: string, userEmail: string | undefined) {
   const db = createServiceClient()
-  const username = userEmail ? userEmail.replace(/@bom\.internal$/i, '') : ''
+  const username = userEmail ? userEmail.split('@')[0] : ''
 
   const { data: rows } = await db
     .from('users')

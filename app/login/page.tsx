@@ -8,7 +8,7 @@ import { useToast } from '@/components/shared/ToastContext'
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [error, setError] = useState('')
@@ -20,29 +20,14 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // Bước 1: tra cứu email từ username
-      const lookupRes = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim().toLowerCase() }),
+      const supabase = createClient()
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
       })
 
-      if (!lookupRes.ok) {
-        const msg = 'Invalid username or password.'
-        setError(msg)
-        toast(msg, 'danger')
-        setLoading(false)
-        return
-      }
-
-      const { email } = await lookupRes.json()
-
-      // Bước 2: đăng nhập với email thực
-      const supabase = createClient()
-      const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
-
       if (authError) {
-        const msg = 'Invalid username or password.'
+        const msg = 'Invalid email or password.'
         setError(msg)
         toast(msg, 'danger')
         setLoading(false)
@@ -53,7 +38,8 @@ export default function LoginPage() {
         'bom_session_expiry',
         rememberMe ? 'permanent' : String(Date.now() + 8 * 3600 * 1000)
       )
-      toast(`Welcome, ${username}!`, 'success')
+      const displayName = email.split('@')[0]
+      toast(`Welcome, ${displayName}!`, 'success')
       router.push('/dashboard')
       router.refresh()
     } catch {
@@ -119,16 +105,16 @@ export default function LoginPage() {
               marginBottom: '0.5rem',
               fontFamily: 'var(--font-body)',
             }}>
-              Account
+              Email
             </label>
             <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              placeholder="username"
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@company.com"
               required
               autoFocus
-              autoComplete="username"
+              autoComplete="email"
               className="input-underline"
             />
           </div>
