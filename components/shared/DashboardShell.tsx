@@ -430,9 +430,7 @@ function DashboardContent({ user, children }: Props) {
 
         {/* ── CONTENT ────────────────────────────────────── */}
         <main className="main-content">
-          <div key={pathname} className="page-enter">
-            {children}
-          </div>
+          {children}
         </main>
 
         <style>{`
