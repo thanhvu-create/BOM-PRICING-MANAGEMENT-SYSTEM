@@ -77,6 +77,7 @@ export default function LoginPage() {
       <div style={{
         background: 'var(--bg-surface)',
         border: '1px solid var(--border-base)',
+        borderTop: '2px solid var(--accent)',
         padding: '3rem 2.5rem',
         width: '100%',
         maxWidth: '440px',
@@ -84,11 +85,11 @@ export default function LoginPage() {
         {/* Eyebrow */}
         <p style={{
           fontFamily: 'var(--font-body)',
-          fontSize: 'var(--text-xs)',
-          fontWeight: 500,
-          letterSpacing: '0.12em',
+          fontSize: 11,
+          fontWeight: 400,
+          letterSpacing: '0.14em',
           textTransform: 'uppercase',
-          color: 'var(--text-secondary)',
+          color: 'var(--text-muted)',
           marginBottom: '0.5rem',
         }}>
           BOM Pricing System
@@ -111,12 +112,13 @@ export default function LoginPage() {
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={{
               display: 'block',
-              fontSize: 'var(--text-xs)',
-              fontWeight: 500,
-              letterSpacing: '0.1em',
+              fontSize: 11,
+              fontWeight: 400,
+              letterSpacing: '0.14em',
               textTransform: 'uppercase',
-              color: 'var(--text-secondary)',
+              color: 'var(--text-muted)',
               marginBottom: '0.5rem',
+              fontFamily: 'var(--font-body)',
             }}>
               Account
             </label>
@@ -136,12 +138,13 @@ export default function LoginPage() {
           <div style={{ marginBottom: '2rem' }}>
             <label style={{
               display: 'block',
-              fontSize: 'var(--text-xs)',
-              fontWeight: 500,
-              letterSpacing: '0.1em',
+              fontSize: 11,
+              fontWeight: 400,
+              letterSpacing: '0.14em',
               textTransform: 'uppercase',
-              color: 'var(--text-secondary)',
+              color: 'var(--text-muted)',
               marginBottom: '0.5rem',
+              fontFamily: 'var(--font-body)',
             }}>
               Password
             </label>
@@ -177,7 +180,7 @@ export default function LoginPage() {
               padding: '0.75rem 1rem',
               color: 'var(--color-danger)',
               fontSize: 'var(--text-sm)',
-              background: '#FAF2F2',
+              background: 'var(--bg-muted)',
               marginBottom: '1.5rem',
             }}>
               {error}

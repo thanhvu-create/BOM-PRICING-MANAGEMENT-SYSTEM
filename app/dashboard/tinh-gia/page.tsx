@@ -47,14 +47,15 @@ const selectBox: React.CSSProperties = {
   color: 'var(--text-primary)', outline: 'none',
 }
 const lbl: React.CSSProperties = {
-  display: 'block', fontSize: 'var(--text-xs)', textTransform: 'uppercase',
-  letterSpacing: '0.1em', color: 'var(--text-secondary)', marginBottom: 4,
+  display: 'block', fontSize: 10, textTransform: 'uppercase',
+  letterSpacing: '0.14em', color: 'var(--text-muted)', marginBottom: 4,
+  fontFamily: 'var(--font-body)',
 }
 const thStyle: React.CSSProperties = {
-  fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em',
-  color: 'var(--text-secondary)', fontWeight: 500,
-  padding: '8px 6px', borderBottom: '1px solid var(--border-base)',
-  background: 'var(--bg-base)', textAlign: 'left', whiteSpace: 'nowrap',
+  fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.14em',
+  color: 'var(--text-muted)', fontWeight: 400,
+  padding: '10px 6px', borderBottom: '1px solid var(--border-base)',
+  background: 'var(--bg-muted)', textAlign: 'left', whiteSpace: 'nowrap',
 }
 const tdStyle: React.CSSProperties = { padding: '4px 4px', borderBottom: '1px solid var(--border-light)', verticalAlign: 'middle' }
 const tdInput: React.CSSProperties = {
@@ -62,8 +63,9 @@ const tdInput: React.CSSProperties = {
   background: 'var(--bg-surface)', padding: '4px 6px',
   fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)',
   color: 'var(--text-primary)', outline: 'none',
+  transition: 'border-color 0.15s',
 }
-const card: React.CSSProperties = { background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4 }
+const card: React.CSSProperties = { background: 'var(--bg-surface)', border: '1px solid var(--border-base)' }
 
 /* ── PERSISTENCE KEYS ──────────────────────────────────────── */
 const DRAFT_KEY = 'bom_draft_v1'
@@ -739,13 +741,13 @@ export default function TinhGiaPage() {
               onClick={() => isComplete && setStep(i + 1)}
               style={{
                 flex: 1, padding: '0.75rem 0.5rem', minWidth: 44,
-                fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 500,
-                letterSpacing: '0.08em', textTransform: 'uppercase',
+                fontFamily: 'var(--font-body)', fontSize: 10, fontWeight: 400,
+                letterSpacing: '0.12em', textTransform: 'uppercase',
                 color: isActive ? 'var(--text-primary)' : isComplete ? 'var(--color-success)' : 'var(--text-muted)',
                 border: 'none',
                 borderRight: i < steps.length - 1 ? '1px solid var(--border-base)' : 'none',
-                outline: isActive ? '2px solid var(--border-strong)' : 'none',
-                outlineOffset: -2,
+                borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+                outline: 'none',
                 background: isActive ? 'var(--bg-surface)' : 'transparent',
                 cursor: isComplete ? 'pointer' : 'default',
                 whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -965,7 +967,7 @@ export default function TinhGiaPage() {
                 const totalCost   = goldRows.reduce((s, r) => s + r.cost, 0)
                 return (
                   <tfoot>
-                    <tr style={{ background: '#F5EDD8' }}>
+                    <tr style={{ background: 'var(--bg-muted)' }}>
                       <td colSpan={3} style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontWeight: 600, fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right', color: 'var(--text-secondary)', paddingRight: 10 }}>
                         Tổng Cộng:
                       </td>
@@ -1144,7 +1146,7 @@ export default function TinhGiaPage() {
               {/* TỔNG CỘNG footer */}
               {stoneRows.some(r => r.tlHot > 0 || (parseInt(r.qty) || 0) > 0) && (
                 <tfoot>
-                  <tr style={{ background: '#F5EDD8' }}>
+                  <tr style={{ background: 'var(--bg-muted)' }}>
                     <td colSpan={4} style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontWeight: 600, fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right', color: 'var(--text-secondary)', paddingRight: 10 }}>
                       Tổng Cộng:
                     </td>

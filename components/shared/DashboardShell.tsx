@@ -152,6 +152,7 @@ function DashboardContent({ user, children }: Props) {
         <header style={{
           background: 'var(--bg-base)',
           borderBottom: '1px solid var(--border-base)',
+          borderTop: '2px solid var(--accent)',
           padding: '0.75rem 1.5rem 0',
           position: 'sticky', top: 0, zIndex: 100,
         }}>
@@ -161,10 +162,11 @@ function DashboardContent({ user, children }: Props) {
             {/* Left: eyebrow + serif title */}
             <div>
               <p style={{
-                fontSize: 'var(--text-xs)', fontWeight: 500, letterSpacing: '0.12em',
-                textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 2,
+                fontSize: 11, fontWeight: 400, letterSpacing: '0.14em',
+                textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 3,
+                fontFamily: 'var(--font-body)',
               }}>
-                BOM PRICING MANAGEMENT SYSTEM
+                BOM Pricing Management System
               </p>
               <h1 style={{
                 fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)',
@@ -178,15 +180,15 @@ function DashboardContent({ user, children }: Props) {
             <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               {/* User info */}
               <div style={{ textAlign: 'right' }}>
-                <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>
+                <p style={{ fontSize: 'var(--text-sm)', fontWeight: 400, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2, fontFamily: 'var(--font-body)' }}>
                   {user.username}
                 </p>
                 <span style={{
                   display: 'inline-block', marginTop: 2,
-                  border: '1px solid var(--border-strong)', padding: '1px 6px',
-                  fontSize: 'var(--text-xs)', letterSpacing: '0.08em',
-                  textTransform: 'uppercase', color: 'var(--text-primary)',
-                  fontWeight: 600, lineHeight: 1.4,
+                  border: '1px solid var(--border-base)', padding: '1px 6px',
+                  fontSize: 10, letterSpacing: '0.1em',
+                  textTransform: 'uppercase', color: 'var(--text-muted)',
+                  fontWeight: 400, lineHeight: 1.4, fontFamily: 'var(--font-body)',
                 }}>
                   {role.toUpperCase()}
                 </span>
@@ -206,14 +208,13 @@ function DashboardContent({ user, children }: Props) {
               {/* Sign Out */}
               <button
                 onClick={handleLogout}
+                className="btn-outline"
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '6px 14px',
-                  border: '1px solid var(--border-base)', borderRadius: 0,
-                  background: 'transparent', color: 'var(--text-secondary)',
-                  fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)',
-                  fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase',
-                  cursor: 'pointer', whiteSpace: 'nowrap',
+                  fontSize: 'var(--text-xs)',
+                  letterSpacing: '0.1em',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 <i className="fa-solid fa-right-from-bracket" style={{ fontSize: 11 }} />
@@ -245,11 +246,11 @@ function DashboardContent({ user, children }: Props) {
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '0.6rem 0.875rem',
                     fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)',
-                    fontWeight: isActive(n.href) ? 600 : 500,
-                    letterSpacing: '0.1em', textTransform: 'uppercase',
-                    color: isActive(n.href) ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    fontWeight: 400,
+                    letterSpacing: '0.12em', textTransform: 'uppercase',
+                    color: isActive(n.href) ? 'var(--text-primary)' : 'var(--text-muted)',
                     textDecoration: 'none',
-                    borderBottom: isActive(n.href) ? '2px solid var(--border-strong)' : '2px solid transparent',
+                    borderBottom: isActive(n.href) ? '2px solid var(--accent)' : '2px solid transparent',
                     transition: 'color 0.15s, border-color 0.15s',
                     whiteSpace: 'nowrap',
                   }}
@@ -263,16 +264,16 @@ function DashboardContent({ user, children }: Props) {
             {/* Right controls: STORE BADGE | USD RATE | MANAGER DISCOUNT CAP | LANG */}
             <div className="topbar-right-controls" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', paddingBottom: '0.25rem', flexShrink: 0 }}>
 
-              {/* Store badge — shown if user.store has value */}
+              {/* Store badge */}
               {user.store && (
                 <span style={{
                   border: '1px solid var(--border-base)',
                   padding: '2px 8px',
-                  fontSize: 'var(--text-xs)',
+                  fontSize: 10,
                   textTransform: 'uppercase',
                   fontFamily: 'var(--font-mono)',
-                  letterSpacing: '0.08em',
-                  color: 'var(--text-secondary)',
+                  letterSpacing: '0.1em',
+                  color: 'var(--text-muted)',
                   whiteSpace: 'nowrap',
                 }}>
                   {user.store}
@@ -417,7 +418,8 @@ function DashboardContent({ user, children }: Props) {
                 </div>
                 <button
                   onClick={handleLogout}
-                  style={{ flex: 1, padding: '8px 0', border: '1px solid var(--color-danger)', background: 'transparent', cursor: 'pointer', color: 'var(--color-danger)', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', letterSpacing: '0.08em', textTransform: 'uppercase' }}
+                  className="btn-outline"
+                  style={{ flex: 1, padding: '8px 0', fontSize: 'var(--text-xs)', letterSpacing: '0.1em', cursor: 'pointer' }}
                 >
                   <i className="fa-solid fa-right-from-bracket" style={{ marginRight: 6 }} />
                   {t('signOut')}

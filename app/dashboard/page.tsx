@@ -24,14 +24,14 @@ function fmt(n: number) {
 const card: React.CSSProperties = {
   background: 'var(--bg-surface)',
   border: '1px solid var(--border-base)',
-  borderRadius: 4,
   padding: '1.5rem',
 }
 
 const eyebrow: React.CSSProperties = {
-  fontSize: 'var(--text-xs)', fontWeight: 500, letterSpacing: '0.12em',
-  textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10,
+  fontSize: 10, fontWeight: 400, letterSpacing: '0.14em',
+  textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10,
   display: 'flex', alignItems: 'center', gap: 6,
+  fontFamily: 'var(--font-body)',
 }
 
 export default function DashboardPage() {
@@ -213,9 +213,9 @@ export default function DashboardPage() {
                     {['#', 'SALESPERSON', 'BOMS', 'VALUE'].map((h, i) => (
                       <th key={h} style={{
                         textAlign: i <= 1 ? 'left' : 'right',
-                        fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em',
-                        color: 'var(--text-secondary)', fontWeight: 500,
-                        padding: '0 6px 10px', borderBottom: '1px solid var(--border-base)',
+                        fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.14em',
+                        color: 'var(--text-muted)', fontWeight: 400,
+                        padding: '10px 6px', background: 'var(--bg-muted)', borderBottom: '1px solid var(--border-base)',
                       }}>{h}</th>
                     ))}
                   </tr>
@@ -283,9 +283,9 @@ export default function DashboardPage() {
                   {['BOM ID', 'DATE', 'MODEL', 'STORE', 'SELL PRICE'].map((h, i) => (
                     <th key={h} style={{
                       textAlign: i === 4 ? 'right' : 'left',
-                      fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em',
-                      color: 'var(--text-secondary)', fontWeight: 500,
-                      padding: '6px 8px 10px', borderBottom: '1px solid var(--border-base)',
+                      fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.14em',
+                      color: 'var(--text-muted)', fontWeight: 400,
+                      padding: '10px 8px', background: 'var(--bg-muted)', borderBottom: '1px solid var(--border-base)',
                     }}>{h}</th>
                   ))}
                 </tr>
