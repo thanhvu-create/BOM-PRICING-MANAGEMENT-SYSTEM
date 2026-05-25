@@ -409,7 +409,7 @@ export default function MKPage() {
             </div>
 
             {/* SCROLLABLE BODY */}
-            <div style={{ overflowY: 'auto', padding: '1.25rem 1.5rem', flex: 1 }}>
+            <div style={{ overflowY: 'auto', minHeight: 0, padding: '1.25rem 1.5rem', flex: 1 }}>
               {formError && <div style={{ borderLeft: '2px solid var(--color-danger)', padding: '8px 12px', marginBottom: '1rem', color: 'var(--color-danger)', fontSize: 'var(--text-sm)' }}>{formError}</div>}
 
               {activeKey === 'store_markup' ? (

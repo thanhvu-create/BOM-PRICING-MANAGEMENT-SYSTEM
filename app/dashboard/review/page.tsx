@@ -793,7 +793,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
             </div>
 
             {/* Body */}
-            <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto' }}>
+            <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto', minHeight: 0 }}>
               {quotLoading ? (
                 <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
                   <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
@@ -936,7 +936,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
             </button>
 
             {/* Body */}
-            <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto' }}>
+            <div style={{ padding: '1.5rem', flex: 1, overflowY: 'auto', minHeight: 0 }}>
               {detailLoading ? (
                 <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                   <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}

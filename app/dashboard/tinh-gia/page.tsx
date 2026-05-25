@@ -1485,7 +1485,7 @@ export default function TinhGiaPage() {
                 autoFocus
               />
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 1.5rem' }}>
+            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: '0.5rem 1.5rem' }}>
               {stoneTypeLoading ? (
                 <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                   <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
