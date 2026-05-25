@@ -77,7 +77,6 @@ export default function LoginPage() {
       <div style={{
         background: 'var(--bg-surface)',
         border: '1px solid var(--border-base)',
-        borderTop: '2px solid var(--accent)',
         padding: '3rem 2.5rem',
         width: '100%',
         maxWidth: '440px',

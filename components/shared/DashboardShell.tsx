@@ -152,7 +152,6 @@ function DashboardContent({ user, children }: Props) {
         <header style={{
           background: 'var(--bg-base)',
           borderBottom: '1px solid var(--border-base)',
-          borderTop: '2px solid var(--accent)',
           padding: '0.75rem 1.5rem 0',
           position: 'sticky', top: 0, zIndex: 100,
         }}>
@@ -233,10 +232,10 @@ function DashboardContent({ user, children }: Props) {
           </div>
 
           {/* ROW 2 — nav left | controls right */}
-          <div className="hide-mobile topbar-row2" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'stretch' }}>
+          <div className="hide-mobile topbar-row2" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'stretch', minWidth: 0 }}>
 
             {/* Nav items */}
-            <nav style={{ display: 'flex', gap: 0 }}>
+            <nav style={{ display: 'flex', gap: 0, minWidth: 0, overflow: 'hidden' }}>
               {visibleNav.map(n => (
                 <Link
                   key={n.key}

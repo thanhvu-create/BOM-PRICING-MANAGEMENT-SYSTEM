@@ -2,14 +2,14 @@ export type Lang = 'vi' | 'en'
 
 const dict: Record<string, Record<Lang, string>> = {
   // Nav
-  home:           { vi: 'TRANG CHỦ',    en: 'DASHBOARD' },
-  tinhgia:        { vi: 'TÍNH GIÁ',     en: 'BOM PRICING' },
-  review:         { vi: 'LỊCH SỬ',      en: 'PRICE HISTORY' },
-  gold:           { vi: 'GIÁ VÀNG',     en: 'GOLD PRICES' },
-  mk:             { vi: 'MK DATA',      en: 'MK DATA' },
-  master:         { vi: 'STONE DATA',   en: 'STONE DATA' },
-  users:          { vi: 'NGƯỜI DÙNG',   en: 'USER MGMT' },
-  audit:          { vi: 'NHẬT KÝ',      en: 'AUDIT LOG' },
+  home:           { vi: 'TRANG CHỦ',    en: 'HOME' },
+  tinhgia:        { vi: 'TÍNH GIÁ',     en: 'PRICING' },
+  review:         { vi: 'LỊCH SỬ',      en: 'HISTORY' },
+  gold:           { vi: 'GIÁ VÀNG',     en: 'GOLD' },
+  mk:             { vi: 'MK DATA',      en: 'MK' },
+  master:         { vi: 'STONE DATA',   en: 'STONE' },
+  users:          { vi: 'NGƯỜI DÙNG',   en: 'USERS' },
+  audit:          { vi: 'NHẬT KÝ',      en: 'AUDIT' },
 
   // Page headings (title case — used in topbar serif heading)
   pageTitleHome:    { vi: 'Trang Chủ',    en: 'Dashboard' },

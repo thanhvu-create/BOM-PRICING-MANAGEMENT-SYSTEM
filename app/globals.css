@@ -327,7 +327,7 @@ td input:focus, td select:focus, td textarea:focus {
 /* ── Nav label: icon-only on laptop (<1500px), full text on wide desktop ── */
 .nav-item-label { display: inline; }
 
-@media (min-width: 768px) and (max-width: 1499px) {
+@media (min-width: 768px) and (max-width: 1699px) {
   .nav-item-label { display: none; }
   .topbar-right-controls { gap: 0.875rem !important; }
 }
