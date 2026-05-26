@@ -5,12 +5,14 @@ import { logAction } from '@/lib/audit'
 // GET /api/config/discount-caps
 export async function GET() {
   try {
-    const supabase = await createClient()
-    const { data, error } = await supabase
+    const db = createServiceClient()
+    const { data, error } = await db
       .from('sys_config').select('value').eq('key', 'MANAGER_MAX_DISCOUNT').single()
 
     const managerMax = error ? 20 : Number(data.value) || 20
-    return NextResponse.json({ success: true, salesMax: 20, managerMax })
+    return NextResponse.json({ success: true, salesMax: 20, managerMax }, {
+      headers: { 'Cache-Control': 'no-store' },
+    })
   } catch (err: any) {
     return NextResponse.json({ success: false, salesMax: 20, managerMax: 20 })
   }
@@ -35,8 +37,7 @@ export async function POST(request: Request) {
     const { error } = await db.from('sys_config').upsert({
       key: 'MANAGER_MAX_DISCOUNT',
       value: String(managerMax),
-      updated_at: new Date().toISOString()
-    })
+    }, { onConflict: 'key' })
 
     if (error) throw error
 

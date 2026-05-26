@@ -6,7 +6,7 @@
  * Khi không tìm thấy match, vẫn trả về type_input của group để client hiển thị đúng cột.
  */
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function GET(request: Request) {
   const supabase = await createClient()
@@ -18,8 +18,10 @@ export async function GET(request: Request) {
   const mmSize    = parseFloat(searchParams.get('size') || '0')
   const ctw1pc    = parseFloat(searchParams.get('ctw')  || '0')
 
+  const db = createServiceClient()
+
   // Primary lookup: mm type uses mmSize range; ct type uses ctw1pc range
-  const { data, error } = await supabase.rpc('lookup_stone_grade', {
+  const { data, error } = await db.rpc('lookup_stone_grade', {
     p_group_code: groupCode,
     p_mm_size:    mmSize,
     p_ctw1pc:     ctw1pc,
@@ -32,7 +34,7 @@ export async function GET(request: Request) {
   }
 
   // Fallback: no size match — still return type_input so the client can show the correct column type
-  const { data: fallback } = await supabase
+  const { data: fallback } = await db
     .from('stone_material')
     .select('type_input')
     .eq('group_code', groupCode)
