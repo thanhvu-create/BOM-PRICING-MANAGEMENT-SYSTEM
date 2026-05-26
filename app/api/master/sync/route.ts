@@ -42,13 +42,16 @@ export async function POST() {
       }
     })
 
-    // Full replace: delete all then insert
-    const { error: delErr } = await db.from('stone_material').delete().neq('grade_id', '')
-    if (delErr) throw delErr
-
+    // Upsert all rows (safe: never leaves table empty)
     if (smRows.length > 0) {
-      const { error: insErr } = await db.from('stone_material').insert(smRows)
-      if (insErr) throw insErr
+      const { error: upsertErr } = await db.from('stone_material').upsert(smRows, { onConflict: 'grade_id' })
+      if (upsertErr) throw upsertErr
+    }
+
+    // Remove stale rows no longer in dm_size
+    const activeGradeIds = smRows.map((r: any) => r.grade_id)
+    if (activeGradeIds.length > 0) {
+      await db.from('stone_material').delete().not('grade_id', 'in', `(${activeGradeIds.map((g: string) => `"${g}"`).join(',')})`)
     }
 
     return NextResponse.json({ success: true, synced: smRows.length })

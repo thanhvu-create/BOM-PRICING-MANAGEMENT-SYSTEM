@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getUserProfile } from '@/lib/supabase/server'
 
 // GET /api/gold/trigger/status — trả về trạng thái trigger hiện tại
 export async function GET() {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const profile = await getUserProfile(user.id, user.email)
+    if (!['Admin', 'Manager'].includes(profile?.role || ''))
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
     const db = createServiceClient()
     const { data } = await db
       .from('sys_config')

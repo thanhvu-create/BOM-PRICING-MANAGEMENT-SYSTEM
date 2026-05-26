@@ -30,7 +30,7 @@ async function runCleanup() {
   try {
     const db = createServiceClient()
     const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - 30)
+    cutoff.setDate(cutoff.getDate() - 365)
 
     const { count, error } = await db
       .from('audit_log')

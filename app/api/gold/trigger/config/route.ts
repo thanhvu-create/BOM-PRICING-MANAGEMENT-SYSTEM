@@ -40,6 +40,13 @@ export async function POST(request: Request) {
 // GET /api/gold/trigger/config — load current config
 export async function GET() {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const profile = await getUserProfile(user.id, user.email)
+    if (!['Admin', 'Manager'].includes(profile?.role || ''))
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
     const db = createServiceClient()
     const { data } = await db
       .from('sys_config')

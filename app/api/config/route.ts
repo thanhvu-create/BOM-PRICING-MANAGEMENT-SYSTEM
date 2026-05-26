@@ -8,6 +8,10 @@ import { createClient, createServiceClient, getUserProfile } from '@/lib/supabas
 import { logAction } from '@/lib/audit'
 
 export async function GET(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+
   const { searchParams } = new URL(request.url)
   const key = searchParams.get('key') || 'VND_RATE'
 
