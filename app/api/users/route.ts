@@ -14,7 +14,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const db = createServiceClient()
-    const { data, error } = await db.from('users').select('id, username, role, store, created_at').order('created_at')
+    const { data, error } = await db.from('users').select('id, email, role, store, created_at').order('created_at')
     if (error) throw error
     return NextResponse.json({ data: data || [] })
   } catch (err: any) {
@@ -47,12 +47,11 @@ export async function POST(request: Request) {
     })
     if (authErr) throw authErr
 
-    // Insert vào public.users — username lưu full email
     const { error: profileErr } = await db.from('users').insert([{
-      id:       authData.user.id,
-      username: normalizedEmail,
-      role:     role || 'Sales',
-      store:    store || '',
+      id:    authData.user.id,
+      email: normalizedEmail,
+      role:  role || 'Sales',
+      store: store || '',
     }])
     if (profileErr) {
       // Rollback auth user nếu insert thất bại
@@ -61,13 +60,13 @@ export async function POST(request: Request) {
     }
 
     logAction({
-      actor:    actorProfile?.username || user.email || '',
+      actor:    actorProfile?.email || user.email || '',
       role:     'Admin',
       action:   'CREATE',
       entity:   'user',
       entityId: normalizedEmail,
       summary:  `Tạo user "${normalizedEmail}" — Role: ${role || 'Sales'}, Store: ${store || 'All'}`,
-      diff:     { after: { username: normalizedEmail, role: role || 'Sales', store: store || '' } },
+      diff:     { after: { email: normalizedEmail, role: role || 'Sales', store: store || '' } },
     })
 
     return NextResponse.json({ success: true })
@@ -93,7 +92,7 @@ export async function PUT(request: Request) {
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
     // Fetch old values for diff
-    const { data: oldUser } = await db.from('users').select('username, role, store').eq('id', id).single()
+    const { data: oldUser } = await db.from('users').select('email, role, store').eq('id', id).single()
 
     const { error: updateErr } = await db.from('users').update({ role, store }).eq('id', id)
     if (updateErr) throw updateErr
@@ -104,12 +103,12 @@ export async function PUT(request: Request) {
     }
 
     logAction({
-      actor:    actorProfile?.username || user.email || '',
+      actor:    actorProfile?.email || user.email || '',
       role:     'Admin',
       action:   'UPDATE',
       entity:   'user',
-      entityId: oldUser?.username || id,
-      summary:  `Cập nhật user "${oldUser?.username || id}" — Role: ${oldUser?.role} → ${role}`,
+      entityId: oldUser?.email || id,
+      summary:  `Cập nhật user "${oldUser?.email || id}" — Role: ${oldUser?.role} → ${role}`,
       diff: {
         before: { role: oldUser?.role, store: oldUser?.store },
         after:  { role, store, passwordChanged: !!(newPassword && newPassword.trim()) },
@@ -139,21 +138,21 @@ export async function DELETE(request: Request) {
     const id = searchParams.get('id')
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-    const { data: target } = await db.from('users').select('username, role, store').eq('id', id).single()
-    if (target?.username === 'admin123')
+    const { data: target } = await db.from('users').select('email, role, store').eq('id', id).single()
+    if (target?.email === 'admin@ctyhp.vn')
       return NextResponse.json({ error: 'Cannot delete the super admin account.' }, { status: 403 })
 
     await db.from('users').delete().eq('id', id)
     await db.auth.admin.deleteUser(id)
 
     logAction({
-      actor:    actorProfile?.username || user.email || '',
+      actor:    actorProfile?.email || user.email || '',
       role:     'Admin',
       action:   'DELETE',
       entity:   'user',
-      entityId: target?.username || id,
-      summary:  `Xóa user "${target?.username || id}" — Role: ${target?.role}`,
-      diff:     { before: { username: target?.username, role: target?.role, store: target?.store } },
+      entityId: target?.email || id,
+      summary:  `Xóa user "${target?.email || id}" — Role: ${target?.role}`,
+      diff:     { before: { email: target?.email, role: target?.role, store: target?.store } },
     })
 
     return NextResponse.json({ success: true })

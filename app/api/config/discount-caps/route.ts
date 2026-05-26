@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     if (error) throw error
 
     logAction({
-      actor:    profile?.username || user.email || '',
+      actor:    profile?.email || user.email || '',
       role:     'Admin',
       action:   'UPDATE',
       entity:   'config',

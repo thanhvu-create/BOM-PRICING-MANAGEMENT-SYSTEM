@@ -36,19 +36,19 @@ export async function getUserProfile(userId: string, userEmail: string | undefin
 
   const { data: byId } = await db
     .from('users')
-    .select('username, role, store, id')
+    .select('email, role, store, id')
     .eq('id', userId)
     .single()
 
-  if (byId) return byId as { username: string; role: string; store: string }
+  if (byId) return byId as { email: string; role: string; store: string }
 
   if (!userEmail) return null
 
   const { data: byEmail } = await db
     .from('users')
-    .select('username, role, store, id')
-    .eq('username', userEmail)
+    .select('email, role, store, id')
+    .eq('email', userEmail)
     .single()
 
-  return (byEmail ?? null) as { username: string; role: string; store: string } | null
+  return (byEmail ?? null) as { email: string; role: string; store: string } | null
 }

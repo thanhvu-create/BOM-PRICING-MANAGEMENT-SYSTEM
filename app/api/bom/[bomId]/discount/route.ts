@@ -13,7 +13,7 @@ export async function POST(
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const profile = await getUserProfile(user.id, user.email)
-    const username = profile?.username || ''
+    const username = profile?.email || ''
     const role = profile?.role || ''
 
     const { bomId } = await params

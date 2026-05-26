@@ -6,7 +6,7 @@ import { useLang } from '@/components/shared/I18nContext'
 
 interface AppUser {
   id: string
-  username: string
+  email: string
   role: string
   store: string
   created_at: string
@@ -134,7 +134,7 @@ export default function UsersPage() {
     if (!editUser) return
     setEditError('')
     setEditSaving(true)
-    const tid = toast(`Updating "${editUser.username}"...`, 'loading')
+    const tid = toast(`Updating "${editUser.email}"...`, 'loading')
     try {
       const body: any = { id: editUser.id, role: eRole, store: eStore }
       if (eNewPassword.trim()) body.newPassword = eNewPassword.trim()
@@ -144,7 +144,7 @@ export default function UsersPage() {
       })
       const d = await r.json()
       if (!r.ok) { setEditError(d.error || 'Failed'); update(tid, d.error || 'Update failed', 'danger'); return }
-      closeEdit(); update(tid, `User "${editUser.username}" updated`, 'success'); load()
+      closeEdit(); update(tid, `User "${editUser.email}" updated`, 'success'); load()
     } catch (e: any) { update(tid, e.message, 'danger') }
     finally { setEditSaving(false) }
   }
@@ -152,12 +152,12 @@ export default function UsersPage() {
   async function doDelete() {
     if (!deleteUser) return
     const u = deleteUser; setDeleteUser(null)
-    const tid = toast(`Deleting "${u.username}"...`, 'loading')
+    const tid = toast(`Deleting "${u.email}"...`, 'loading')
     try {
       const r = await fetch(`/api/users?id=${u.id}`, { method: 'DELETE' })
       const d = await r.json()
       if (!r.ok) { update(tid, d.error || 'Failed to delete', 'danger'); return }
-      update(tid, `User "${u.username}" deleted`, 'success'); load()
+      update(tid, `User "${u.email}" deleted`, 'success'); load()
     } catch { update(tid, 'Failed to delete', 'danger') }
   }
 
@@ -304,7 +304,7 @@ export default function UsersPage() {
                 </td>
                 {/* Username */}
                 <td style={td}>
-                  <span style={{ fontWeight: 600 }}>{u.username}</span>
+                  <span style={{ fontWeight: 600 }}>{u.email}</span>
                 </td>
                 {/* Role badge */}
                 <td style={td}>
@@ -338,11 +338,11 @@ export default function UsersPage() {
                     <button
                       onClick={() => setDeleteUser(u)}
                       title="Delete"
-                      disabled={u.username === 'admin123'}
+                      disabled={u.email === 'admin@ctyhp.vn'}
                       style={{
-                        background: 'none', border: `1px solid ${u.username === 'admin123' ? 'var(--border-light)' : 'var(--color-danger)'}`,
-                        borderRadius: 0, padding: '4px 10px', cursor: u.username === 'admin123' ? 'not-allowed' : 'pointer',
-                        fontSize: 'var(--text-xs)', color: u.username === 'admin123' ? 'var(--text-muted)' : 'var(--color-danger)',
+                        background: 'none', border: `1px solid ${u.email === 'admin@ctyhp.vn' ? 'var(--border-light)' : 'var(--color-danger)'}`,
+                        borderRadius: 0, padding: '4px 10px', cursor: u.email === 'admin@ctyhp.vn' ? 'not-allowed' : 'pointer',
+                        fontSize: 'var(--text-xs)', color: u.email === 'admin@ctyhp.vn' ? 'var(--text-muted)' : 'var(--color-danger)',
                       }}
                     >
                       <i className="fa-solid fa-trash-can" />
@@ -380,12 +380,12 @@ export default function UsersPage() {
                 </div>
               )}
 
-              {/* Username — readonly */}
+              {/* Email — readonly */}
               <div>
-                <label style={labelStyle}>Username</label>
+                <label style={labelStyle}>Email</label>
                 <input
                   style={{ ...inputStyle, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}
-                  value={editUser.username}
+                  value={editUser.email}
                   readOnly
                 />
               </div>
@@ -448,7 +448,7 @@ export default function UsersPage() {
               {t('confirmDeleteUser')}
             </h3>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: '0 0 1.25rem' }}>
-              {t('delete')} <strong style={{ fontFamily: 'var(--font-mono)' }}>{deleteUser.username}</strong>? {t('cannotUndo')}
+              {t('delete')} <strong style={{ fontFamily: 'var(--font-mono)' }}>{deleteUser.email}</strong>? {t('cannotUndo')}
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button

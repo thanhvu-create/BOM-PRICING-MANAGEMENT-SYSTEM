@@ -53,7 +53,7 @@ export async function POST(request: Request) {
 
     const db = createServiceClient()
     const profile = await getUserProfile(user.id, user.email)
-    const username = profile?.username || user.email || ''
+    const username = profile?.email || user.email || ''
     const role = profile?.role || ''
 
     const payload = await request.json()

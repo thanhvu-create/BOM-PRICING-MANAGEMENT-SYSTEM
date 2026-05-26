@@ -12,7 +12,7 @@ import DriveAuthButton from './DriveAuthButton'
 import type { Role } from '@/types'
 
 interface Props {
-  user: { username: string; role: string; store: string }
+  user: { email: string; role: string; store: string }
   children: React.ReactNode
 }
 
@@ -119,7 +119,7 @@ function DashboardContent({ user, children }: Props) {
     }, 800)
   }
 
-  const initials = user.username.slice(0, 2).toUpperCase()
+  const initials = user.email.slice(0, 2).toUpperCase()
 
   function isActive(href: string) {
     if (href === '/dashboard') return pathname === '/dashboard'
@@ -130,7 +130,7 @@ function DashboardContent({ user, children }: Props) {
   const pageTitle = t(pageTitleKey)
 
   const sessionUser = {
-    username: user.username,
+    email: user.email,
     role: user.role as Role,
     store: user.store as any,
   }
@@ -180,7 +180,7 @@ function DashboardContent({ user, children }: Props) {
               {/* User info */}
               <div style={{ textAlign: 'right' }}>
                 <p style={{ fontSize: 'var(--text-sm)', fontWeight: 400, color: 'var(--text-primary)', margin: 0, lineHeight: 1.2, fontFamily: 'var(--font-body)' }}>
-                  {user.username}
+                  {user.email}
                 </p>
                 <span style={{
                   display: 'inline-block', marginTop: 2,

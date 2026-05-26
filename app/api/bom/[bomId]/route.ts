@@ -86,13 +86,13 @@ export async function DELETE(
     // Soft delete — giữ record trong DB để có thể khôi phục
     const { error } = await db.from('bom').update({
       deleted_at: new Date().toISOString(),
-      updated_by: profile?.username || user.email || '',
+      updated_by: profile?.email || user.email || '',
       updated_at: new Date().toISOString(),
     }).eq('bom_id', bomId)
     if (error) throw error
 
     logAction({
-      actor:    profile?.username || user.email || '',
+      actor:    profile?.email || user.email || '',
       role:     profile?.role,
       action:   'DELETE',
       entity:   'bom',
@@ -120,7 +120,7 @@ export async function PUT(
 
     const db = createServiceClient()
     const profile = await getUserProfile(user.id, user.email)
-    const username = profile?.username || user.email || ''
+    const username = profile?.email || user.email || ''
 
     const { bomId } = await params
     const payload = await request.json()

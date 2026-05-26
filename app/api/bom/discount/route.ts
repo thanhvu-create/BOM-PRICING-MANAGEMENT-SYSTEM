@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const db = createServiceClient()
     const profile = await getUserProfile(user.id, user.email)
     const role = profile?.role || ''
-    const username = profile?.username || user.email || ''
+    const username = profile?.email || user.email || ''
 
     const { bomId, newSellPrice, discountPct, discountAmt } = await request.json()
 

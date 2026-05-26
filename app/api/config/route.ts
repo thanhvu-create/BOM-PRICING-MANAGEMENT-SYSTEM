@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
   const profile = await getUserProfile(user.id, user.email)
   logAction({
-    actor:    profile?.username || user.email || '',
+    actor:    profile?.email || user.email || '',
     role:     profile?.role,
     action:   'UPDATE',
     entity:   'config',

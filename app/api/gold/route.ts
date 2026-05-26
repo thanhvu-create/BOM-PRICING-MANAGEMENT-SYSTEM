@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
     const isUpdate = !!existing
     logAction({
-      actor:    profile?.username || user.email || '',
+      actor:    profile?.email || user.email || '',
       role:     profile?.role,
       action:   isUpdate ? 'UPDATE' : 'CREATE',
       entity:   'gold',
@@ -109,7 +109,7 @@ export async function DELETE(request: Request) {
     if (error) throw error
 
     logAction({
-      actor:    profile?.username || user.email || '',
+      actor:    profile?.email || user.email || '',
       role:     profile?.role,
       action:   'DELETE',
       entity:   'gold',
