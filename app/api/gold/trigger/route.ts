@@ -105,18 +105,16 @@ async function fetchMetalPrices(): Promise<{ goldOz: number; ptOz: number; agOz:
 
 export async function GET(req: NextRequest) {
   try {
-    // Auth: accept Vercel CRON_SECRET (auto-injected by Vercel) OR custom AMARK_FETCH_SECRET
+    // Auth: Vercel injects Authorization: Bearer <CRON_SECRET> for cron calls
+    // Also accept x-vercel-cron: 1 header (always present on Vercel cron requests)
     const cronSecret   = process.env.CRON_SECRET
     const customSecret = process.env.AMARK_FETCH_SECRET
-    if (cronSecret || customSecret) {
-      const authHeader = req.headers.get('authorization') || ''
-      const xSecret    = req.headers.get('x-amark-secret') || ''
-      const qsec       = req.nextUrl.searchParams.get('secret') || ''
-      const validCron   = cronSecret   && authHeader === `Bearer ${cronSecret}`
-      const validCustom = customSecret && (authHeader === `Bearer ${customSecret}` || xSecret === customSecret || qsec === customSecret)
-      if (!validCron && !validCustom) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      }
+    const authHeader   = req.headers.get('authorization') || ''
+    const isVercelCron = req.headers.get('x-vercel-cron') === '1'
+    const validCron    = cronSecret && authHeader === `Bearer ${cronSecret}`
+    const validCustom  = customSecret && authHeader === `Bearer ${customSecret}`
+    if (!isVercelCron && !validCron && !validCustom) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const db = createServiceClient()
@@ -179,7 +177,7 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error
 
-    logAction({
+    await logAction({
       actor:    'system',
       role:     'system',
       action:   'CREATE',
@@ -191,7 +189,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, date: today, goldOz, ptOz, agOz, lossFactor, karatPrices, source })
   } catch (err: any) {
-    logAction({
+    await logAction({
       actor:    'system',
       role:     'system',
       action:   'UPDATE',
