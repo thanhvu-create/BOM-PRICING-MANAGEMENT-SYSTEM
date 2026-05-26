@@ -32,7 +32,7 @@ export async function GET(
 
     const db = createServiceClient()
     const { data, error } = await db.from(table).select('*').order('sort_order', { ascending: true, nullsFirst: false })
-    const CC = { headers: { 'Cache-Control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=3600' } }
+    const CC = { headers: { 'Cache-Control': 'no-store' } }
     if (error) {
       const { data: d2, error: e2 } = await db.from(table).select('*')
       if (e2) throw e2

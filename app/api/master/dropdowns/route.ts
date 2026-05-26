@@ -25,7 +25,7 @@ export async function GET() {
       qualities:   quaRes.data || [],
       definitions: defRes.data || [],
     }, {
-      headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400' },
+      headers: { 'Cache-Control': 'no-store' },
     })
   } catch (err: any) {
     console.error('[GET /api/master/dropdowns]', err)

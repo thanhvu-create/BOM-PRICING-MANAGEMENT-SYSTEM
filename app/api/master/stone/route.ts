@@ -12,7 +12,7 @@ export async function GET() {
     const { data, error } = await db.from('dm_size').select('*').order('master_code').order('grade_id')
     if (error) throw error
     return NextResponse.json({ data: data || [] }, {
-      headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400' },
+      headers: { 'Cache-Control': 'no-store' },
     })
   } catch (err: any) {
     console.error('[master/stone route]', err)

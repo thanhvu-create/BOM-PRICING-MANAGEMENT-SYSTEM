@@ -30,7 +30,7 @@ export async function GET(
     const { data, error } = await db.from(table).select(select).order(orderBy)
     if (error) throw error
     return NextResponse.json({ data: data || [] }, {
-      headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400' },
+      headers: { 'Cache-Control': 'no-store' },
     })
   } catch (err: any) {
     console.error('[master/dm route]', err)
