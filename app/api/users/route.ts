@@ -110,9 +110,26 @@ export async function PUT(request: Request) {
       const { data: { users: authList }, error: listErr } = await db.auth.admin.listUsers({ perPage: 1000 })
       if (listErr) throw listErr
       const authUser = (authList as any[]).find((u: any) => u.email?.toLowerCase() === userEmail.toLowerCase())
-      if (!authUser) return NextResponse.json({ error: `Không tìm thấy auth user: ${userEmail}` }, { status: 404 })
-      const { error: pwErr } = await db.auth.admin.updateUserById(authUser.id, { password: newPassword.trim() })
-      if (pwErr) throw pwErr
+
+      if (authUser) {
+        // Auth user exists — update password
+        const { error: pwErr } = await db.auth.admin.updateUserById(authUser.id, { password: newPassword.trim() })
+        if (pwErr) throw pwErr
+        // Sync public.users.id if it differs from auth.users.id
+        if (authUser.id !== id) {
+          await db.from('users').update({ id: authUser.id }).eq('email', userEmail)
+        }
+      } else {
+        // Auth user missing (migrated account) — create it now
+        const { data: created, error: createErr } = await db.auth.admin.createUser({
+          email: userEmail,
+          password: newPassword.trim(),
+          email_confirm: true,
+        })
+        if (createErr) throw createErr
+        // Sync public.users.id to the new auth UUID
+        await db.from('users').update({ id: created.user.id }).eq('email', userEmail)
+      }
     }
 
     logAction({
