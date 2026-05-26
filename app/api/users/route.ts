@@ -98,7 +98,14 @@ export async function PUT(request: Request) {
     if (updateErr) throw updateErr
 
     if (newPassword && newPassword.trim()) {
-      const { error: pwErr } = await db.auth.admin.updateUserById(id, { password: newPassword.trim() })
+      // Resolve auth UUID by email — public.users.id may differ from auth.users.id on migrated accounts
+      const email = oldUser?.email
+      if (!email) throw new Error('Cannot resolve email for password update')
+      const { data: { users: authList }, error: listErr } = await db.auth.admin.listUsers({ perPage: 1000 })
+      if (listErr) throw listErr
+      const authUser = (authList as any[]).find((u: any) => u.email === email)
+      if (!authUser) throw new Error(`Auth user not found: ${email}`)
+      const { error: pwErr } = await db.auth.admin.updateUserById(authUser.id, { password: newPassword.trim() })
       if (pwErr) throw pwErr
     }
 
