@@ -8,16 +8,16 @@ import { createClient, createServiceClient, getUserProfile } from '@/lib/supabas
 import { logAction } from '@/lib/audit'
 
 export async function GET(request: Request) {
-  const supabase = await createClient()
   const { searchParams } = new URL(request.url)
   const key = searchParams.get('key') || 'VND_RATE'
 
-  const { data, error } = await supabase
+  const db = createServiceClient()
+  const { data, error } = await db
     .from('sys_config').select('value').eq('key', key).single()
 
   if (error) return NextResponse.json({ success: false })
   return NextResponse.json({ success: true, rate: parseFloat(data.value) }, {
-    headers: { 'Cache-Control': 'public, max-age=60, s-maxage=60' },
+    headers: { 'Cache-Control': 'no-store' },
   })
 }
 
@@ -29,15 +29,14 @@ export async function POST(request: Request) {
   const body = await request.json()
   const { key = 'VND_RATE', value } = body
 
-  // Fetch old value for diff
   const db = createServiceClient()
   const { data: oldCfg } = await db.from('sys_config').select('value').eq('key', key).single()
 
-  const { error } = await supabase
+  const { error } = await db
     .from('sys_config')
-    .upsert({ key, value: String(value), updated_at: new Date().toISOString() })
+    .upsert({ key, value: String(value) }, { onConflict: 'key' })
 
-  if (error) return NextResponse.json({ success: false, message: 'Đã xảy ra lỗi, vui lòng thử lại' })
+  if (error) return NextResponse.json({ success: false, message: 'Đã xảy ra lỗi, vui lòng thử lại' }, { status: 500 })
 
   const profile = await getUserProfile(user.id, user.email)
   logAction({
