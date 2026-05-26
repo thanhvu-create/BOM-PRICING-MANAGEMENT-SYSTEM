@@ -88,23 +88,29 @@ export async function PUT(request: Request) {
     if (actorProfile?.role !== 'Admin')
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const { id, role, store, newPassword } = await request.json()
+    const { id, email: reqEmail, role, store, newPassword } = await request.json()
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
 
-    // Fetch old values for diff
-    const { data: oldUser } = await db.from('users').select('email, role, store').eq('id', id).single()
+    // Fetch old values for diff — use maybeSingle() so it doesn't throw when UUID is stale
+    const { data: oldUser } = await db.from('users').select('email, role, store').eq('id', id).maybeSingle()
+    const userEmail = reqEmail || oldUser?.email || ''
 
-    const { error: updateErr } = await db.from('users').update({ role, store }).eq('id', id)
-    if (updateErr) throw updateErr
+    // Update role/store by id (primary) or email fallback when UUID is stale post-migration
+    if (oldUser) {
+      const { error: updateErr } = await db.from('users').update({ role, store }).eq('id', id)
+      if (updateErr) throw updateErr
+    } else if (userEmail) {
+      const { error: updateErr } = await db.from('users').update({ role, store }).eq('email', userEmail)
+      if (updateErr) throw updateErr
+    }
 
     if (newPassword && newPassword.trim()) {
-      // Resolve auth UUID by email — public.users.id may differ from auth.users.id on migrated accounts
-      const email = oldUser?.email
-      if (!email) throw new Error('Cannot resolve email for password update')
+      if (!userEmail) return NextResponse.json({ error: 'email required for password update' }, { status: 400 })
+      // Look up auth user by email to get the correct auth UUID
       const { data: { users: authList }, error: listErr } = await db.auth.admin.listUsers({ perPage: 1000 })
       if (listErr) throw listErr
-      const authUser = (authList as any[]).find((u: any) => u.email === email)
-      if (!authUser) throw new Error(`Auth user not found: ${email}`)
+      const authUser = (authList as any[]).find((u: any) => u.email?.toLowerCase() === userEmail.toLowerCase())
+      if (!authUser) return NextResponse.json({ error: `Không tìm thấy auth user: ${userEmail}` }, { status: 404 })
       const { error: pwErr } = await db.auth.admin.updateUserById(authUser.id, { password: newPassword.trim() })
       if (pwErr) throw pwErr
     }
@@ -114,8 +120,8 @@ export async function PUT(request: Request) {
       role:     'Admin',
       action:   'UPDATE',
       entity:   'user',
-      entityId: oldUser?.email || id,
-      summary:  `Cập nhật user "${oldUser?.email || id}" — Role: ${oldUser?.role} → ${role}`,
+      entityId: userEmail || id,
+      summary:  `Cập nhật user "${userEmail || id}" — Role: ${oldUser?.role ?? '?'} → ${role}`,
       diff: {
         before: { role: oldUser?.role, store: oldUser?.store },
         after:  { role, store, passwordChanged: !!(newPassword && newPassword.trim()) },

@@ -136,7 +136,7 @@ export default function UsersPage() {
     setEditSaving(true)
     const tid = toast(`Updating "${editUser.email}"...`, 'loading')
     try {
-      const body: any = { id: editUser.id, role: eRole, store: eStore }
+      const body: any = { id: editUser.id, email: editUser.email, role: eRole, store: eStore }
       if (eNewPassword.trim()) body.newPassword = eNewPassword.trim()
       const r = await fetch('/api/users', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
