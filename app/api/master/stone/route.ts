@@ -106,8 +106,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true })
   } catch (err: any) {
-    console.error('[master/stone route]', err)
-    return NextResponse.json({ error: 'Đã xảy ra lỗi, vui lòng thử lại' }, { status: 500 })
+    console.error('[master/stone POST]', err)
+    return NextResponse.json({ error: err?.message || 'Đã xảy ra lỗi, vui lòng thử lại' }, { status: 500 })
   }
 }
 
