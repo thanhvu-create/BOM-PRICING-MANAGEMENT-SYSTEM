@@ -418,9 +418,9 @@ function DashboardContent({ user, children }: Props) {
                 <button
                   onClick={handleLogout}
                   className="btn-outline"
-                  style={{ flex: 1, padding: '8px 0', fontSize: 'var(--text-xs)', letterSpacing: '0.1em', cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '8px 0', fontSize: 'var(--text-xs)', letterSpacing: '0.1em', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                 >
-                  <i className="fa-solid fa-right-from-bracket" style={{ marginRight: 6 }} />
+                  <i className="fa-solid fa-right-from-bracket" style={{ fontSize: 11 }} />
                   {t('signOut')}
                 </button>
               </div>
