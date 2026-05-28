@@ -375,6 +375,7 @@ function DashboardContent({ user, children }: Props) {
             ))}
 
             <div style={{ marginTop: 'auto', paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* USD Rate */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
                   USD RATE
@@ -394,7 +395,30 @@ function DashboardContent({ user, children }: Props) {
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>VND</span>
               </div>
 
+              {/* Manager Discount Cap — Admin only */}
+              {isAdmin && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+                    {t('mgrDiscCapLabel')}
+                  </span>
+                  <input
+                    type="number" min={0} max={100} step={1}
+                    value={mgrDiscCap}
+                    onChange={e => handleMgrDiscInput(e.target.value)}
+                    style={{
+                      width: 56, border: 'none', borderBottom: '1px solid var(--border-base)',
+                      background: 'transparent', textAlign: 'right',
+                      fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)',
+                      color: 'var(--text-primary)', outline: 'none',
+                    }}
+                  />
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontWeight: 500 }}>%</span>
+                </div>
+              )}
+
+              {/* Drive + Lang + Sign Out */}
               <div style={{ display: 'flex', gap: 8 }}>
+                <DriveAuthButton />
                 {/* Segmented VI | EN — same as desktop */}
                 <div style={{ display: 'flex', border: '1px solid var(--border-base)', overflow: 'hidden', borderRadius: 0, flex: 1 }}>
                   {(['vi', 'en'] as const).map(l => (
