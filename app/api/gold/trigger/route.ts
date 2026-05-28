@@ -3,7 +3,7 @@
  * Uses goldprice.org public API (no key needed) with fallbacks
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getUserProfile } from '@/lib/supabase/server'
 import { logAction } from '@/lib/audit'
 
 const OZ = 31.103
@@ -113,8 +113,19 @@ export async function GET(req: NextRequest) {
     const isVercelCron = req.headers.get('x-vercel-cron') === '1'
     const validCron    = cronSecret && authHeader === `Bearer ${cronSecret}`
     const validCustom  = customSecret && authHeader === `Bearer ${customSecret}`
+
+    // Also allow Admin/Manager session users (for manual "Run Now" test)
+    let isSessionAdmin = false
     if (!isVercelCron && !validCron && !validCustom) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const profile = await getUserProfile(user.id, user.email)
+        isSessionAdmin = ['Admin', 'Manager'].includes(profile?.role || '')
+      }
+      if (!isSessionAdmin) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
     }
 
     const db = createServiceClient()

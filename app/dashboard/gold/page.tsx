@@ -452,21 +452,13 @@ export default function GoldPage() {
                       setTriggerRunning(true)
                       const tid = toast('Đang fetch giá vàng...', 'loading')
                       try {
-                        const r = await fetch('/api/gold/fetch-amark')
+                        const r = await fetch('/api/gold/trigger')
                         const d = await r.json()
-                        if (!d.success) throw new Error(d.message || 'Fetch failed')
-                        const { goldOz, ptOz, agOz, date } = d
-                        const save = await fetch('/api/gold', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ date, goldOz, ptOz, agOz, lossFactor: Number(triggerLF), overwriteIfSameDate: false }),
-                        })
-                        const sd = await save.json()
-                        if (sd.success) {
-                          update(tid, `✓ Gold $${Number(goldOz).toFixed(2)}/oz đã lưu (${d.source})`, 'success')
+                        if (d.success) {
+                          update(tid, `✓ Gold $${Number(d.goldOz).toFixed(2)}/oz đã lưu (${d.source})`, 'success')
                           load(); setShowTriggerPanel(false)
                         } else {
-                          update(tid, `❌ Save failed: ${sd.error || sd.message}`, 'danger')
+                          update(tid, `❌ ${d.message || d.error || 'Failed'}`, 'danger')
                         }
                       } catch (e: any) { update(tid, `❌ ${e.message}`, 'danger') }
                       finally { setTriggerRunning(false) }
