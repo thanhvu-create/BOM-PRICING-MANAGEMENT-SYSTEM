@@ -398,6 +398,7 @@ export default function ReviewPage() {
       if (!r.ok) { update(tid, d.error || 'Delete failed', 'danger'); return }
       update(tid, `BOM ${bomId} deleted`, 'success')
       detailCache.current.delete(bomId)
+      window.dispatchEvent(new CustomEvent('bom_pending_changed'))
       loadBoms()
     } catch { update(tid, 'Delete failed', 'danger') }
   }
