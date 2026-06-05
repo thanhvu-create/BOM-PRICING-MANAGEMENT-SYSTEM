@@ -79,9 +79,15 @@ function DashboardContent({ user, children }: Props) {
 
   useEffect(() => {
     if (role !== 'Admin' && role !== 'Manager') return
-    fetch('/api/bom/pending-count').then(r => r.json()).then(d => {
-      if (d?.count != null) setPendingCount(Number(d.count))
-    }).catch(() => {})
+    function fetchPending() {
+      fetch('/api/bom/pending-count').then(r => r.json()).then(d => {
+        if (d?.count != null) setPendingCount(Number(d.count))
+      }).catch(() => {})
+    }
+    fetchPending()
+    // Re-fetch when Review page signals an approve/reject (same-tab CustomEvent)
+    window.addEventListener('bom_pending_changed', fetchPending)
+    return () => window.removeEventListener('bom_pending_changed', fetchPending)
   }, [role])
 
   async function handleLogout() {

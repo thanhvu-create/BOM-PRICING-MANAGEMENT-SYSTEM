@@ -1401,12 +1401,12 @@ export default function TinhGiaPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <span style={{ color: 'var(--color-success)', fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <i className="fa-solid fa-circle-check" />
-                        BOM Đã Lưu:&nbsp;<strong style={{ fontFamily: 'var(--font-mono)' }}>{savedBomId}</strong>
+                        {t('bomSavedLabel')}:&nbsp;<strong style={{ fontFamily: 'var(--font-mono)' }}>{savedBomId}</strong>
                         &nbsp;
-                        {approvalStatus === 'draft' && <span style={{ fontSize: 10, border: '1px solid var(--border-base)', padding: '1px 6px', color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Nháp</span>}
-                        {approvalStatus === 'pending' && <span style={{ fontSize: 10, border: '1px solid #D97706', padding: '1px 6px', color: '#D97706', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Chờ Duyệt</span>}
-                        {approvalStatus === 'approved' && <span style={{ fontSize: 10, border: '1px solid var(--color-success)', padding: '1px 6px', color: 'var(--color-success)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Đã Duyệt</span>}
-                        {approvalStatus === 'rejected' && <span style={{ fontSize: 10, border: '1px solid var(--color-danger)', padding: '1px 6px', color: 'var(--color-danger)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Từ Chối</span>}
+                        {approvalStatus === 'draft' && <span style={{ fontSize: 10, border: '1px solid var(--border-base)', padding: '1px 6px', color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{t('approvalDraft')}</span>}
+                        {approvalStatus === 'pending' && <span style={{ fontSize: 10, border: '1px solid #D97706', padding: '1px 6px', color: '#D97706', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{t('approvalPending')}</span>}
+                        {approvalStatus === 'approved' && <span style={{ fontSize: 10, border: '1px solid var(--color-success)', padding: '1px 6px', color: 'var(--color-success)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{t('approvalApproved')}</span>}
+                        {approvalStatus === 'rejected' && <span style={{ fontSize: 10, border: '1px solid var(--color-danger)', padding: '1px 6px', color: 'var(--color-danger)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{t('approvalRejected')}</span>}
                       </span>
                       {approvalStatus === 'rejected' && approvalNote && (
                         <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-danger)' }}>
@@ -1424,8 +1424,8 @@ export default function TinhGiaPage() {
                           style={{ padding: '4px 12px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}
                         >
                           {submitting
-                            ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 10 }} />Đang gửi...</>
-                            : <><i className="fa-solid fa-paper-plane" style={{ fontSize: 10 }} />{approvalStatus === 'rejected' ? 'Gửi Lại' : 'Gửi Duyệt'}</>
+                            ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 10 }} />{t('submitting')}</>
+                            : <><i className="fa-solid fa-paper-plane" style={{ fontSize: 10 }} />{approvalStatus === 'rejected' ? t('resubmitApproval') : t('submitApproval')}</>
                           }
                         </button>
                       )}
@@ -1455,7 +1455,7 @@ export default function TinhGiaPage() {
                     {editLocked && (
                       <span style={{ fontSize: 'var(--text-xs)', color: '#D97706', display: 'flex', alignItems: 'center', gap: 5 }}>
                         <i className="fa-solid fa-lock" style={{ fontSize: 10 }} />
-                        BOM đang chờ duyệt — không thể chỉnh sửa
+                        {t('editLockedMsg')}
                       </span>
                     )}
                   </div>
