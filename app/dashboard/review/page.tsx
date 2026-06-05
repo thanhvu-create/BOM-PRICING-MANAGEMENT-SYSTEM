@@ -16,6 +16,8 @@ interface BomRow {
   cost_total: number; sales_person: string; store: string
   customer_name: string; created_by: string
   img1: string; img2: string; img3: string
+  approval_status: 'draft'|'pending'|'approved'|'rejected'
+  approved_by?: string; approved_at?: string; approval_note?: string
 }
 interface BomDetail {
   header: Record<string, any>
@@ -140,6 +142,7 @@ export default function ReviewPage() {
   const showSellPrice = true
   const showStones    = role !== 'Sales' && role !== 'Sales Supervisor'
   const canDiscount   = role === 'Admin' || role === 'Manager' || role === 'Sales Supervisor'
+  const canApprove    = role === 'Admin' || role === 'Manager'
 
   const [boms, setBoms] = useState<BomRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -149,7 +152,13 @@ export default function ReviewPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [storeFilter, setStoreFilter] = useState('')
+  const [approvalFilter, setApprovalFilter] = useState('')
   const [page, setPage] = useState(1)
+
+  // Approve/Reject modal
+  const [rejectBom, setRejectBom] = useState<BomRow | null>(null)
+  const [rejectNote, setRejectNote] = useState('')
+  const [approveSaving, setApproveSaving] = useState(false)
 
   // Detail modal
   const [detailBomId, setDetailBomId] = useState<string | null>(null)
@@ -217,7 +226,7 @@ export default function ReviewPage() {
 
   // Hide sticky header when any modal is open
   useEffect(() => {
-    const anyOpen = !!(quotBomId || detailBomId || discountBom || deleteBomId || lightboxSrc)
+    const anyOpen = !!(quotBomId || detailBomId || discountBom || deleteBomId || lightboxSrc || rejectBom)
     if (anyOpen) {
       document.body.classList.add('modal-open')
       document.body.style.overflow = 'hidden'
@@ -229,7 +238,7 @@ export default function ReviewPage() {
       document.body.classList.remove('modal-open')
       document.body.style.overflow = ''
     }
-  }, [quotBomId, detailBomId, discountBom, deleteBomId, lightboxSrc])
+  }, [quotBomId, detailBomId, discountBom, deleteBomId, lightboxSrc, rejectBom])
 
   async function loadBoms() {
     loadBomsCtrl.current?.abort()
@@ -263,9 +272,10 @@ export default function ReviewPage() {
       if (dateFrom && b.date < dateFrom) return false
       if (dateTo && b.date > dateTo) return false
       if (storeFilter && !b.store?.toUpperCase().startsWith(storeFilter)) return false
+      if (approvalFilter && b.approval_status !== approvalFilter) return false
       return true
     })
-  }, [boms, search, dateFrom, dateTo, storeFilter])
+  }, [boms, search, dateFrom, dateTo, storeFilter, approvalFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -382,6 +392,40 @@ export default function ReviewPage() {
       detailCache.current.delete(bomId)
       loadBoms()
     } catch { update(tid, 'Delete failed', 'danger') }
+  }
+
+  /* ── Approve BOM ─── */
+  async function approveBom(bomId: string) {
+    setApproveSaving(true)
+    const tid = toast(`Đang duyệt BOM ${bomId}...`, 'loading')
+    try {
+      const r = await fetch(`/api/bom/${bomId}/approve`, { method: 'PATCH' })
+      const d = await r.json()
+      if (!r.ok) { update(tid, d.error || 'Duyệt thất bại', 'danger'); return }
+      update(tid, `BOM ${bomId} đã duyệt`, 'success')
+      setBoms(prev => prev.map(b => b.bom_id === bomId ? { ...b, approval_status: 'approved' } : b))
+    } catch { update(tid, 'Duyệt thất bại', 'danger') }
+    finally { setApproveSaving(false) }
+  }
+
+  /* ── Reject BOM ─── */
+  async function submitReject() {
+    if (!rejectBom) return
+    const bomId = rejectBom.bom_id
+    setApproveSaving(true)
+    const tid = toast(`Đang từ chối BOM ${bomId}...`, 'loading')
+    try {
+      const r = await fetch(`/api/bom/${bomId}/reject`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ note: rejectNote }),
+      })
+      const d = await r.json()
+      if (!r.ok) { update(tid, d.error || 'Từ chối thất bại', 'danger'); return }
+      update(tid, `BOM ${bomId} đã từ chối`, 'success')
+      setBoms(prev => prev.map(b => b.bom_id === bomId ? { ...b, approval_status: 'rejected', approval_note: rejectNote } : b))
+      setRejectBom(null); setRejectNote('')
+    } catch { update(tid, 'Từ chối thất bại', 'danger') }
+    finally { setApproveSaving(false) }
   }
 
   /* ── Print Quotation ─── */
@@ -600,7 +644,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
         />
       </div>
 
-      {/* Filter bar — date + store filters */}
+      {/* Filter bar — date + store + approval filters */}
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, padding: '0.75rem 1rem', marginBottom: '1rem' }}>
         <div className="review-filter-grid">
           <div>
@@ -621,9 +665,31 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
               {['VN', 'US', 'ADM'].map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
+          <div>
+            <span style={{ display: 'block', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: 4 }}>Trạng Thái</span>
+            <select style={{ ...inputStyle, width: '100%', boxSizing: 'border-box' }} value={approvalFilter}
+              onChange={e => { setApprovalFilter(e.target.value); setPage(1) }}>
+              <option value="">Tất cả</option>
+              <option value="draft">Nháp</option>
+              <option value="pending">Chờ Duyệt</option>
+              <option value="approved">Đã Duyệt</option>
+              <option value="rejected">Từ Chối</option>
+            </select>
+          </div>
         </div>
-        <div style={{ marginTop: 6, fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-          {filtered.length} results {filtered.length !== boms.length && `(of ${boms.length} total)`}
+        <div style={{ marginTop: 6, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span>{filtered.length} results {filtered.length !== boms.length && `(of ${boms.length} total)`}</span>
+          {canApprove && (() => {
+            const pendingCount = boms.filter(b => b.approval_status === 'pending').length
+            return pendingCount > 0 ? (
+              <button
+                onClick={() => { setApprovalFilter('pending'); setPage(1) }}
+                style={{ fontSize: 11, border: '1px solid #D97706', padding: '2px 8px', background: 'transparent', color: '#D97706', cursor: 'pointer', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <i className="fa-solid fa-clock" style={{ fontSize: 10 }} />
+                {pendingCount} chờ duyệt
+              </button>
+            ) : null
+          })()}
         </div>
       </div>
 
@@ -637,17 +703,17 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                   '', t('colDate'), t('colSoMo'), t('colModel'), t('colProductType'),
                   ...(showCostTotal ? [t('colCost')] : []),
                   ...(showSellPrice ? [t('colSell'), t('colDisc'), t('colAfterDisc')] : []),
-                  t('colSalesperson'), t('colStore'), t('colActions')
+                  t('colSalesperson'), t('colStore'), 'Trạng Thái', t('colActions')
                 ].map((h, i) => <th key={i} style={h ? th : { ...th, width: 48 }}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5 + (showCostTotal ? 1 : 0) + (showSellPrice ? 3 : 0) + 3} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                <tr><td colSpan={5 + (showCostTotal ? 1 : 0) + (showSellPrice ? 3 : 0) + 4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                   <i className="fa-solid fa-circle-notch fa-spin" style={{ marginRight: 8 }} />{t('loading')}
                 </td></tr>
               ) : paged.length === 0 ? (
-                <tr><td colSpan={5 + (showCostTotal ? 1 : 0) + (showSellPrice ? 3 : 0) + 3} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>{t('noData')}</td></tr>
+                <tr><td colSpan={5 + (showCostTotal ? 1 : 0) + (showSellPrice ? 3 : 0) + 4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>{t('noData')}</td></tr>
               ) : paged.map(b => (
                 <tr key={b.bom_id}
                   style={{
@@ -687,6 +753,21 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                       {b.store || '—'}
                     </span>
                   </td>
+                  {/* Approval status badge */}
+                  <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                    {(!b.approval_status || b.approval_status === 'draft') && (
+                      <span style={{ fontSize: 10, border: '1px solid var(--border-base)', padding: '1px 6px', color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Nháp</span>
+                    )}
+                    {b.approval_status === 'pending' && (
+                      <span style={{ fontSize: 10, border: '1px solid #D97706', padding: '1px 6px', color: '#D97706', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Chờ Duyệt</span>
+                    )}
+                    {b.approval_status === 'approved' && (
+                      <span style={{ fontSize: 10, border: '1px solid var(--color-success)', padding: '1px 6px', color: 'var(--color-success)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Đã Duyệt</span>
+                    )}
+                    {b.approval_status === 'rejected' && (
+                      <span title={b.approval_note || ''} style={{ fontSize: 10, border: '1px solid var(--color-danger)', padding: '1px 6px', color: 'var(--color-danger)', letterSpacing: '0.08em', textTransform: 'uppercase', cursor: b.approval_note ? 'help' : 'default' }}>Từ Chối</span>
+                    )}
+                  </td>
                   <td style={td}>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap' }}>
                       {/* View Quotation — all roles */}
@@ -722,6 +803,20 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                           style={{ display: 'inline-flex', alignItems: 'center', background: 'none', border: '1px solid #8C7340', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: '#8C7340', textDecoration: 'none' }}>
                           <i className="fa-solid fa-pen-to-square" />
                         </a>
+                      )}
+                      {/* Approve — Admin/Manager, only when pending */}
+                      {canApprove && b.approval_status === 'pending' && (
+                        <button onClick={() => approveBom(b.bom_id)} title="Duyệt" disabled={approveSaving}
+                          style={{ background: 'none', border: '1px solid var(--color-success)', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--color-success)' }}>
+                          <i className="fa-solid fa-check" />
+                        </button>
+                      )}
+                      {/* Reject — Admin/Manager, only when pending */}
+                      {canApprove && b.approval_status === 'pending' && (
+                        <button onClick={() => { setRejectBom(b); setRejectNote('') }} title="Từ Chối"
+                          style={{ background: 'none', border: '1px solid var(--color-danger)', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--color-danger)' }}>
+                          <i className="fa-solid fa-xmark" />
+                        </button>
                       )}
                       {/* Delete — Admin only */}
                       {role === 'Admin' && (
@@ -1278,6 +1373,47 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
           </div>
         </div>
       )}
+      {/* ── REJECT MODAL ───────────────────────────────────── */}
+      {rejectBom && (
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(26,24,20,0.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={e => e.target === e.currentTarget && setRejectBom(null)}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', width: '100%', maxWidth: 420 }}>
+            <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', fontWeight: 400, margin: 0, color: 'var(--text-primary)' }}>
+                Từ Chối BOM
+              </h3>
+              <button onClick={() => setRejectBom(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--text-secondary)', lineHeight: 1 }}>
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <div style={{ padding: '1.25rem 1.5rem' }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                BOM <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>{rejectBom.bom_id}</strong>
+              </p>
+              <label style={{ display: 'block', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', marginBottom: 6 }}>
+                Ghi chú (tùy chọn)
+              </label>
+              <textarea
+                value={rejectNote}
+                onChange={e => setRejectNote(e.target.value)}
+                placeholder="Lý do từ chối..."
+                rows={3}
+                style={{ width: '100%', border: '1px solid var(--border-base)', borderRadius: 0, background: 'var(--bg-surface)', padding: '8px 10px', fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--text-primary)', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ padding: '0.75rem 1.5rem', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button onClick={() => setRejectBom(null)} className="btn-outline" style={{ padding: '7px 18px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                Hủy
+              </button>
+              <button onClick={submitReject} disabled={approveSaving} className="btn-primary"
+                style={{ padding: '7px 18px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', letterSpacing: '0.08em', textTransform: 'uppercase', background: 'var(--color-danger)', border: 'none', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {approveSaving ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 10 }} />Đang xử lý</> : <><i className="fa-solid fa-xmark" style={{ fontSize: 10 }} />Từ Chối</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── LIGHTBOX ───────────────────────────────────────── */}
       {lightboxSrc && (
         <div

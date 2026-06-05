@@ -53,6 +53,7 @@ function DashboardContent({ user, children }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [vndRate, setVndRate] = useState(0)
   const [mgrDiscCap, setMgrDiscCap] = useState(20)
+  const [pendingCount, setPendingCount] = useState(0)
   const mgrDiscTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const vndTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -75,6 +76,13 @@ function DashboardContent({ user, children }: Props) {
       if (discD?.rate != null) setMgrDiscCap(Number(discD.rate))
     }).catch(() => {})
   }, [canDiscount])
+
+  useEffect(() => {
+    if (role !== 'Admin' && role !== 'Manager') return
+    fetch('/api/bom/pending-count').then(r => r.json()).then(d => {
+      if (d?.count != null) setPendingCount(Number(d.count))
+    }).catch(() => {})
+  }, [role])
 
   async function handleLogout() {
     const supabase = createClient()
@@ -252,10 +260,22 @@ function DashboardContent({ user, children }: Props) {
                     borderBottom: isActive(n.href) ? '2px solid var(--accent)' : '2px solid transparent',
                     transition: 'color 0.15s, border-color 0.15s',
                     whiteSpace: 'nowrap',
+                    position: 'relative',
                   }}
                 >
                   <i className={`fa-solid ${n.icon}`} style={{ fontSize: 11 }} />
                   <span className="nav-item-label">{t(n.i18nKey)}</span>
+                  {n.key === 'review' && pendingCount > 0 && (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      minWidth: 16, height: 16, borderRadius: 8,
+                      background: '#D97706', color: '#fff',
+                      fontSize: 9, fontWeight: 700, lineHeight: 1,
+                      padding: '0 4px', letterSpacing: 0,
+                    }}>
+                      {pendingCount > 99 ? '99+' : pendingCount}
+                    </span>
+                  )}
                 </Link>
               ))}
             </nav>
@@ -371,6 +391,17 @@ function DashboardContent({ user, children }: Props) {
                 }}>
                 <i className={`fa-solid ${n.icon}`} style={{ width: 20, textAlign: 'center', fontSize: 13 }} />
                 {t(n.i18nKey)}
+                {n.key === 'review' && pendingCount > 0 && (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    minWidth: 18, height: 18, borderRadius: 9,
+                    background: '#D97706', color: '#fff',
+                    fontSize: 10, fontWeight: 700, lineHeight: 1,
+                    padding: '0 5px', letterSpacing: 0, marginLeft: 'auto',
+                  }}>
+                    {pendingCount > 99 ? '99+' : pendingCount}
+                  </span>
+                )}
               </Link>
             ))}
 

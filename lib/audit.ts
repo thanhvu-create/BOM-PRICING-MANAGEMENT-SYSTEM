@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server'
 
-export type AuditAction  = 'CREATE' | 'UPDATE' | 'DELETE' | 'DISCOUNT'
+export type AuditAction  = 'CREATE' | 'UPDATE' | 'DELETE' | 'DISCOUNT' | 'SUBMIT' | 'APPROVE' | 'REJECT'
 export type AuditEntity  = 'bom' | 'gold' | 'user' | 'stone' | 'mk' | 'config'
 
 export interface AuditPayload {

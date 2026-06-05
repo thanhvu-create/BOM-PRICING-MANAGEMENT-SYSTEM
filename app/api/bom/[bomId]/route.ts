@@ -150,13 +150,21 @@ export async function PUT(
       }
     }
 
-    // Fetch before update for audit diff
-    const { data: oldBom } = await db.from('bom').select('sell_price, discount_pct, so_mo, model').eq('bom_id', bomId).single()
+    // Fetch before update for audit diff + permission check
+    const { data: oldBom } = await db.from('bom').select('sell_price, discount_pct, so_mo, model, approval_status').eq('bom_id', bomId).single()
+
+    // Order không được edit BOM khi đang pending hoặc approved
+    const role = profile?.role || ''
+    const isAdminOrManager = role === 'Admin' || role === 'Manager'
+    if (!isAdminOrManager && (oldBom?.approval_status === 'pending' || oldBom?.approval_status === 'approved')) {
+      return NextResponse.json({ error: 'Không thể chỉnh sửa BOM đang chờ duyệt hoặc đã duyệt' }, { status: 403 })
+    }
+
     const discountPrice = discountPct > 0
       ? Math.round((costs.sellPrice || 0) * (1 - discountPct / 100) * 100) / 100
       : 0
 
-    // Update BOM
+    // Update BOM — reset approval to draft on any edit
     const { error: updateErr } = await db.from('bom').update({
       date:            header.date,
       product_type:    header.productType || '',
@@ -186,6 +194,10 @@ export async function PUT(
       discount_price:  discountPrice,
       sales_person:    header.salesPerson || '',
       store:           header.store || '',
+      approval_status: 'draft',
+      approved_by:     null,
+      approved_at:     null,
+      approval_note:   null,
     }).eq('bom_id', bomId)
     if (updateErr) throw updateErr
 

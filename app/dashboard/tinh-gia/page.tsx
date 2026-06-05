@@ -80,6 +80,8 @@ export default function TinhGiaPage() {
   const isAdmin    = role === 'Admin'
   const isManager  = role === 'Manager'
   const canSeeAll  = isAdmin || isManager
+  const isOrder    = role === 'Order'
+  const canSubmit  = isAdmin || isManager || isOrder
 
   const [step, setStep] = useState(1)
   const [dropdowns, setDropdowns] = useState<Dropdowns | null>(null)
@@ -124,6 +126,13 @@ export default function TinhGiaPage() {
   const [saving, setSaving] = useState(false)
   const [savedBomId, setSavedBomId] = useState('')
   const [saveError, setSaveError] = useState('')
+
+  // Approval
+  const [approvalStatus, setApprovalStatus] = useState<'draft'|'pending'|'approved'|'rejected'>('draft')
+  const [approvalNote, setApprovalNote] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  // Order cannot edit pending/approved BOM
+  const editLocked = isOrder && (approvalStatus === 'pending' || approvalStatus === 'approved')
 
   // Edit mode
   const [editBomId, setEditBomId] = useState<string | null>(null)
@@ -222,6 +231,9 @@ export default function TinhGiaPage() {
       // Normalize spType: 'TSTT' is only valid when hasStones; store the underlying type
       const loadedSpType = h.sp_type || 'Basic'
       setSpType(loadedSpType === 'TSTT' ? 'Basic' : loadedSpType)
+
+      setApprovalStatus(h.approval_status || 'draft')
+      setApprovalNote(h.approval_note || '')
 
       setStep(1)
     } catch (e) { console.error('loadForEdit failed', e) }
@@ -624,6 +636,8 @@ export default function TinhGiaPage() {
       setEditBomId(savedId)         // put form in edit mode for the saved BOM
       setSaveAsNew(false)           // reset to overwrite mode by default
       setSavedBomId(savedId)        // show inline success banner
+      // Edit resets approval to draft (per API logic)
+      if (isUpdate) { setApprovalStatus('draft'); setApprovalNote('') }
       update(tid, `BOM ${savedId} ${isUpdate ? 'updated' : 'saved'}`, 'success')
       // Save prefs for next BOM + clear draft + signal review page to refresh
       try {
@@ -633,6 +647,23 @@ export default function TinhGiaPage() {
       } catch { /* ignore storage errors */ }
     } catch (e: any) { setSaveError(e.message); update(tid, e.message, 'danger') }
     finally { setSaving(false) }
+  }
+
+  /* ── Submit for approval ── */
+  async function submitForApproval() {
+    if (!editBomId && !savedBomId) return
+    const bomId = editBomId || savedBomId
+    setSubmitting(true)
+    const tid = toast('Đang gửi duyệt...', 'loading')
+    try {
+      const r = await fetch(`/api/bom/${bomId}/submit`, { method: 'PATCH' })
+      const d = await r.json()
+      if (!r.ok) { update(tid, d.error || 'Gửi duyệt thất bại', 'danger'); return }
+      setApprovalStatus('pending')
+      setApprovalNote('')
+      update(tid, `BOM ${bomId} đã gửi chờ duyệt`, 'success')
+    } catch (e: any) { update(tid, e.message, 'danger') }
+    finally { setSubmitting(false) }
   }
 
   /* ── Reset ── */
@@ -658,6 +689,7 @@ export default function TinhGiaPage() {
     setGoldRows([newGold()]); setStoneRows([newStone()])
     setPricing(null); setDiscountPct(''); setDiscountAmt(''); setSavedBomId(''); setSaveError('')
     setEditBomId(null); setSaveAsNew(false)
+    setApprovalStatus('draft'); setApprovalNote('')
   }
 
   /* ── Date change → re-fetch gold prices ── */
@@ -1365,12 +1397,38 @@ export default function TinhGiaPage() {
 
                 {/* Inline success banner — shown after save, stays in Step 4 so user can save again */}
                 {savedBomId && (
-                  <div className="fade-in" style={{ margin: '0 1.5rem 1rem', padding: '10px 14px', borderLeft: '2px solid var(--color-success)', background: '#F2F7F4', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                    <span style={{ color: 'var(--color-success)', fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <i className="fa-solid fa-circle-check" />
-                      BOM Đã Lưu:&nbsp;<strong style={{ fontFamily: 'var(--font-mono)' }}>{savedBomId}</strong>
-                    </span>
+                  <div className="fade-in" style={{ margin: '0 1.5rem 1rem', padding: '10px 14px', borderLeft: `2px solid ${approvalStatus === 'pending' ? 'var(--color-warning, #D97706)' : approvalStatus === 'approved' ? 'var(--color-success)' : approvalStatus === 'rejected' ? 'var(--color-danger)' : 'var(--color-success)'}`, background: '#F2F7F4', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={{ color: 'var(--color-success)', fontSize: 'var(--text-sm)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <i className="fa-solid fa-circle-check" />
+                        BOM Đã Lưu:&nbsp;<strong style={{ fontFamily: 'var(--font-mono)' }}>{savedBomId}</strong>
+                        &nbsp;
+                        {approvalStatus === 'draft' && <span style={{ fontSize: 10, border: '1px solid var(--border-base)', padding: '1px 6px', color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Nháp</span>}
+                        {approvalStatus === 'pending' && <span style={{ fontSize: 10, border: '1px solid #D97706', padding: '1px 6px', color: '#D97706', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Chờ Duyệt</span>}
+                        {approvalStatus === 'approved' && <span style={{ fontSize: 10, border: '1px solid var(--color-success)', padding: '1px 6px', color: 'var(--color-success)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Đã Duyệt</span>}
+                        {approvalStatus === 'rejected' && <span style={{ fontSize: 10, border: '1px solid var(--color-danger)', padding: '1px 6px', color: 'var(--color-danger)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Từ Chối</span>}
+                      </span>
+                      {approvalStatus === 'rejected' && approvalNote && (
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-danger)' }}>
+                          <i className="fa-solid fa-comment-dots" style={{ marginRight: 4 }} />
+                          {approvalNote}
+                        </span>
+                      )}
+                    </div>
                     <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                      {canSubmit && (approvalStatus === 'draft' || approvalStatus === 'rejected') && (
+                        <button
+                          onClick={submitForApproval}
+                          disabled={submitting}
+                          className="btn-primary"
+                          style={{ padding: '4px 12px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}
+                        >
+                          {submitting
+                            ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 10 }} />Đang gửi...</>
+                            : <><i className="fa-solid fa-paper-plane" style={{ fontSize: 10 }} />{approvalStatus === 'rejected' ? 'Gửi Lại' : 'Gửi Duyệt'}</>
+                          }
+                        </button>
+                      )}
                       <button onClick={doReset} className="btn-outline" style={{ padding: '4px 12px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                         BOM Mới
                       </button>
@@ -1403,9 +1461,15 @@ export default function TinhGiaPage() {
                         </label>
                       </div>
                     )}
+                    {editLocked && (
+                      <span style={{ fontSize: 'var(--text-xs)', color: '#D97706', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <i className="fa-solid fa-lock" style={{ fontSize: 10 }} />
+                        BOM đang chờ duyệt — không thể chỉnh sửa
+                      </span>
+                    )}
                     <button onClick={saveBOM} className="btn-primary"
                       style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}
-                      disabled={saving || fillLoading || !pricing}>
+                      disabled={saving || fillLoading || !pricing || editLocked}>
                       {saving
                         ? <><i className="fa-solid fa-circle-notch fa-spin" style={{ fontSize: 12 }} />SAVING...</>
                         : fillLoading
