@@ -240,6 +240,14 @@ const dict: Record<string, Record<Lang, string>> = {
   colTime:         { vi: 'Thời Gian',                en: 'Time' },
   colSummary:      { vi: 'Tóm Tắt / Diff',           en: 'Summary / Diff' },
   allOptions:      { vi: 'Tất cả',                   en: 'All' },
+
+  // Guide drawer
+  guide:           { vi: 'HƯỚNG DẪN',               en: 'GUIDE' },
+  guideTitle:      { vi: 'Hướng Dẫn Sử Dụng',       en: 'User Guide' },
+  guideViewAs:     { vi: 'Xem hướng dẫn cho',        en: 'View guide for' },
+  guideOverview:   { vi: 'Tổng Quan',                en: 'Overview' },
+  guideSteps:      { vi: 'Các bước thực hiện',       en: 'Steps' },
+  guideTip:        { vi: 'Lưu ý',                    en: 'Tip' },
 }
 
 export function t(key: string, lang: Lang): string {

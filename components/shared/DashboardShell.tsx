@@ -9,6 +9,7 @@ import { ConfigProvider } from './ConfigContext'
 import { I18nProvider, useLang } from './I18nContext'
 import { useToast } from './ToastContext'
 import DriveAuthButton from './DriveAuthButton'
+import GuideDrawer from './GuideDrawer'
 import type { Role } from '@/types'
 
 interface Props {
@@ -51,6 +52,7 @@ function DashboardContent({ user, children }: Props) {
   const pathname = usePathname()
   const { lang, setLang, t } = useLang()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(false)
   const [vndRate, setVndRate] = useState(0)
   const [mgrDiscCap, setMgrDiscCap] = useState(20)
   const [pendingCount, setPendingCount] = useState(0)
@@ -340,6 +342,24 @@ function DashboardContent({ user, children }: Props) {
               {/* Drive auth button */}
               <DriveAuthButton />
 
+              {/* Guide button */}
+              <button
+                onClick={() => setGuideOpen(true)}
+                title={t('guideTitle')}
+                style={{
+                  background: 'none', border: '1px solid var(--border-base)',
+                  cursor: 'pointer', color: 'var(--text-muted)',
+                  padding: '4px 8px', borderRadius: 0, lineHeight: 1,
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  fontSize: 'var(--text-xs)', letterSpacing: '0.08em',
+                  textTransform: 'uppercase', fontFamily: 'var(--font-body)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <i className="fa-solid fa-circle-question" style={{ fontSize: 11 }} />
+                <span className="nav-item-label">{t('guide')}</span>
+              </button>
+
               {/* Lang toggle — segmented VI | EN */}
               <div style={{
                 display: 'flex', border: '1px solid var(--border-base)',
@@ -453,8 +473,16 @@ function DashboardContent({ user, children }: Props) {
                 </div>
               )}
 
-              {/* Drive + Lang + Sign Out */}
+              {/* Guide + Drive + Lang + Sign Out */}
               <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => { setMobileOpen(false); setGuideOpen(true) }}
+                  className="btn-outline"
+                  style={{ padding: '8px 12px', fontSize: 'var(--text-xs)', letterSpacing: '0.1em', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
+                >
+                  <i className="fa-solid fa-circle-question" style={{ fontSize: 11 }} />
+                  {t('guide')}
+                </button>
                 <DriveAuthButton />
                 {/* Segmented VI | EN — same as desktop */}
                 <div style={{ display: 'flex', border: '1px solid var(--border-base)', overflow: 'hidden', borderRadius: 0, flex: 1 }}>
@@ -493,6 +521,14 @@ function DashboardContent({ user, children }: Props) {
         <main className="main-content">
           {children}
         </main>
+
+        {/* ── GUIDE DRAWER ──────────────────────────────── */}
+        <GuideDrawer
+          open={guideOpen}
+          onClose={() => setGuideOpen(false)}
+          currentRole={role}
+          lang={lang}
+        />
 
         <style>{`
           .main-content { padding: 1.5rem; }
