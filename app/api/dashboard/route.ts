@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient, createServiceClient, getUserProfile } from '@/lib/supabase/server'
 
 const STORE_PRICE_MAP: Record<string, string[]> = {
@@ -18,67 +18,149 @@ export async function GET() {
     const profile = await getUserProfile(user.id, user.email)
     if (!profile?.role) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const role = profile.role
+    const role      = profile.role
     const userStore = profile.store || ''
     const isAdminOrManager = ['Admin', 'Manager'].includes(role)
+    const isOrder          = role === 'Order'
 
     const db = createServiceClient()
+    const today     = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
+    const thisMonth = today.substring(0, 7)
 
-    // Admin/Manager: dùng RPC aggregates — không fetch raw rows
+    // ── Admin / Manager ──────────────────────────────────────────────────────
     if (isAdminOrManager) {
-      const [kpiRes, byStoreRes, byTypeRes, bySalesRes, trendRes, recentRes] = await Promise.all([
-        db.rpc('stats_kpi'),
-        db.rpc('stats_by_store'),
-        db.rpc('stats_by_type'),
-        db.rpc('stats_by_sales'),
-        db.rpc('stats_daily_trend'),
+      const [approvedRes, draftCnt, pendingCnt, approvedCnt, rejectedCnt] = await Promise.all([
         db.from('bom')
-          .select('bom_id, date, model, store, sell_price')
+          .select('bom_id, date, model, store, sell_price, discount_pct, product_type, sales_person')
+          .eq('approval_status', 'approved')
           .is('deleted_at', null)
-          .order('date', { ascending: false })
-          .limit(5),
+          .order('date', { ascending: false }),
+        db.from('bom').select('*', { count: 'exact', head: true }).eq('approval_status', 'draft').is('deleted_at', null),
+        db.from('bom').select('*', { count: 'exact', head: true }).eq('approval_status', 'pending').is('deleted_at', null),
+        db.from('bom').select('*', { count: 'exact', head: true }).eq('approval_status', 'approved').is('deleted_at', null),
+        db.from('bom').select('*', { count: 'exact', head: true }).eq('approval_status', 'rejected').is('deleted_at', null),
       ])
 
-      if (kpiRes.error) throw kpiRes.error
+      if (approvedRes.error) throw approvedRes.error
 
-      const kpiRow = Array.isArray(kpiRes.data) ? kpiRes.data[0] : kpiRes.data
-      const kpi = (kpiRow ?? {}) as {
-        total_boms: number; total_value: number; avg_value: number
-        today_count: number; month_count: number; discounted: number
+      const rows = approvedRes.data ?? []
+
+      const totalBOMs       = rows.length
+      const todayBOMs       = rows.filter(r => String(r.date ?? '').substring(0, 10) === today).length
+      const monthBOMs       = rows.filter(r => String(r.date ?? '').substring(0, 10).startsWith(thisMonth)).length
+      const totalValue      = rows.reduce((s, r) => s + (Number(r.sell_price) || 0), 0)
+      const avgSellPrice    = totalBOMs > 0 ? totalValue / totalBOMs : 0
+      const discountedCount = rows.filter(r => Number(r.discount_pct) > 0).length
+
+      // By store
+      const storeAgg: Record<string, { count: number; value: number }> = {}
+      for (const r of rows) {
+        const k = r.store || '—'
+        const a = (storeAgg[k] ??= { count: 0, value: 0 })
+        a.count++
+        a.value += Number(r.sell_price) || 0
       }
+      const byStore = Object.entries(storeAgg)
+        .map(([store, v]) => ({ store, ...v }))
+        .sort((a, b) => b.count - a.count)
+
+      // By product type (top 5)
+      const typeAgg: Record<string, number> = {}
+      for (const r of rows) {
+        const k = r.product_type || '—'
+        typeAgg[k] = (typeAgg[k] ?? 0) + 1
+      }
+      const byProductType = Object.entries(typeAgg)
+        .map(([type, count]) => ({ type, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5)
+
+      // By salesperson (top 5)
+      const salesAgg: Record<string, { count: number; value: number }> = {}
+      for (const r of rows) {
+        const k = r.sales_person || '—'
+        const a = (salesAgg[k] ??= { count: 0, value: 0 })
+        a.count++
+        a.value += Number(r.sell_price) || 0
+      }
+      const bySalesPerson = Object.entries(salesAgg)
+        .map(([name, v]) => ({ name, ...v }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5)
+
+      // Recent 5 (already sorted desc)
+      const recentBOMs = rows.slice(0, 5).map(r => ({
+        bom_id:     r.bom_id,
+        date:       String(r.date ?? '').substring(0, 10),
+        model:      r.model,
+        store:      r.store || '—',
+        sell_price: Number(r.sell_price) || 0,
+      }))
 
       return NextResponse.json({
         data: {
-          totalBOMs:      Number(kpi.total_boms)  || 0,
-          todayBOMs:      Number(kpi.today_count) || 0,
-          monthBOMs:      Number(kpi.month_count) || 0,
-          totalValue:     Number(kpi.total_value) || 0,
-          avgSellPrice:   Number(kpi.avg_value)   || 0,
-          discountedCount: Number(kpi.discounted) || 0,
-          byStore:        (byStoreRes.data  ?? []).map((r: any) => ({ store: r.store, count: Number(r.count), value: Number(r.total_value) })),
-          byProductType:  (byTypeRes.data   ?? []).map((r: any) => ({ type: r.product_type, count: Number(r.count) })),
-          bySalesPerson:  (bySalesRes.data  ?? []).map((r: any) => ({ name: r.name, count: Number(r.count), value: Number(r.total_value) })),
-          recentBOMs:     (recentRes.data   ?? []).map((r: any) => ({ bom_id: r.bom_id, date: String(r.date || '').substring(0, 10), model: r.model, store: r.store || '—', sell_price: Number(r.sell_price) })),
-          dailyTrend:     (trendRes.data    ?? []).map((r: any) => ({ date: r.day, count: Number(r.count), value: Number(r.total_value) })),
+          totalBOMs, todayBOMs, monthBOMs,
+          totalValue, avgSellPrice, discountedCount,
+          byStore, byProductType, bySalesPerson, recentBOMs,
+          approvalBreakdown: {
+            draft:    draftCnt.count    ?? 0,
+            pending:  pendingCnt.count  ?? 0,
+            approved: approvedCnt.count ?? 0,
+            rejected: rejectedCnt.count ?? 0,
+          },
         }
       }, CC)
     }
 
-    // Sales / Sales Supervisor / Order: chỉ cần 3 KPI counts, filter theo store
-    let query = db
-      .from('bom')
-      .select('date, price_list_type', { count: 'exact' })
+    // ── Sales / Sales Supervisor / Order ─────────────────────────────────────
+    const storePriceTypes = userStore && STORE_PRICE_MAP[userStore] ? STORE_PRICE_MAP[userStore] : null
 
-    if (userStore && STORE_PRICE_MAP[userStore]) {
-      query = query.in('price_list_type', STORE_PRICE_MAP[userStore])
+    function addStore(q: any): any {
+      return storePriceTypes ? q.in('price_list_type', storePriceTypes) : q
     }
 
-    const { data: rows, count: totalBOMs } = await query
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' })
-    const thisMonth = today.substring(0, 7)
+    if (isOrder) {
+      const [mainRes, draftR, pendingR, approvedR, rejectedR] = await Promise.all([
+        addStore(db.from('bom').select('date, price_list_type', { count: 'exact' }).eq('approval_status', 'approved').is('deleted_at', null)),
+        addStore(db.from('bom').select('*', { count: 'exact', head: true }).eq('approval_status', 'draft').is('deleted_at', null)),
+        addStore(db.from('bom').select('*', { count: 'exact', head: true }).eq('approval_status', 'pending').is('deleted_at', null)),
+        addStore(db.from('bom').select('*', { count: 'exact', head: true }).eq('approval_status', 'approved').is('deleted_at', null)),
+        addStore(db.from('bom').select('*', { count: 'exact', head: true }).eq('approval_status', 'rejected').is('deleted_at', null)),
+      ])
+
+      let todayBOMs = 0, monthBOMs = 0
+      for (const r of mainRes.data ?? []) {
+        const d = String(r.date ?? '').substring(0, 10)
+        if (d === today) todayBOMs++
+        if (d.substring(0, 7) === thisMonth) monthBOMs++
+      }
+
+      return NextResponse.json({
+        data: {
+          totalBOMs: mainRes.count ?? 0, todayBOMs, monthBOMs,
+          totalValue: 0, avgSellPrice: 0, discountedCount: 0,
+          byStore: [], byProductType: [], bySalesPerson: [], recentBOMs: [],
+          approvalBreakdown: {
+            draft:    draftR.count    ?? 0,
+            pending:  pendingR.count  ?? 0,
+            approved: approvedR.count ?? 0,
+            rejected: rejectedR.count ?? 0,
+          },
+        }
+      }, CC)
+    }
+
+    // Sales / Sales Supervisor
+    const { data: rows, count: totalBOMs } = await addStore(
+      db.from('bom')
+        .select('date, price_list_type', { count: 'exact' })
+        .eq('approval_status', 'approved')
+        .is('deleted_at', null)
+    )
+
     let todayBOMs = 0, monthBOMs = 0
     for (const r of rows ?? []) {
-      const d = String(r.date || '').substring(0, 10)
+      const d = String(r.date ?? '').substring(0, 10)
       if (d === today) todayBOMs++
       if (d.substring(0, 7) === thisMonth) monthBOMs++
     }
@@ -87,7 +169,7 @@ export async function GET() {
       data: {
         totalBOMs: totalBOMs ?? 0, todayBOMs, monthBOMs,
         totalValue: 0, avgSellPrice: 0, discountedCount: 0,
-        byStore: [], byProductType: [], bySalesPerson: [], recentBOMs: [], dailyTrend: [],
+        byStore: [], byProductType: [], bySalesPerson: [], recentBOMs: [],
       }
     }, CC)
   } catch (err: any) {

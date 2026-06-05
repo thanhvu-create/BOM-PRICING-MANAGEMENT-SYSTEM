@@ -179,8 +179,10 @@ const dict: Record<string, Record<Lang, string>> = {
   dashRecentAct:   { vi: 'HOẠT ĐỘNG GẦN ĐÂY',       en: 'RECENT ACTIVITY' },
   dashViewAll:     { vi: 'Xem tất cả ›',            en: 'View all ›' },
   dashNoRecent:    { vi: 'Chưa có BOM nào',          en: 'No recent BOMs' },
-  dashWelcome:     { vi: 'Chào mừng đến BOM Pricing System', en: 'Welcome to BOM Pricing System' },
-  dashUseNav:      { vi: 'Dùng menu trên để truy cập Tính Giá và Lịch Sử BOM.', en: 'Use the navigation above to access BOM Pricing and Price History.' },
+  dashWelcome:          { vi: 'Chào mừng đến BOM Pricing System', en: 'Welcome to BOM Pricing System' },
+  dashUseNav:           { vi: 'Dùng menu trên để truy cập Tính Giá và Lịch Sử BOM.', en: 'Use the navigation above to access BOM Pricing and Price History.' },
+  dashStatusBreakdown:  { vi: 'PHÂN BỔ TRẠNG THÁI',            en: 'STATUS BREAKDOWN' },
+  dashApprovedOnly:     { vi: 'Chỉ tính BOM đã duyệt',         en: 'Approved BOMs only' },
 
   // Gold page
   goldSubtitle:    { vi: 'Giá kim loại theo ngày — tự động từ Amark', en: 'Daily metal prices — auto-fetched from Amark.com' },

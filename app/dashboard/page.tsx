@@ -15,6 +15,7 @@ interface Stats {
   byProductType: Array<{ type: string; count: number }>
   bySalesPerson: Array<{ name: string; count: number; value: number }>
   recentBOMs: Array<{ bom_id: string; date: string; model: string; store: string; sell_price: number }>
+  approvalBreakdown?: { draft: number; pending: number; approved: number; rejected: number }
 }
 
 function fmt(n: number) {
@@ -42,7 +43,8 @@ export default function DashboardPage() {
   const [error, setError] = useState('')
   const [refreshing, setRefreshing] = useState(false)
 
-  const showValue = ['Admin', 'Manager'].includes(role)
+  const showValue     = ['Admin', 'Manager'].includes(role)
+  const showBreakdown = ['Admin', 'Manager', 'Order'].includes(role)
   const ctrlRef = useRef<AbortController | null>(null)
 
   async function loadStats(refresh = false) {
@@ -115,10 +117,10 @@ export default function DashboardPage() {
       {/* ── KPI Cards ── */}
       <div className="grid-4col cards-stagger" style={{ marginBottom: '1.5rem' }}>
         {[
-          { icon: 'fa-file-invoice-dollar', label: t('dashTotalBoms'),  value: (stats?.totalBOMs ?? 0).toLocaleString(),      sub: t('dashAllTime'), heading: true },
-          { icon: 'fa-calendar-day',        label: t('dashTodayBoms'), value: (stats?.todayBOMs ?? 0).toLocaleString(),      sub: t('dashAllTime'), heading: true },
-          { icon: 'fa-calendar-week',       label: t('dashMonthBoms'), value: (stats?.monthBOMs ?? 0).toLocaleString(),      sub: t('dashAllTime'), heading: true },
-          { icon: 'fa-money-bill-wave',     label: t('dashTotalValue'),value: showValue ? fmt(stats?.totalValue ?? 0) : '—', sub: t('dashTotalValue'), heading: false },
+          { icon: 'fa-file-invoice-dollar', label: t('dashTotalBoms'),  value: (stats?.totalBOMs ?? 0).toLocaleString(),      sub: showBreakdown ? t('dashApprovedOnly') : t('dashAllTime'), heading: true },
+          { icon: 'fa-calendar-day',        label: t('dashTodayBoms'), value: (stats?.todayBOMs ?? 0).toLocaleString(),      sub: showBreakdown ? t('dashApprovedOnly') : t('dashAllTime'), heading: true },
+          { icon: 'fa-calendar-week',       label: t('dashMonthBoms'), value: (stats?.monthBOMs ?? 0).toLocaleString(),      sub: showBreakdown ? t('dashApprovedOnly') : t('dashAllTime'), heading: true },
+          { icon: 'fa-money-bill-wave',     label: t('dashTotalValue'),value: showValue ? fmt(stats?.totalValue ?? 0) : '—', sub: showValue ? t('dashApprovedOnly') : t('dashAllTime'), heading: false },
         ].map((k, i) => (
           <div key={i} style={card}>
             <p style={eyebrow}>
@@ -136,6 +138,40 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* ── Approval Status Breakdown ── */}
+      {showBreakdown && stats?.approvalBreakdown && (() => {
+        const bd = stats.approvalBreakdown!
+        const items = [
+          { key: 'draft',    label: t('approvalDraft'),    count: bd.draft,    color: 'var(--text-muted)',    border: 'var(--border-base)', href: null },
+          { key: 'pending',  label: t('approvalPending'),  count: bd.pending,  color: '#D97706',              border: '#D97706',            href: showValue && bd.pending > 0 ? '/dashboard/review?status=pending' : null },
+          { key: 'approved', label: t('approvalApproved'), count: bd.approved, color: 'var(--color-success)', border: 'var(--color-success)', href: null },
+          { key: 'rejected', label: t('approvalRejected'), count: bd.rejected, color: 'var(--color-danger)',  border: 'var(--color-danger)',  href: null },
+        ]
+        return (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <p style={{ ...eyebrow, marginBottom: 10 }}>
+              <i className="fa-solid fa-chart-pie" style={{ fontSize: 10, color: 'var(--text-muted)' }} />
+              {t('dashStatusBreakdown')}
+            </p>
+            <div className="grid-4col">
+              {items.map(s => (
+                <div key={s.key} style={{ ...card, borderLeft: `3px solid ${s.border}`, padding: '1rem 1.25rem' }}>
+                  <p style={{ ...eyebrow, color: s.color, marginBottom: 6 }}>{s.label}</p>
+                  <div style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: s.color, lineHeight: 1 }}>
+                    {s.count.toLocaleString()}
+                  </div>
+                  {s.href && (
+                    <a href={s.href} style={{ fontSize: 'var(--text-xs)', color: s.color, display: 'block', marginTop: 8, textDecoration: 'none', letterSpacing: '0.04em' }}>
+                      {t('dashViewAll')}
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── Admin/Manager sections ── */}
       {showValue && stats && (

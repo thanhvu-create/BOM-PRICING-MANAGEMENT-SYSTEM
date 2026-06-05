@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useUser } from '@/components/shared/UserContext'
 import { useConfig } from '@/components/shared/ConfigContext'
 import { useLang } from '@/components/shared/I18nContext'
@@ -136,6 +137,7 @@ export default function ReviewPage() {
   const { vndRate, mgrDiscCap } = useConfig()
   const { t } = useLang()
   const { toast, update, dismiss } = useToast()
+  const searchParams = useSearchParams()
 
   // cost-total-restricted = Admin/Manager only; Sell/Disc/AfterDisc visible to all roles incl. Order
   const showCostTotal = role === 'Admin' || role === 'Manager'
@@ -194,6 +196,12 @@ export default function ReviewPage() {
 
   useEffect(() => {
     // vndRate + mgrDiscCap read from ConfigContext (provided by DashboardShell)
+
+    // Pre-set approval filter from URL param (e.g., ?status=pending from dashboard)
+    const urlStatus = searchParams.get('status')
+    if (urlStatus && ['draft', 'pending', 'approved', 'rejected'].includes(urlStatus)) {
+      setApprovalFilter(urlStatus)
+    }
 
     // Check if tinh-gia just saved a BOM (same tab)
     try {
