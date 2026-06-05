@@ -133,6 +133,8 @@ const dict: Record<string, Record<Lang, string>> = {
   warnMaxDiscount:    { vi: 'Tối đa',              en: 'Max' },
 
   // Common
+  btnContinue:     { vi: 'Tiếp Tục →',              en: 'Continue →' },
+  btnBack:         { vi: '← Quay Lại',              en: '← Back' },
   save:            { vi: 'Lưu',                     en: 'Save' },
   cancel:          { vi: 'Hủy',                     en: 'Cancel' },
   delete:          { vi: 'Xóa',                     en: 'Delete' },

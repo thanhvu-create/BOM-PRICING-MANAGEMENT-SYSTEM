@@ -913,7 +913,7 @@ export default function TinhGiaPage() {
               </p>
             )}
           </div>
-          <StepNav canNext={canGoNext()} onNext={() => setStep(2)} nextLabel="Tiếp Tục →" />
+          <StepNav canNext={canGoNext()} onNext={() => setStep(2)} />
         </div>
       )}
 
@@ -1597,6 +1597,7 @@ function StepNav({ canNext, onPrev, onNext, nextLabel, prevLabel }: {
   canNext: boolean
   onPrev?: () => void; onNext?: () => void; nextLabel?: string; prevLabel?: string
 }) {
+  const { t } = useLang()
   const navBtn: React.CSSProperties = {
     border: '1px solid var(--btn-dark-bg)', padding: '8px 24px', borderRadius: 0,
     fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)',
@@ -1606,11 +1607,11 @@ function StepNav({ canNext, onPrev, onNext, nextLabel, prevLabel }: {
   return (
     <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
       {onPrev
-        ? <button onClick={onPrev} style={{ ...navBtn, background: 'transparent', color: 'var(--text-primary)' }}>{prevLabel || '← Quay Lại'}</button>
+        ? <button onClick={onPrev} style={{ ...navBtn, background: 'transparent', color: 'var(--text-primary)' }}>{prevLabel || t('btnBack')}</button>
         : <div />}
       {onNext && (
         <button onClick={onNext} style={{ ...navBtn, background: canNext ? 'var(--btn-dark-bg)' : 'var(--bg-muted)', color: 'var(--text-inverse)', cursor: canNext ? 'pointer' : 'not-allowed' }} disabled={!canNext}>
-          {nextLabel || 'Tiếp Tục →'}
+          {nextLabel || t('btnContinue')}
         </button>
       )}
     </div>
