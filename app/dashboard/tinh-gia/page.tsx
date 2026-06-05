@@ -1448,11 +1448,19 @@ export default function TinhGiaPage() {
 
                 {/* Bottom action bar */}
                 <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-base)' }}>
-                  <button onClick={() => setStep(3)} className="btn-outline" style={{ padding: '8px 18px', flexShrink: 0, fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    ← BACK
-                  </button>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    {editBomId && (
+                    <button onClick={() => setStep(3)} className="btn-outline" style={{ padding: '8px 18px', flexShrink: 0, fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                      ← BACK
+                    </button>
+                    {editLocked && (
+                      <span style={{ fontSize: 'var(--text-xs)', color: '#D97706', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <i className="fa-solid fa-lock" style={{ fontSize: 10 }} />
+                        BOM đang chờ duyệt — không thể chỉnh sửa
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {editBomId && !editLocked && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 4, border: '1px solid var(--btn-dark-bg)', background: 'var(--bg-surface)' }}>
                         <input type="checkbox" id="chkSaveAsNew" checked={saveAsNew} onChange={e => setSaveAsNew(e.target.checked)}
                           style={{ accentColor: 'var(--btn-dark-bg)', width: 14, height: 14, margin: 0 }} />
@@ -1460,12 +1468,6 @@ export default function TinhGiaPage() {
                           Save as new entry (no overwrite)
                         </label>
                       </div>
-                    )}
-                    {editLocked && (
-                      <span style={{ fontSize: 'var(--text-xs)', color: '#D97706', display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <i className="fa-solid fa-lock" style={{ fontSize: 10 }} />
-                        BOM đang chờ duyệt — không thể chỉnh sửa
-                      </span>
                     )}
                     <button onClick={saveBOM} className="btn-primary"
                       style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}
