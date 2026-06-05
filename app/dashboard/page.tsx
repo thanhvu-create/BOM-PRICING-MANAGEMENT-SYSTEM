@@ -47,7 +47,7 @@ export default function DashboardPage() {
   const showBreakdown = ['Admin', 'Manager', 'Order'].includes(role)
   const ctrlRef = useRef<AbortController | null>(null)
 
-  async function loadStats(refresh = false) {
+  async function loadStats(refresh = false, bustCache = false) {
     ctrlRef.current?.abort()
     const ctrl = new AbortController()
     ctrlRef.current = ctrl
@@ -55,7 +55,8 @@ export default function DashboardPage() {
     else setLoading(true)
     setError('')
     try {
-      const r = await fetch('/api/dashboard', { signal: ctrl.signal })
+      const url = bustCache ? `/api/dashboard?t=${Date.now()}` : '/api/dashboard'
+      const r = await fetch(url, { signal: ctrl.signal })
       if (!r.ok) throw new Error('Failed to load')
       const d = await r.json()
       setStats(d.data)
@@ -68,7 +69,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadStats()
-    return () => ctrlRef.current?.abort()
+    const onApproval = () => loadStats(true, true)
+    window.addEventListener('bom_pending_changed', onApproval)
+    return () => {
+      ctrlRef.current?.abort()
+      window.removeEventListener('bom_pending_changed', onApproval)
+    }
   }, [])
 
   if (loading) return (
