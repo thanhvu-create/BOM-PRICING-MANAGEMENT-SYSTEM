@@ -34,7 +34,8 @@ export async function GET() {
           .select('bom_id, date, model, store, sell_price, discount_pct, product_type, sales_person')
           .eq('approval_status', 'approved')
           .is('deleted_at', null)
-          .order('date', { ascending: false }),
+          .order('date', { ascending: false })
+          .limit(10000),
         db.from('bom').select('*', { count: 'exact', head: true }).eq('approval_status', 'draft').is('deleted_at', null),
         db.from('bom').select('*', { count: 'exact', head: true }).eq('approval_status', 'pending').is('deleted_at', null),
         db.from('bom').select('*', { count: 'exact', head: true }).eq('approval_status', 'approved').is('deleted_at', null),
@@ -45,7 +46,7 @@ export async function GET() {
 
       const rows = approvedRes.data ?? []
 
-      const totalBOMs       = rows.length
+      const totalBOMs       = approvedCnt.count ?? rows.length
       const todayBOMs       = rows.filter(r => String(r.date ?? '').substring(0, 10) === today).length
       const monthBOMs       = rows.filter(r => String(r.date ?? '').substring(0, 10).startsWith(thisMonth)).length
       const totalValue      = rows.reduce((s, r) => s + (Number(r.sell_price) || 0), 0)
