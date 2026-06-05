@@ -1001,7 +1001,7 @@ export default function TinhGiaPage() {
                   <tfoot>
                     <tr style={{ background: 'var(--bg-muted)' }}>
                       <td colSpan={3} style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontWeight: 600, fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right', color: 'var(--text-secondary)', paddingRight: 10 }}>
-                        Tổng Cộng:
+                        {t('totalRow')}:
                       </td>
                       <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-primary)', paddingLeft: 8 }}>
                         {totalWeight.toFixed(2)} gr
@@ -1430,10 +1430,10 @@ export default function TinhGiaPage() {
                         </button>
                       )}
                       <button onClick={doReset} className="btn-outline" style={{ padding: '4px 12px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                        BOM Mới
+                        {t('btnNewBom')}
                       </button>
                       <a href="/dashboard/review" className="btn-outline" style={{ padding: '4px 12px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
-                        Lịch Sử
+                        {t('btnHistory')}
                       </a>
                     </div>
                   </div>

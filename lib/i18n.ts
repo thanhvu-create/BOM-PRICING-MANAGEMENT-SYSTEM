@@ -135,6 +135,9 @@ const dict: Record<string, Record<Lang, string>> = {
   // Common
   btnContinue:     { vi: 'Tiếp Tục →',              en: 'Continue →' },
   btnBack:         { vi: '← Quay Lại',              en: '← Back' },
+  btnNewBom:       { vi: 'BOM Mới',                 en: 'New BOM' },
+  btnHistory:      { vi: 'Lịch Sử',                en: 'History' },
+  totalRow:        { vi: 'Tổng Cộng',               en: 'Total' },
   save:            { vi: 'Lưu',                     en: 'Save' },
   cancel:          { vi: 'Hủy',                     en: 'Cancel' },
   delete:          { vi: 'Xóa',                     en: 'Delete' },
