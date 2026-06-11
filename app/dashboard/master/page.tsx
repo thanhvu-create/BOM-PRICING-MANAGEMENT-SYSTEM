@@ -125,7 +125,8 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
       let masterCode = ''
       if (catCode && typCode && shpCode) {
         const body = `${catCode}${typCode}-${shpCode}`
-        masterCode = qCode ? `${qCode}-${body}` : body
+        const withQ = qCode ? `${qCode}-${body}` : body
+        masterCode = next.color ? `${withQ} (${next.color})` : withQ
       }
       next.master_code = masterCode
 
