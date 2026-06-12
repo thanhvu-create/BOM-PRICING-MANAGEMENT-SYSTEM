@@ -121,7 +121,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
       const qOpt   = dd?.qualities.find(o => o.name === next.quality)
       const catCode = catOpt?.code || ''; const typCode = typOpt?.code || ''
       const shpCode = shpOpt?.code || ''; const qCode = qOpt?.code || ''
-      const colCode = colOpt?.code || ''
+      const colCode = (colOpt?.code && colOpt.code !== 'No') ? colOpt.code : ''
 
       // Master Code: catCode + colCode + typCode + "-" + shpCode
       let masterCode = ''
