@@ -117,16 +117,17 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
       const catOpt = dd?.categories.find(o => o.name === next.category)
       const typOpt = dd?.types.find(o => o.name === next.type)
       const shpOpt = dd?.shapes.find(o => o.name === next.shape_code)
+      const colOpt = dd?.colors.find(o => o.name === next.color)
       const qOpt   = dd?.qualities.find(o => o.name === next.quality)
       const catCode = catOpt?.code || ''; const typCode = typOpt?.code || ''
       const shpCode = shpOpt?.code || ''; const qCode = qOpt?.code || ''
+      const colCode = colOpt?.code || ''
 
-      // Master Code: GAS exact formula
+      // Master Code: catCode + colCode + typCode + "-" + shpCode
       let masterCode = ''
       if (catCode && typCode && shpCode) {
-        const body = `${catCode}${typCode}-${shpCode}`
-        const withQ = qCode ? `${qCode}-${body}` : body
-        masterCode = next.color ? `${withQ} (${next.color})` : withQ
+        const body = `${catCode}${colCode}${typCode}-${shpCode}`
+        masterCode = qCode ? `${qCode}-${body}` : body
       }
       next.master_code = masterCode
 
