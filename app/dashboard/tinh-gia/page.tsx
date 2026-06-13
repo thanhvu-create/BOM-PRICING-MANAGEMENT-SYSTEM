@@ -87,7 +87,7 @@ export default function TinhGiaPage() {
   const [dropdowns, setDropdowns] = useState<Dropdowns | null>(null)
   const [loadingDD, setLoadingDD] = useState(true)
   const [showStoneTypes, setShowStoneTypes] = useState(false)
-  const [stoneTypeList, setStoneTypeList] = useState<Array<{ code: string; viName: string; enName: string; unit: string; typeInput: string }>>([])
+  const [stoneTypeList, setStoneTypeList] = useState<Array<{ code: string; displayName: string; viName: string; enName: string; unit: string; typeInput: string }>>([])
   const [stoneTypeSearch, setStoneTypeSearch] = useState('')
   const [stoneTypeLoading, setStoneTypeLoading] = useState(false)
   const [stoneTypeNameLang, setStoneTypeNameLang] = useState<'vi' | 'en'>('en')
@@ -1586,7 +1586,7 @@ export default function TinhGiaPage() {
                         onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
                         onMouseLeave={e => (e.currentTarget.style.background = '')}>
                         <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '6px 6px' }}>{s.code}</td>
-                        <td style={{ ...tdStyle, padding: '6px 6px' }}>{s.viName || '—'}</td>
+                        <td style={{ ...tdStyle, padding: '6px 6px' }}>{s.displayName || '—'}</td>
                         <td style={{ ...tdStyle, color: 'var(--text-secondary)', padding: '6px 6px' }}>{(stoneTypeNameLang === 'vi' ? s.viName : s.enName) || '—'}</td>
                         <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '6px 6px', textAlign: 'center' }}>{s.unit || '—'}</td>
                         <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '6px 6px', textAlign: 'center' }}>{s.typeInput || '—'}</td>
