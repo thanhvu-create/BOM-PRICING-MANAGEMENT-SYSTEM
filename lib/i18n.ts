@@ -87,6 +87,8 @@ const dict: Record<string, Record<Lang, string>> = {
   stoneTypeListTitle: { vi: 'Danh Sách Hột Đá',     en: 'Stone Types' },
   stoneTypeSearchPlh: { vi: 'Tìm Group Code, tên Việt, tên Anh...', en: 'Search Group Code, VI name, EN name...' },
   colViName:          { vi: 'Tên Tiếng Việt',        en: 'Vietnamese Name' },
+  colDisplayName:     { vi: 'Tên Hiển Thị',          en: 'Display Name' },
+  colFullName:        { vi: 'Tên Đầy Đủ',            en: 'Full Name' },
   stoneTypeNoData:    { vi: 'Không có dữ liệu',      en: 'No data' },
   stoneTypeNoResult:  { vi: 'Không tìm thấy kết quả', en: 'No results found' },
 

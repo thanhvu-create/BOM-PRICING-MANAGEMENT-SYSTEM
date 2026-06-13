@@ -90,6 +90,7 @@ export default function TinhGiaPage() {
   const [stoneTypeList, setStoneTypeList] = useState<Array<{ code: string; viName: string; enName: string; unit: string; typeInput: string }>>([])
   const [stoneTypeSearch, setStoneTypeSearch] = useState('')
   const [stoneTypeLoading, setStoneTypeLoading] = useState(false)
+  const [stoneTypeNameLang, setStoneTypeNameLang] = useState<'vi' | 'en'>('en')
 
   // Step 1 — Header
   const [date, setDate] = useState(today)
@@ -1564,7 +1565,17 @@ export default function TinhGiaPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
                   <thead>
                     <tr>
-                      {['Group Code', t('colViName'), 'Full Name (EN)', 'Unit', 'Type'].map(h => (
+                      {['Group Code', t('colDisplayName')].map(h => (
+                        <th key={h} style={{ ...thStyle, position: 'sticky', top: 0 }}>{h}</th>
+                      ))}
+                      <th style={{ ...thStyle, position: 'sticky', top: 0, whiteSpace: 'nowrap' }}>
+                        {t('colFullName')} ({stoneTypeNameLang.toUpperCase()})
+                        <button
+                          onClick={() => setStoneTypeNameLang(l => l === 'vi' ? 'en' : 'vi')}
+                          style={{ marginLeft: 6, padding: '1px 5px', fontSize: 9, border: '1px solid var(--border-base)', borderRadius: 0, background: 'var(--bg-hover)', cursor: 'pointer', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', fontWeight: 600 }}
+                        >{stoneTypeNameLang === 'vi' ? 'EN' : 'VI'}</button>
+                      </th>
+                      {['Unit', 'Type'].map(h => (
                         <th key={h} style={{ ...thStyle, position: 'sticky', top: 0 }}>{h}</th>
                       ))}
                     </tr>
@@ -1576,7 +1587,7 @@ export default function TinhGiaPage() {
                         onMouseLeave={e => (e.currentTarget.style.background = '')}>
                         <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '6px 6px' }}>{s.code}</td>
                         <td style={{ ...tdStyle, padding: '6px 6px' }}>{s.viName || '—'}</td>
-                        <td style={{ ...tdStyle, color: 'var(--text-secondary)', padding: '6px 6px' }}>{s.enName || '—'}</td>
+                        <td style={{ ...tdStyle, color: 'var(--text-secondary)', padding: '6px 6px' }}>{(stoneTypeNameLang === 'vi' ? s.viName : s.enName) || '—'}</td>
                         <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '6px 6px', textAlign: 'center' }}>{s.unit || '—'}</td>
                         <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '6px 6px', textAlign: 'center' }}>{s.typeInput || '—'}</td>
                       </tr>
