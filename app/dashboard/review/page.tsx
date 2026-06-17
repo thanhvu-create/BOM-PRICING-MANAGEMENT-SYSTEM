@@ -502,10 +502,12 @@ export default function ReviewPage() {
 </style>
 </head>
 <body>
-  ${logoDataUri ? `<div class="logo-wrap"><img src="${logoDataUri}" alt="Logo"/></div>` : ''}
-  <div style="display:flex;align-items:center;gap:24px;margin-bottom:20px">
-    <h1 style="flex:1;margin:0">QUOTATION</h1>
-    ${img1Uri ? `<img src="${img1Uri}" style="width:140px;height:140px;object-fit:cover;border:1px solid #C8C3BB;flex-shrink:0" alt=""/>` : ''}
+  <div style="display:flex;align-items:center;gap:24px;margin-bottom:16px">
+    <div style="flex:1">
+      ${logoDataUri ? `<div style="margin-bottom:8px"><img src="${logoDataUri}" alt="Logo" style="max-height:60px;max-width:200px;object-fit:contain"/></div>` : ''}
+      <h1 style="margin:0">QUOTATION</h1>
+    </div>
+    ${img1Uri ? `<img src="${img1Uri}" style="width:180px;height:180px;object-fit:cover;border:1px solid #C8C3BB;border-radius:4px;flex-shrink:0" alt=""/>` : ''}
   </div>
   <hr/>
   <div>
@@ -919,24 +921,24 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
 
                 return (
                   <div>
-                    {/* Logo */}
-                    {h.logoUrl && (
-                      <div style={{ marginBottom: 16 }}>
-                        <DriveImage url={h.logoUrl} size={560} alt="Logo"
-                             style={{ maxHeight: 110, maxWidth: 280, objectFit: 'contain' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 16 }}>
+                      <div style={{ flex: 1 }}>
+                        {h.logoUrl && (
+                          <div style={{ marginBottom: 8 }}>
+                            <DriveImage url={h.logoUrl} size={560} alt="Logo"
+                              style={{ maxHeight: 60, maxWidth: 200, objectFit: 'contain' }} />
+                          </div>
+                        )}
+                        <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>
+                          QUOTATION
+                        </h2>
                       </div>
-                    )}
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 20 }}>
-                      <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--text-primary)', margin: 0, flex: 1 }}>
-                        QUOTATION
-                      </h2>
                       {h.img1 && (
                         <DriveImage url={h.img1} size={560} alt="Product"
-                          style={{ width: 140, height: 140, objectFit: 'cover', border: '1px solid var(--border-base)', flexShrink: 0 }} />
+                          style={{ width: 180, height: 180, objectFit: 'cover', border: '1px solid var(--border-base)', borderRadius: 4, flexShrink: 0 }} />
                       )}
                     </div>
-                    <hr style={{ border: 'none', borderTop: '1px solid var(--border-base)', marginBottom: 20 }} />
+                    <hr style={{ border: 'none', borderTop: '1px solid var(--border-base)', marginBottom: 16 }} />
 
                     {/* Info */}
                     <div style={{ marginBottom: 20 }}>
