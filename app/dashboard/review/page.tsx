@@ -504,7 +504,7 @@ export default function ReviewPage() {
 <body>
   ${logoDataUri ? `<div class="logo-wrap"><img src="${logoDataUri}" alt="Logo"/></div>` : ''}
   <div class="brand">JEWELRY BOM TEMPLATE</div>
-  <h1>BÁO GIÁ / QUOTATION</h1>
+  <h1>QUOTATION</h1>
   <hr/>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px">
     <div style="flex:1">
@@ -523,18 +523,18 @@ export default function ReviewPage() {
     </div>
   </div>
 
-  <div class="section-title">CHẤT LIỆU / MATERIAL</div>
+  <div class="section-title">MATERIAL</div>
   ${goldTypes ? `<div class="material-row"><span class="info-label">Gold Type</span><span>${goldTypes}</span></div>` : ''}
   ${goldColors ? `<div class="material-row"><span class="info-label">Color</span><span>${goldColors}</span></div>` : ''}
   ${totalWeight > 0 ? `<div class="material-row"><span class="info-label">Total Weight</span><span>${totalWeight.toFixed(2)} gr</span></div>` : ''}
   ${stoneNames ? `<div class="material-row"><span class="info-label">Stones</span><span>${stoneNames}</span></div>` : ''}
 
-  <div class="section-title">THÔNG TIN BÁO GIÁ</div>
+  <div class="section-title">QUOTE INFO</div>
   ${h.price_list_type ? `<div class="material-row"><span class="info-label">Price List</span><span>${h.price_list_type}</span></div>` : ''}
   ${h.note ? `<div class="material-row"><span class="info-label">Note</span><span>${h.note}</span></div>` : ''}
 
   <div class="price-box">
-    <div class="price-label">GIÁ BÁN LẺ DỰ KIẾN / ESTIMATED RETAIL PRICE</div>
+    <div class="price-label">ESTIMATED RETAIL PRICE</div>
     ${vndAmt ? `<div class="price-main">${vndAmt.toLocaleString('vi-VN')} VND</div>` : ''}
     <div class="price-${vndAmt ? 'sub' : 'main'}">${fmt$(displayPrice)}</div>
   </div>
@@ -936,7 +936,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                       JEWELRY BOM TEMPLATE
                     </p>
                     <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--text-primary)', marginBottom: 20 }}>
-                      BÁO GIÁ / QUOTATION
+                      QUOTATION
                     </h2>
                     <hr style={{ border: 'none', borderTop: '1px solid var(--border-base)', marginBottom: 20 }} />
 
