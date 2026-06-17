@@ -503,10 +503,12 @@ export default function ReviewPage() {
 </head>
 <body>
   ${logoDataUri ? `<div class="logo-wrap"><img src="${logoDataUri}" alt="Logo"/></div>` : ''}
-  <h1>QUOTATION</h1>
+  <div style="display:flex;align-items:center;gap:24px;margin-bottom:20px">
+    <h1 style="flex:1;margin:0">QUOTATION</h1>
+    ${img1Uri ? `<img src="${img1Uri}" style="width:140px;height:140px;object-fit:cover;border:1px solid #C8C3BB;flex-shrink:0" alt=""/>` : ''}
+  </div>
   <hr/>
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px">
-    <div style="flex:1">
+  <div>
       ${h.date ? `<div class="info-row"><span class="info-label">Date</span><span class="info-val">${h.date}</span></div>` : ''}
       ${h.product_type ? `<div class="info-row"><span class="info-label">Product Type</span><span class="info-val">${h.product_type}</span></div>` : ''}
       ${h.customer_name ? `<div class="info-row"><span class="info-label">Customer</span><span class="info-val">${h.customer_name}</span></div>` : ''}
@@ -514,12 +516,6 @@ export default function ReviewPage() {
       ${h.model ? `<div class="info-row"><span class="info-label">Model</span><span class="info-val">${h.model}</span></div>` : ''}
       ${h.sales_person ? `<div class="info-row"><span class="info-label">Salesperson</span><span class="info-val">${h.sales_person}</span></div>` : ''}
       ${h.store ? `<div class="info-row"><span class="info-label">Store</span><span class="info-val">${h.store}</span></div>` : ''}
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      ${img1Uri ? `<img src="${img1Uri}" style="max-height:90px;max-width:90px;object-fit:cover;border:1px solid #C8C3BB" alt=""/>` : ''}
-      ${img2Uri ? `<img src="${img2Uri}" style="max-height:90px;max-width:90px;object-fit:cover;border:1px solid #C8C3BB" alt=""/>` : ''}
-      ${img3Uri ? `<img src="${img3Uri}" style="max-height:90px;max-width:90px;object-fit:cover;border:1px solid #C8C3BB" alt=""/>` : ''}
-    </div>
   </div>
 
   <div class="section-title">MATERIAL</div>
@@ -931,37 +927,33 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                       </div>
                     )}
 
-                    <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--text-primary)', marginBottom: 20 }}>
-                      QUOTATION
-                    </h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 20 }}>
+                      <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--text-primary)', margin: 0, flex: 1 }}>
+                        QUOTATION
+                      </h2>
+                      {h.img1 && (
+                        <DriveImage url={h.img1} size={560} alt="Product"
+                          style={{ width: 140, height: 140, objectFit: 'cover', border: '1px solid var(--border-base)', flexShrink: 0 }} />
+                      )}
+                    </div>
                     <hr style={{ border: 'none', borderTop: '1px solid var(--border-base)', marginBottom: 20 }} />
 
-                    {/* Info + Images */}
-                    <div style={{ display: 'flex', gap: 20, marginBottom: 20 }}>
-                      <div style={{ flex: 1 }}>
-                        {[
-                          ['Date', h.date],
-                          ['Product Type', h.product_type],
-                          ['Customer', h.customer_name],
-                          ['SO / MO', h.so_mo],
-                          ['Model', h.model],
-                          ['Salesperson', h.sales_person],
-                          ['Store', h.store],
-                        ].filter(([, v]) => v).map(([l, v]) => (
-                          <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border-light)' }}>
-                            <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)' }}>{l}</span>
-                            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>{String(v)}</span>
-                          </div>
-                        ))}
-                      </div>
-                      {(h.img1 || h.img2 || h.img3) && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {[h.img1, h.img2, h.img3].filter(Boolean).map((url, i) => (
-                            <DriveImage key={i} url={url as string} size={200} alt={`img${i+1}`}
-                              style={{ width: 80, height: 80, objectFit: 'cover', border: '1px solid var(--border-base)' }} />
-                          ))}
+                    {/* Info */}
+                    <div style={{ marginBottom: 20 }}>
+                      {[
+                        ['Date', h.date],
+                        ['Product Type', h.product_type],
+                        ['Customer', h.customer_name],
+                        ['SO / MO', h.so_mo],
+                        ['Model', h.model],
+                        ['Salesperson', h.sales_person],
+                        ['Store', h.store],
+                      ].filter(([, v]) => v).map(([l, v]) => (
+                        <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border-light)' }}>
+                          <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)' }}>{l}</span>
+                          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}>{String(v)}</span>
                         </div>
-                      )}
+                      ))}
                     </div>
 
                     {/* Material */}
