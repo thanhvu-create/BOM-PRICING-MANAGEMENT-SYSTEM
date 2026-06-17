@@ -504,7 +504,7 @@ export default function ReviewPage() {
 <body>
   <div style="display:flex;align-items:center;gap:24px;margin-bottom:16px">
     <div style="flex:1">
-      ${logoDataUri ? `<div style="margin-bottom:8px"><img src="${logoDataUri}" alt="Logo" style="max-height:60px;max-width:200px;object-fit:contain"/></div>` : ''}
+      ${logoDataUri ? `<div style="margin-bottom:8px"><img src="${logoDataUri}" alt="Logo" style="max-height:100px;max-width:260px;object-fit:contain"/></div>` : ''}
       <h1 style="margin:0">QUOTATION</h1>
     </div>
     ${img1Uri ? `<img src="${img1Uri}" style="width:180px;height:180px;object-fit:cover;border:1px solid #C8C3BB;border-radius:4px;flex-shrink:0" alt=""/>` : ''}
@@ -926,7 +926,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                         {h.logoUrl && (
                           <div style={{ marginBottom: 8 }}>
                             <DriveImage url={h.logoUrl} size={560} alt="Logo"
-                              style={{ maxHeight: 60, maxWidth: 200, objectFit: 'contain' }} />
+                              style={{ maxHeight: 100, maxWidth: 260, objectFit: 'contain' }} />
                           </div>
                         )}
                         <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--text-primary)', margin: 0 }}>
