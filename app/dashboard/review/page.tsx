@@ -503,7 +503,6 @@ export default function ReviewPage() {
 </head>
 <body>
   ${logoDataUri ? `<div class="logo-wrap"><img src="${logoDataUri}" alt="Logo"/></div>` : ''}
-  <div class="brand">JEWELRY BOM TEMPLATE</div>
   <h1>QUOTATION</h1>
   <hr/>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px">
@@ -932,9 +931,6 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                       </div>
                     )}
 
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 4 }}>
-                      JEWELRY BOM TEMPLATE
-                    </p>
                     <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-2xl)', fontWeight: 400, color: 'var(--text-primary)', marginBottom: 20 }}>
                       QUOTATION
                     </h2>
