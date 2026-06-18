@@ -16,7 +16,7 @@ export default function SessionGuard() {
 
   const checkExpiry = useCallback(() => {
     const val = localStorage.getItem('bom_session_expiry')
-    if (!val) { kick(); return }
+    if (!val) return
     if (val !== 'permanent' && Number(val) < Date.now()) kick()
   }, [kick])
 

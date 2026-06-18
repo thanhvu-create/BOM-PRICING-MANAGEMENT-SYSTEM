@@ -27,6 +27,7 @@ interface BomDetail {
 }
 
 /* ── HELPERS ─────────────────────────────────────────────────*/
+function esc(s: string) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
 function fmt$(n: number) { return '$' + (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
 function fmtPct(n: number) {
   if (!n) return ''
@@ -464,25 +465,22 @@ export default function ReviewPage() {
     const dateStr = h.date ? new Date(h.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase() : ''
 
     // Pre-fetch images as data: URIs (required for print popup window)
-    const [logoDataUri, img1Uri, img2Uri, img3Uri] = await Promise.all([
+    const [logoDataUri, img1Uri] = await Promise.all([
       fetchDataUri(h.logoUrl || ''),
       fetchDataUri(h.img1 || ''),
-      fetchDataUri(h.img2 || ''),
-      fetchDataUri(h.img3 || ''),
     ])
 
     const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8"/>
-<title>Quotation - ${h.bom_id}</title>
+<title>Quotation - ${esc(h.bom_id)}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Jost:wght@300;400;500&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Jost', Arial, sans-serif; background: #F0EBE4; color: #1A1814; padding: 40px; max-width: 700px; margin: 0 auto; }
   .logo-wrap { margin-bottom: 20px; }
   .logo-wrap img { max-height: 110px; max-width: 280px; object-fit: contain; }
-  .brand { font-family: 'Cormorant Garamond', serif; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: #6B645C; margin-bottom: 4px; }
   h1 { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; color: #1A1814; margin-bottom: 24px; letter-spacing: 0.05em; }
   hr { border: none; border-top: 1px solid #C8C3BB; margin: 20px 0; }
   .info-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #DDD8CF; }
@@ -511,13 +509,13 @@ export default function ReviewPage() {
   </div>
   <hr/>
   <div>
-      ${h.date ? `<div class="info-row"><span class="info-label">Date</span><span class="info-val">${h.date}</span></div>` : ''}
-      ${h.product_type ? `<div class="info-row"><span class="info-label">Product Type</span><span class="info-val">${h.product_type}</span></div>` : ''}
-      ${h.customer_name ? `<div class="info-row"><span class="info-label">Customer</span><span class="info-val">${h.customer_name}</span></div>` : ''}
-      ${h.so_mo ? `<div class="info-row"><span class="info-label">SO / MO</span><span class="info-val">${h.so_mo}</span></div>` : ''}
-      ${h.model ? `<div class="info-row"><span class="info-label">Model</span><span class="info-val">${h.model}</span></div>` : ''}
-      ${h.sales_person ? `<div class="info-row"><span class="info-label">Salesperson</span><span class="info-val">${h.sales_person}</span></div>` : ''}
-      ${h.store ? `<div class="info-row"><span class="info-label">Store</span><span class="info-val">${h.store}</span></div>` : ''}
+      ${h.date ? `<div class="info-row"><span class="info-label">Date</span><span class="info-val">${esc(h.date)}</span></div>` : ''}
+      ${h.product_type ? `<div class="info-row"><span class="info-label">Product Type</span><span class="info-val">${esc(h.product_type)}</span></div>` : ''}
+      ${h.customer_name ? `<div class="info-row"><span class="info-label">Customer</span><span class="info-val">${esc(h.customer_name)}</span></div>` : ''}
+      ${h.so_mo ? `<div class="info-row"><span class="info-label">SO / MO</span><span class="info-val">${esc(h.so_mo)}</span></div>` : ''}
+      ${h.model ? `<div class="info-row"><span class="info-label">Model</span><span class="info-val">${esc(h.model)}</span></div>` : ''}
+      ${h.sales_person ? `<div class="info-row"><span class="info-label">Salesperson</span><span class="info-val">${esc(h.sales_person)}</span></div>` : ''}
+      ${h.store ? `<div class="info-row"><span class="info-label">Store</span><span class="info-val">${esc(h.store)}</span></div>` : ''}
   </div>
 
   <div class="section-title">MATERIAL</div>
@@ -527,8 +525,8 @@ export default function ReviewPage() {
   ${stoneNames ? `<div class="material-row"><span class="info-label">Stones</span><span>${stoneNames}</span></div>` : ''}
 
   <div class="section-title">QUOTE INFO</div>
-  ${h.price_list_type ? `<div class="material-row"><span class="info-label">Price List</span><span>${h.price_list_type}</span></div>` : ''}
-  ${h.note ? `<div class="material-row"><span class="info-label">Note</span><span>${h.note}</span></div>` : ''}
+  ${h.price_list_type ? `<div class="material-row"><span class="info-label">Price List</span><span>${esc(h.price_list_type)}</span></div>` : ''}
+  ${h.note ? `<div class="material-row"><span class="info-label">Note</span><span>${esc(h.note)}</span></div>` : ''}
 
   <div class="price-box">
     <div class="price-label">ESTIMATED RETAIL PRICE</div>
@@ -561,11 +559,11 @@ export default function ReviewPage() {
     ])
 
     const goldRows = (detailData.golds || []).map(g =>
-      `<tr><td>${g.idx}</td><td>${g.gold_type}</td><td>${g.color}</td><td style="font-family:monospace">${g.weight} gr</td></tr>`
+      `<tr><td>${g.idx}</td><td>${esc(g.gold_type)}</td><td>${esc(g.color)}</td><td style="font-family:monospace">${g.weight} gr</td></tr>`
     ).join('')
 
     const stoneRows = showStones ? (detailData.stones || []).map(s =>
-      `<tr><td>${s.idx}</td><td>${s.group_code}</td><td style="font-family:monospace">${s.ctw1pc}</td><td style="font-family:monospace">${s.qty}</td><td style="font-family:monospace">${(s.tl_hot || 0).toFixed(3)}</td>${showCostTotal ? `<td style="font-family:monospace">${fmt$(s.gia_ban)}</td>` : ''}</tr>`
+      `<tr><td>${s.idx}</td><td>${esc(s.group_code)}</td><td style="font-family:monospace">${s.ctw1pc}</td><td style="font-family:monospace">${s.qty}</td><td style="font-family:monospace">${(s.tl_hot || 0).toFixed(3)}</td>${showCostTotal ? `<td style="font-family:monospace">${fmt$(s.gia_ban)}</td>` : ''}</tr>`
     ).join('') : ''
 
     const costRows = showCostTotal ? [
@@ -576,7 +574,7 @@ export default function ReviewPage() {
     ).join('') : ''
 
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
-<title>BOM ${h.bom_id}</title>
+<title>BOM ${esc(h.bom_id)}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500&family=Jost:wght@400;500&display=swap');
   *{box-sizing:border-box;margin:0;padding:0}
@@ -592,7 +590,7 @@ export default function ReviewPage() {
   .sell{display:flex;justify-content:space-between;padding:8px 0 3px;border-top:1px solid #1A1814;margin-top:3px}
   @media print{body{padding:14px}}
 </style></head><body>
-<h1>BOM Detail — ${h.bom_id}</h1>
+<h1>BOM Detail — ${esc(h.bom_id)}</h1>
 <div style="display:flex;gap:8px;margin-bottom:14px">
   ${[img1Uri, img2Uri, img3Uri].filter(Boolean).map(u => `<img src="${u}" style="height:75px;object-fit:cover;border:1px solid #C8C3BB" alt=""/>`).join('')}
 </div>
@@ -601,8 +599,8 @@ export default function ReviewPage() {
      ['Price List',h.price_list_type],['Salesperson',h.sales_person],['Store',h.store],['Customer',h.customer_name]
     ].filter(([,v])=>v).map(([l,v])=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #DDD8CF">
     <span style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#6B645C">${l}</span>
-    <span style="font-size:11px">${v}</span></div>`).join('')}
-  ${h.note ? `<div style="grid-column:span 2;padding:3px 0;border-bottom:1px solid #DDD8CF"><span style="font-size:9px;text-transform:uppercase;color:#6B645C;display:block">Note</span><span>${h.note}</span></div>` : ''}
+    <span style="font-size:11px">${esc(String(v))}</span></div>`).join('')}
+  ${h.note ? `<div style="grid-column:span 2;padding:3px 0;border-bottom:1px solid #DDD8CF"><span style="font-size:9px;text-transform:uppercase;color:#6B645C;display:block">Note</span><span>${esc(h.note)}</span></div>` : ''}
 </div>
 ${detailData.golds?.length > 0 ? `<div class="sec">Vàng (Gold)</div>
 <table><thead><tr><th>#</th><th>Type</th><th>Color</th><th>Weight</th></tr></thead>
