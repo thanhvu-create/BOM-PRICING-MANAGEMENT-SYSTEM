@@ -1060,18 +1060,18 @@ export default function TinhGiaPage() {
                 <col style={{ width: 84 }} />
                 <col style={{ width: 90 }} />
                 <col style={{ width: 70 }} />
+                <col style={{ width: 140 }} />
                 <col style={{ width: 90 }} />
                 <col style={{ width: 90 }} />
                 <col style={{ width: 120 }} />
                 {canSeeAll && <col style={{ width: 100 }} />}
-                <col style={{ width: 140 }} />
                 <col style={{ width: 44 }} />
               </colgroup>
               <thead>
                 <tr>
-                  {['#', 'STONE TYPE (MASTER)', 'MM SIZE', 'CTW/1PC', 'QTY', 'CTW TOTAL', 'INPUT TYPE', 'GRADE ID',
+                  {['#', 'STONE TYPE (MASTER)', 'MM SIZE', 'CTW/1PC', 'QTY', 'NOTE', 'CTW TOTAL', 'INPUT TYPE', 'GRADE ID',
                     ...(canSeeAll ? ['SELL PRICE'] : []),
-                    'NOTE', 'DELETE'
+                    'DELETE'
                   ].map((h, i) => <th key={`sh-${i}`} style={{ ...thStyle, textAlign: h === 'SELL PRICE' || h === 'CTW TOTAL' ? 'right' : h === 'DELETE' || h === '#' ? 'center' : 'left' }}>{h}</th>)}
                 </tr>
               </thead>
@@ -1143,6 +1143,15 @@ export default function TinhGiaPage() {
                       <input type="number" style={tdInput} value={r.qty} min="0" step="1" placeholder="0"
                         onChange={e => updateStone(r.id, 'qty', e.target.value)} />
                     </td>
+                    <td style={{ ...tdStyle, width: 140 }}>
+                      <input
+                        type="text"
+                        style={tdInput}
+                        value={r.note}
+                        placeholder="Size/shape note..."
+                        onChange={e => updateStone(r.id, 'note', e.target.value)}
+                      />
+                    </td>
                     <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textAlign: 'right', paddingRight: 6 }}>
                       {r.tlHot > 0 ? r.tlHot.toFixed(3) : '—'}
                     </td>
@@ -1163,15 +1172,6 @@ export default function TinhGiaPage() {
                         {r.giaBan > 0 ? fmt$(r.giaBan) : '—'}
                       </td>
                     )}
-                    <td style={{ ...tdStyle, width: 140 }}>
-                      <input
-                        type="text"
-                        style={tdInput}
-                        value={r.note}
-                        placeholder="Size/shape note..."
-                        onChange={e => updateStone(r.id, 'note', e.target.value)}
-                      />
-                    </td>
                     <td style={{ ...tdStyle, width: 44, textAlign: 'center' }}>
                       {stoneRows.length > 1 ? (
                         <button onClick={() => removeStoneRow(r.id)} style={{
@@ -1197,6 +1197,7 @@ export default function TinhGiaPage() {
                     <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-primary)' }}>
                       {totalStoneQtyVal}
                     </td>
+                    <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)' }} />
                     <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'right', paddingRight: 6 }}>
                       {totalStoneTlVal.toFixed(3)}
                     </td>
@@ -1207,7 +1208,6 @@ export default function TinhGiaPage() {
                         {totalStoneGiaVal > 0 ? fmt$(totalStoneGiaVal) : '—'}
                       </td>
                     )}
-                    <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)' }} />
                     <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)' }} />
                   </tr>
                 </tfoot>
