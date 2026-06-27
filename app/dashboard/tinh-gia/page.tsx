@@ -1166,7 +1166,7 @@ export default function TinhGiaPage() {
                     <td style={{ ...tdStyle, width: 140 }}>
                       <input
                         type="text"
-                        style={{ ...tdInput, fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)' }}
+                        style={tdInput}
                         value={r.note}
                         placeholder="Size/shape note..."
                         onChange={e => updateStone(r.id, 'note', e.target.value)}
