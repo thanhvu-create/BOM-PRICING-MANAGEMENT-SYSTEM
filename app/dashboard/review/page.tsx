@@ -23,7 +23,7 @@ interface BomRow {
 interface BomDetail {
   header: Record<string, any>
   golds: Array<{ idx: number; gold_type: string; color: string; weight: number }>
-  stones: Array<{ idx: number; group_code: string; grade_id: string; size: string; ctw1pc: number; qty: number; tl_hot: number; gia_ban: number; en_name?: string }>
+  stones: Array<{ idx: number; group_code: string; grade_id: string; size: string; ctw1pc: number; qty: number; tl_hot: number; gia_ban: number; en_name?: string; note?: string }>
 }
 
 /* ── HELPERS ─────────────────────────────────────────────────*/
@@ -563,7 +563,7 @@ export default function ReviewPage() {
     ).join('')
 
     const stoneRows = showStones ? (detailData.stones || []).map(s =>
-      `<tr><td>${s.idx}</td><td>${esc(s.group_code)}</td><td style="font-family:monospace">${s.ctw1pc}</td><td style="font-family:monospace">${s.qty}</td><td style="font-family:monospace">${(s.tl_hot || 0).toFixed(3)}</td>${showCostTotal ? `<td style="font-family:monospace">${fmt$(s.gia_ban)}</td>` : ''}</tr>`
+      `<tr><td>${s.idx}</td><td>${esc(s.group_code)}</td><td style="font-family:monospace">${s.ctw1pc}</td><td style="font-family:monospace">${s.qty}</td><td style="font-family:monospace">${(s.tl_hot || 0).toFixed(3)}</td>${showCostTotal ? `<td style="font-family:monospace">${fmt$(s.gia_ban)}</td>` : ''}<td>${esc(s.note || '')}</td></tr>`
     ).join('') : ''
 
     const costRows = showCostTotal ? [
@@ -606,7 +606,7 @@ ${detailData.golds?.length > 0 ? `<div class="sec">Vàng (Gold)</div>
 <table><thead><tr><th>#</th><th>Type</th><th>Color</th><th>Weight</th></tr></thead>
 <tbody>${goldRows}</tbody></table>` : ''}
 ${showStones && detailData.stones?.length > 0 ? `<div class="sec">Hột đá (Stones)</div>
-<table><thead><tr><th>#</th><th>Group</th><th>CTW/pc</th><th>Qty</th><th>TL Hột</th>${showCostTotal ? '<th>Price</th>' : ''}</tr></thead>
+<table><thead><tr><th>#</th><th>Group</th><th>CTW/pc</th><th>Qty</th><th>TL Hột</th>${showCostTotal ? '<th>Price</th>' : ''}<th>Note</th></tr></thead>
 <tbody>${stoneRows}</tbody></table>` : ''}
 ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
 <div style="background:#F0EBE4;border:1px solid #DDD8CF;padding:12px">
@@ -1144,7 +1144,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                         <div style={{ overflowX: 'auto' }}>
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)', minWidth: 500 }}>
                             <thead><tr>
-                              {['#', 'Group', 'Size', 'CTW/pc', 'Qty', 'TL Hột', ...(showCostTotal ? ['Price'] : [])].map(h => (
+                              {['#', 'Group', 'Size', 'CTW/pc', 'Qty', 'TL Hột', ...(showCostTotal ? ['Price'] : []), 'Note'].map(h => (
                                 <th key={h} style={{ ...th, padding: '6px 8px' }}>{h}</th>
                               ))}
                             </tr></thead>
@@ -1158,6 +1158,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                                   <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{s.qty}</td>
                                   <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{s.tl_hot?.toFixed(3)}</td>
                                   {showCostTotal && <td style={{ ...td, padding: '6px 8px', fontFamily: 'var(--font-mono)' }}>{fmt$(s.gia_ban)}</td>}
+                                  <td style={{ ...td, padding: '6px 8px', color: 'var(--text-secondary)' }}>{s.note || '—'}</td>
                                 </tr>
                               ))}
                             </tbody>

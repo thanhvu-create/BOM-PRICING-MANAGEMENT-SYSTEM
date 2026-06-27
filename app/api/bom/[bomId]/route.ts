@@ -23,7 +23,7 @@ export async function GET(
     ] = await Promise.all([
       db.from('bom').select('*').eq('bom_id', bomId).is('deleted_at', null).single(),
       db.from('bom_gold').select('idx, gold_type, color, weight').eq('bom_id', bomId).order('idx'),
-      db.from('bom_stone').select('idx, group_code, grade_id, size, ctw1pc, qty, tl_hot, input_type, gia_ban').eq('bom_id', bomId).order('idx'),
+      db.from('bom_stone').select('idx, group_code, grade_id, size, ctw1pc, qty, tl_hot, input_type, gia_ban, note').eq('bom_id', bomId).order('idx'),
     ])
 
     if (bomErr || !bomRow) return NextResponse.json({ error: 'BOM not found' }, { status: 404 })
@@ -219,6 +219,7 @@ export async function PUT(
         qty: Number(s.qty) || 0,
         tl_hot: Number(s.tlHot) || (Number(s.ctw1pc) * Number(s.qty)),
         input_type: s.inputType || 'mm', gia_ban: Number(s.giaBan) || 0,
+        note: s.note || '',
       }))
     if (stoneRows.length > 0) await db.from('bom_stone').insert(stoneRows)
 

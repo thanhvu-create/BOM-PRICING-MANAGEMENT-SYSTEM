@@ -19,7 +19,7 @@ interface Dropdowns {
   storeNames: string[]
 }
 interface GoldRow  { id: number; goldType: string; color: string; weight: string; pricePerGr: number; cost: number }
-interface StoneRow { id: number; groupCode: string; size: string; ctw1pc: string; qty: string; tlHot: number; gradeId: string; giaBan: number; inputType: string; sellingPrice: number; pricingUnit: string; notFound: boolean }
+interface StoneRow { id: number; groupCode: string; size: string; ctw1pc: string; qty: string; tlHot: number; gradeId: string; giaBan: number; inputType: string; sellingPrice: number; pricingUnit: string; notFound: boolean; note: string }
 interface PricingData {
   costGold: number; costStones: number; costLabor: number
   costSubtotal: number; costCif: number; costTotal: number; sellPrice: number
@@ -31,7 +31,7 @@ function nextId() { return ++_rowId }
 function today() { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }) }
 function fmt$(n: number) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
 function newGold(): GoldRow  { return { id: nextId(), goldType: '18K', color: 'Yellow', weight: '', pricePerGr: 0, cost: 0 } }
-function newStone(): StoneRow { return { id: nextId(), groupCode: '', size: '', ctw1pc: '', qty: '', tlHot: 0, gradeId: '', giaBan: 0, inputType: 'mm', sellingPrice: 0, pricingUnit: 'ct', notFound: false } }
+function newStone(): StoneRow { return { id: nextId(), groupCode: '', size: '', ctw1pc: '', qty: '', tlHot: 0, gradeId: '', giaBan: 0, inputType: 'mm', sellingPrice: 0, pricingUnit: 'ct', notFound: false, note: '' } }
 
 /* ── STYLE CONSTANTS ───────────────────────────────────────── */
 const inputUnder: React.CSSProperties = {
@@ -207,7 +207,7 @@ export default function TinhGiaPage() {
             size: String(s.size || ''), ctw1pc: String(ctw || ''),
             qty: String(qty || ''), tlHot,
             gradeId: s.grade_id || '', giaBan, inputType: s.input_type || 'mm',
-            sellingPrice: 0, pricingUnit: 'ct', notFound: false,
+            sellingPrice: 0, pricingUnit: 'ct', notFound: false, note: s.note || '',
           }
         })
         setStoneRows(filledStones)
@@ -572,6 +572,7 @@ export default function TinhGiaPage() {
         tlHot: (parseFloat(r.ctw1pc) || 0) * (parseFloat(r.qty) || 0),
         inputType: r.inputType as 'mm' | 'ct',
         giaBan: r.giaBan,
+        note: r.note || '',
       }))
 
     return {
@@ -1063,13 +1064,14 @@ export default function TinhGiaPage() {
                 <col style={{ width: 90 }} />
                 <col style={{ width: 120 }} />
                 {canSeeAll && <col style={{ width: 100 }} />}
+                <col style={{ width: 140 }} />
                 <col style={{ width: 44 }} />
               </colgroup>
               <thead>
                 <tr>
                   {['#', 'STONE TYPE (MASTER)', 'MM SIZE', 'CTW/1PC', 'QTY', 'CTW TOTAL', 'INPUT TYPE', 'GRADE ID',
                     ...(canSeeAll ? ['SELL PRICE'] : []),
-                    'DELETE'
+                    'NOTE', 'DELETE'
                   ].map((h, i) => <th key={`sh-${i}`} style={{ ...thStyle, textAlign: h === 'SELL PRICE' || h === 'CTW TOTAL' ? 'right' : h === 'DELETE' || h === '#' ? 'center' : 'left' }}>{h}</th>)}
                 </tr>
               </thead>
@@ -1161,6 +1163,15 @@ export default function TinhGiaPage() {
                         {r.giaBan > 0 ? fmt$(r.giaBan) : '—'}
                       </td>
                     )}
+                    <td style={{ ...tdStyle, width: 140 }}>
+                      <input
+                        type="text"
+                        style={{ ...tdInput, fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)' }}
+                        value={r.note}
+                        placeholder="Size/shape note..."
+                        onChange={e => updateStone(r.id, 'note', e.target.value)}
+                      />
+                    </td>
                     <td style={{ ...tdStyle, width: 44, textAlign: 'center' }}>
                       {stoneRows.length > 1 ? (
                         <button onClick={() => removeStoneRow(r.id)} style={{
@@ -1196,6 +1207,7 @@ export default function TinhGiaPage() {
                         {totalStoneGiaVal > 0 ? fmt$(totalStoneGiaVal) : '—'}
                       </td>
                     )}
+                    <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)' }} />
                     <td style={{ ...tdStyle, borderTop: '1px solid var(--border-base)' }} />
                   </tr>
                 </tfoot>

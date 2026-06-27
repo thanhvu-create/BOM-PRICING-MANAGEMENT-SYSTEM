@@ -158,6 +158,7 @@ export async function POST(request: Request) {
           tl_hot:     Number(s.tlHot) || (Number(s.ctw1pc) * Number(s.qty)),
           input_type: s.inputType || 'mm',
           gia_ban:    Number(s.giaBan) || 0,
+          note:       s.note || '',
         }))
       if (stoneRows.length > 0) {
         const { error: sErr } = await db.from('bom_stone').insert(stoneRows)
