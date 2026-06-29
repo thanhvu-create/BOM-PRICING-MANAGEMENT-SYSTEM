@@ -611,7 +611,7 @@ ${showStones && detailData.stones?.length > 0 ? `<div class="sec">Stones</div>
 ${showCostTotal ? `<div class="sec">Costs</div>
 <div style="background:#F0EBE4;border:1px solid #DDD8CF;padding:12px">
   ${costRows}
-  <div class="sell"><span style="font-weight:600;font-size:12px;text-transform:uppercase">Sell Price</span>
+  <div class="sell"><span style="font-weight:600;font-size:12px;text-transform:uppercase">Quotation</span>
     <span style="font-size:16px;font-family:'Cormorant Garamond',serif">${fmt$(h.sell_price)}</span></div>
   ${h.discount_pct > 0 ? `<div class="cr" style="color:#4A7C59"><span>Discount (${fmtPct(h.discount_pct)})</span><span style="font-family:monospace">${fmt$(h.discount_price)}</span></div>` : ''}
   ${vndAmt ? `<div style="margin-top:6px;font-size:11px;color:#6B645C">Est. VND: ${vndAmt.toLocaleString('vi-VN')} ₫</div>` : ''}
@@ -1204,12 +1204,12 @@ ${showCostTotal ? `<div class="sec">Costs</div>
                       </div>
                     )}
 
-                    {/* Sell Price panel — visible to all except Order */}
+                    {/* Quotation panel — visible to all except Order */}
                     {showSellPrice && (
                       <div style={{ border: '1px solid var(--border-light)', borderRadius: 4, overflow: 'hidden' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1.25rem', background: 'var(--bg-surface)' }}>
                           <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                            {h.discount_pct > 0 ? 'After Discount' : 'Sell Price'}
+                            {h.discount_pct > 0 ? 'After Discount' : 'Quotation'}
                           </span>
                           <span style={{ fontFamily: 'var(--font-heading)', fontSize: 'var(--text-xl)', color: 'var(--color-success)', fontWeight: 400 }}>
                             {fmt$(effectiveSell)}

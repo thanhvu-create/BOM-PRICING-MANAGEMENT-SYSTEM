@@ -102,7 +102,7 @@ const dict: Record<string, Record<Lang, string>> = {
   colModel:          { vi: 'Model',           en: 'Model' },
   colStones:         { vi: 'Hột',            en: 'Stones' },
   colCost:           { vi: 'Chi Phí ($)',     en: 'Cost ($)' },
-  colSell:           { vi: 'Giá Bán ($)',     en: 'Sell ($)' },
+  colSell:           { vi: 'Báo Giá ($)',     en: 'Quotation ($)' },
   colDisc:           { vi: 'CK%',            en: 'Disc%' },
   colAfterDisc:      { vi: 'Sau CK',         en: 'After Disc' },
   colProductType:    { vi: 'Loại SP',          en: 'Product Type' },
