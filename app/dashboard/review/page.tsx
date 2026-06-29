@@ -188,7 +188,7 @@ export default function ReviewPage() {
   // Lightbox
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null)
 
-  // Client-side cache: tránh re-fetch khi mở lại cùng BOM
+  // Client-side cache: avoid re-fetching when reopening the same BOM
   const detailCache = useRef<Map<string, BomDetail>>(new Map())
   const loadBomsCtrl = useRef<AbortController | null>(null)
 
@@ -407,15 +407,15 @@ export default function ReviewPage() {
   /* ── Approve BOM ─── */
   async function approveBom(bomId: string) {
     setApproveSaving(true)
-    const tid = toast(`Đang duyệt BOM ${bomId}...`, 'loading')
+    const tid = toast(`Approving BOM ${bomId}...`, 'loading')
     try {
       const r = await fetch(`/api/bom/${bomId}/approve`, { method: 'PATCH' })
       const d = await r.json()
-      if (!r.ok) { update(tid, d.error || 'Duyệt thất bại', 'danger'); return }
-      update(tid, `BOM ${bomId} đã duyệt`, 'success')
+      if (!r.ok) { update(tid, d.error || 'Approval failed', 'danger'); return }
+      update(tid, `BOM ${bomId} approved`, 'success')
       setBoms(prev => prev.map(b => b.bom_id === bomId ? { ...b, approval_status: 'approved' } : b))
       try { window.dispatchEvent(new CustomEvent('bom_pending_changed')) } catch { /* ignore */ }
-    } catch { update(tid, 'Duyệt thất bại', 'danger') }
+    } catch { update(tid, 'Approval failed', 'danger') }
     finally { setApproveSaving(false) }
   }
 
@@ -424,19 +424,19 @@ export default function ReviewPage() {
     if (!rejectBom) return
     const bomId = rejectBom.bom_id
     setApproveSaving(true)
-    const tid = toast(`Đang từ chối BOM ${bomId}...`, 'loading')
+    const tid = toast(`Rejecting BOM ${bomId}...`, 'loading')
     try {
       const r = await fetch(`/api/bom/${bomId}/reject`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ note: rejectNote }),
       })
       const d = await r.json()
-      if (!r.ok) { update(tid, d.error || 'Từ chối thất bại', 'danger'); return }
-      update(tid, `BOM ${bomId} đã từ chối`, 'success')
+      if (!r.ok) { update(tid, d.error || 'Rejection failed', 'danger'); return }
+      update(tid, `BOM ${bomId} rejected`, 'success')
       setBoms(prev => prev.map(b => b.bom_id === bomId ? { ...b, approval_status: 'rejected', approval_note: rejectNote } : b))
       setRejectBom(null); setRejectNote('')
       try { window.dispatchEvent(new CustomEvent('bom_pending_changed')) } catch { /* ignore */ }
-    } catch { update(tid, 'Từ chối thất bại', 'danger') }
+    } catch { update(tid, 'Rejection failed', 'danger') }
     finally { setApproveSaving(false) }
   }
 
@@ -602,13 +602,13 @@ export default function ReviewPage() {
     <span style="font-size:11px">${esc(String(v))}</span></div>`).join('')}
   ${h.note ? `<div style="grid-column:span 2;padding:3px 0;border-bottom:1px solid #DDD8CF"><span style="font-size:9px;text-transform:uppercase;color:#6B645C;display:block">Note</span><span>${esc(h.note)}</span></div>` : ''}
 </div>
-${detailData.golds?.length > 0 ? `<div class="sec">Vàng (Gold)</div>
+${detailData.golds?.length > 0 ? `<div class="sec">Gold</div>
 <table><thead><tr><th>#</th><th>Type</th><th>Color</th><th>Weight</th></tr></thead>
 <tbody>${goldRows}</tbody></table>` : ''}
-${showStones && detailData.stones?.length > 0 ? `<div class="sec">Hột đá (Stones)</div>
-<table><thead><tr><th>#</th><th>Group</th><th>CTW/pc</th><th>Qty</th><th>TL Hột</th>${showCostTotal ? '<th>Price</th>' : ''}<th>Note</th></tr></thead>
+${showStones && detailData.stones?.length > 0 ? `<div class="sec">Stones</div>
+<table><thead><tr><th>#</th><th>Group</th><th>CTW/pc</th><th>Qty</th><th>Total CTW</th>${showCostTotal ? '<th>Price</th>' : ''}<th>Note</th></tr></thead>
 <tbody>${stoneRows}</tbody></table>` : ''}
-${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
+${showCostTotal ? `<div class="sec">Costs</div>
 <div style="background:#F0EBE4;border:1px solid #DDD8CF;padding:12px">
   ${costRows}
   <div class="sell"><span style="font-weight:600;font-size:12px;text-transform:uppercase">Sell Price</span>
@@ -778,13 +778,13 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap' }}>
                       {/* View Quotation — all roles */}
                       <button onClick={() => openQuotation(b.bom_id)}
-                        title="Xem Báo Giá"
+                        title="View Quotation"
                         style={{ background: 'none', border: '1px solid #e91d79', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: '#e91d79' }}>
                         <i className="fa-solid fa-file-invoice" />
                       </button>
                       {/* Detail — all roles */}
                       <button onClick={() => openDetail(b.bom_id)}
-                        title="Chi tiết"
+                        title="Detail"
                         style={{ background: 'none', border: '1px solid var(--border-base)', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--text-secondary)' }}>
                         <i className="fa-solid fa-eye" />
                       </button>
@@ -798,7 +798,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                       {/* Discount — Admin + Manager only */}
                       {canDiscount && (
                         <button onClick={() => openDiscount(b)}
-                          title="Chiết Khấu"
+                          title="Discount"
                           style={{ background: 'none', border: '1px solid var(--color-warning)', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--color-warning)' }}>
                           <i className="fa-solid fa-percent" />
                         </button>
@@ -812,14 +812,14 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                       )}
                       {/* Approve — Admin/Manager, only when pending */}
                       {canApprove && b.approval_status === 'pending' && (
-                        <button onClick={() => approveBom(b.bom_id)} title="Duyệt" disabled={approveSaving}
+                        <button onClick={() => approveBom(b.bom_id)} title="Approve" disabled={approveSaving}
                           style={{ background: 'none', border: '1px solid var(--color-success)', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--color-success)' }}>
                           <i className="fa-solid fa-check" />
                         </button>
                       )}
                       {/* Reject — Admin/Manager, only when pending */}
                       {canApprove && b.approval_status === 'pending' && (
-                        <button onClick={() => { setRejectBom(b); setRejectNote('') }} title="Từ Chối"
+                        <button onClick={() => { setRejectBom(b); setRejectNote('') }} title="Reject"
                           style={{ background: 'none', border: '1px solid var(--color-danger)', borderRadius: 0, padding: '3px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--color-danger)' }}>
                           <i className="fa-solid fa-xmark" />
                         </button>
@@ -1117,7 +1117,7 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                     {detailData.golds?.length > 0 && (
                       <div style={{ marginBottom: '1.5rem' }}>
                         <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.12em', color: '#B8860B', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, margin: '0 0 8px' }}>
-                          <span>🪙</span><span>Gold</span>
+                          <i className="fa-solid fa-coins" style={{ fontSize: 10 }} /><span>Gold</span>
                         </p>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
                           <thead><tr>{['#', 'Type', 'Color', 'Weight (gr)'].map(h => <th key={h} style={{ ...th, padding: '6px 8px' }}>{h}</th>)}</tr></thead>
@@ -1139,12 +1139,12 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
                     {showStones && detailData.stones?.length > 0 && (
                       <div style={{ marginBottom: '1.5rem' }}>
                         <p style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-secondary)', margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <i className="fa-regular fa-gem" style={{ fontSize: 10 }} /><span>Hột đá</span>
+                          <i className="fa-regular fa-gem" style={{ fontSize: 10 }} /><span>Stones</span>
                         </p>
                         <div style={{ overflowX: 'auto' }}>
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)', minWidth: 500 }}>
                             <thead><tr>
-                              {['#', 'Group', 'Size', 'CTW/pc', 'Qty', 'TL Hột', ...(showCostTotal ? ['Price'] : []), 'Note'].map(h => (
+                              {['#', 'Group', 'Size', 'CTW/pc', 'Qty', 'Total CTW', ...(showCostTotal ? ['Price'] : []), 'Note'].map(h => (
                                 <th key={h} style={{ ...th, padding: '6px 8px' }}>{h}</th>
                               ))}
                             </tr></thead>
@@ -1363,11 +1363,11 @@ ${showCostTotal ? `<div class="sec">Chi phí (Costs)</div>
             <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-light)', background: 'var(--bg-base)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={() => setDeleteBomId(null)}
                 style={{ background: 'transparent', color: 'var(--text-primary)', border: '1px solid var(--border-strong)', borderRadius: 0, padding: '7px 20px', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
-                Hủy
+                Cancel
               </button>
               <button onClick={confirmDelete}
                 style={{ background: 'var(--color-danger)', color: '#fff', border: '1px solid var(--color-danger)', borderRadius: 0, padding: '7px 20px', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
-                Xóa
+                Delete
               </button>
             </div>
           </div>
