@@ -76,11 +76,12 @@ const dict: Record<string, Record<Lang, string>> = {
   // Quotation modal
   quotationTitle:    { vi: 'Báo Giá',                      en: 'Quotation' },
   printPDF:          { vi: 'IN / PDF',                     en: 'PRINT / PDF' },
-  quotMaterial:      { vi: 'CHẤT LIỆU / MATERIAL',         en: 'MATERIAL' },
-  quotInfo:          { vi: 'THÔNG TIN BÁO GIÁ',            en: 'QUOTE INFO' },
-  quotGoldType:      { vi: 'Loại Vàng',                    en: 'Gold Type' },
-  quotColor:         { vi: 'Màu',                          en: 'Color' },
+  quotMaterial:      { vi: 'CHẤT LIỆU / MATERIAL',         en: 'MATERIAL SPECIFICATION' },
+  quotInfo:          { vi: 'THÔNG TIN BÁO GIÁ',            en: 'PRICING DETAILS' },
+  quotGoldType:      { vi: 'Loại Vàng',                    en: 'Gold Karat' },
+  quotColor:         { vi: 'Màu',                          en: 'Gold Color' },
   quotWeight:        { vi: 'Tổng KL',                      en: 'Total Weight' },
+  quotStones:        { vi: 'Đá',                           en: 'Stones' },
   quotRetailPrice:   { vi: 'GIÁ BÁN LẺ DỰ KIẾN',          en: 'ESTIMATED RETAIL PRICE' },
 
   // Stone Type List modal

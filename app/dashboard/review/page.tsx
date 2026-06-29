@@ -518,13 +518,13 @@ export default function ReviewPage() {
       ${h.store ? `<div class="info-row"><span class="info-label">Store</span><span class="info-val">${esc(h.store)}</span></div>` : ''}
   </div>
 
-  <div class="section-title">MATERIAL</div>
-  ${goldTypes ? `<div class="material-row"><span class="info-label">Gold Type</span><span>${goldTypes}</span></div>` : ''}
-  ${goldColors ? `<div class="material-row"><span class="info-label">Color</span><span>${goldColors}</span></div>` : ''}
+  <div class="section-title">MATERIAL SPECIFICATION</div>
+  ${goldTypes ? `<div class="material-row"><span class="info-label">Gold Karat</span><span>${goldTypes}</span></div>` : ''}
+  ${goldColors ? `<div class="material-row"><span class="info-label">Gold Color</span><span>${goldColors}</span></div>` : ''}
   ${totalWeight > 0 ? `<div class="material-row"><span class="info-label">Total Weight</span><span>${totalWeight.toFixed(2)} gr</span></div>` : ''}
   ${stoneNames ? `<div class="material-row"><span class="info-label">Stones</span><span>${stoneNames}</span></div>` : ''}
 
-  <div class="section-title">QUOTE INFO</div>
+  <div class="section-title">PRICING DETAILS</div>
   ${h.price_list_type ? `<div class="material-row"><span class="info-label">Price List</span><span>${esc(h.price_list_type)}</span></div>` : ''}
   ${h.note ? `<div class="material-row"><span class="info-label">Note</span><span>${esc(h.note)}</span></div>` : ''}
 
@@ -973,7 +973,7 @@ ${showCostTotal ? `<div class="sec">Costs</div>
                       <span style={{ fontFamily: 'var(--font-mono)' }}>{totalWeight.toFixed(2)} gr</span>
                     </div>}
                     {stoneNames && <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border-light)', fontSize: 'var(--text-sm)' }}>
-                      <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>Stones</span>
+                      <span style={{ fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>{t('quotStones')}</span>
                       <span>{stoneNames}</span>
                     </div>}
 
