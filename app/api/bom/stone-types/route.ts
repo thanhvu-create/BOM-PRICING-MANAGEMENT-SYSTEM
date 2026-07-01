@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 
-// GET /api/bom/stone-types — danh sách loại đá (group_code dedup)
+// GET /api/bom/stone-types — danh sách loại đá đầy đủ tất cả size range
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -11,25 +11,26 @@ export async function GET() {
     const db = createServiceClient()
     const { data, error } = await db
       .from('stone_material')
-      .select('group_code, display_name, full_name_vi, full_name_en, unit, type_input')
+      .select('group_code, display_name, full_name_vi, full_name_en, unit, type_input, min_size, max_size, selling_price, grade_id')
       .order('group_code')
+      .order('min_size')
 
     if (error) throw error
 
-    // Dedup theo group_code (giữ row đầu tiên mỗi group)
-    const seen = new Set<string>()
-    const result = (data || []).filter(r => {
-      if (!r.group_code || seen.has(r.group_code)) return false
-      seen.add(r.group_code)
-      return true
-    }).map(r => ({
-      code:        r.group_code,
-      displayName: r.display_name || r.full_name_vi || '',
-      viName:      r.full_name_vi || '',
-      enName:      r.full_name_en || '',
-      unit:      (r.unit || 'ct').toLowerCase(),
-      typeInput: (r.type_input || 'mm').toLowerCase(),
-    }))
+    const result = (data || [])
+      .filter(r => r.group_code)
+      .map(r => ({
+        code:         r.group_code,
+        gradeId:      r.grade_id || '',
+        displayName:  r.display_name || '',
+        viName:       r.full_name_vi || '',
+        enName:       r.full_name_en || '',
+        unit:         (r.unit || 'ct').toLowerCase(),
+        typeInput:    (r.type_input || 'mm').toLowerCase(),
+        minSize:      Number(r.min_size) || 0,
+        maxSize:      Number(r.max_size) || 0,
+        sellingPrice: Number(r.selling_price) || 0,
+      }))
 
     return NextResponse.json({ success: true, data: result })
   } catch (err: any) {

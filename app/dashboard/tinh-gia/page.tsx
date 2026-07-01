@@ -92,7 +92,7 @@ export default function TinhGiaPage() {
   const [dropdowns, setDropdowns] = useState<Dropdowns | null>(null)
   const [loadingDD, setLoadingDD] = useState(true)
   const [showStoneTypes, setShowStoneTypes] = useState(false)
-  const [stoneTypeList, setStoneTypeList] = useState<Array<{ code: string; displayName: string; viName: string; enName: string; unit: string; typeInput: string }>>([])
+  const [stoneTypeList, setStoneTypeList] = useState<Array<{ code: string; gradeId: string; displayName: string; viName: string; enName: string; unit: string; typeInput: string; minSize: number; maxSize: number; sellingPrice: number }>>([])
   const [stoneTypeSearch, setStoneTypeSearch] = useState('')
   const [stoneTypeLoading, setStoneTypeLoading] = useState(false)
   const [stoneTypeNameLang, setStoneTypeNameLang] = useState<'vi' | 'en'>('en')
@@ -723,10 +723,17 @@ export default function TinhGiaPage() {
     } catch { } finally { setStoneTypeLoading(false) }
   }
 
-  const filteredStoneTypes = stoneTypeList.filter(s => {
-    const q = stoneTypeSearch.toLowerCase()
-    return !q || s.code.toLowerCase().includes(q) || s.viName.toLowerCase().includes(q) || s.enName.toLowerCase().includes(q)
-  })
+  const filteredStoneTypes = (() => {
+    const q = stoneTypeSearch.toLowerCase().trim()
+    if (!q) return stoneTypeList
+    // Collect matching group_codes first, then return ALL rows for those groups
+    const matchingCodes = new Set(
+      stoneTypeList
+        .filter(s => s.code.toLowerCase().includes(q) || s.viName.toLowerCase().includes(q) || s.enName.toLowerCase().includes(q))
+        .map(s => s.code)
+    )
+    return stoneTypeList.filter(s => matchingCodes.has(s.code))
+  })()
 
   /* ── SP Type lock logic (CASE B → TSTT) — exact GAS definition ── */
   const hasStones = stoneRows.some(
@@ -1604,33 +1611,72 @@ export default function TinhGiaPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
                   <thead>
                     <tr>
-                      {['Group Code', t('colDisplayName')].map(h => (
-                        <th key={h} style={{ ...thStyle, position: 'sticky', top: 0 }}>{h}</th>
-                      ))}
+                      <th style={{ ...thStyle, position: 'sticky', top: 0 }}>Group Code</th>
                       <th style={{ ...thStyle, position: 'sticky', top: 0, whiteSpace: 'nowrap' }}>
-                        {t('colFullName')} ({stoneTypeNameLang.toUpperCase()})
+                        Full Name ({stoneTypeNameLang.toUpperCase()})
                         <button
                           onClick={() => setStoneTypeNameLang(l => l === 'vi' ? 'en' : 'vi')}
                           style={{ marginLeft: 6, padding: '1px 5px', fontSize: 9, border: '1px solid var(--border-base)', borderRadius: 0, background: 'var(--bg-hover)', cursor: 'pointer', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', fontWeight: 600 }}
                         >{stoneTypeNameLang === 'vi' ? 'EN' : 'VI'}</button>
                       </th>
-                      {['Unit', 'Type'].map(h => (
-                        <th key={h} style={{ ...thStyle, position: 'sticky', top: 0 }}>{h}</th>
-                      ))}
+                      <th style={{ ...thStyle, position: 'sticky', top: 0, textAlign: 'right' }}>Min</th>
+                      <th style={{ ...thStyle, position: 'sticky', top: 0, textAlign: 'right' }}>Max</th>
+                      <th style={{ ...thStyle, position: 'sticky', top: 0, textAlign: 'center' }}>Unit</th>
+                      <th style={{ ...thStyle, position: 'sticky', top: 0, textAlign: 'center' }}>Type</th>
+                      <th style={{ ...thStyle, position: 'sticky', top: 0, textAlign: 'right' }}>Sell/ct</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredStoneTypes.map(s => (
-                      <tr key={s.code}
-                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-                        onMouseLeave={e => (e.currentTarget.style.background = '')}>
-                        <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '6px 6px' }}>{s.code}</td>
-                        <td style={{ ...tdStyle, padding: '6px 6px' }}>{s.displayName || '—'}</td>
-                        <td style={{ ...tdStyle, color: 'var(--text-secondary)', padding: '6px 6px' }}>{(stoneTypeNameLang === 'vi' ? s.viName : s.enName) || '—'}</td>
-                        <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '6px 6px', textAlign: 'center' }}>{s.unit || '—'}</td>
-                        <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '6px 6px', textAlign: 'center' }}>{s.typeInput || '—'}</td>
-                      </tr>
-                    ))}
+                    {filteredStoneTypes.map((s, i) => {
+                      const isGroupStart = i === 0 || filteredStoneTypes[i - 1].code !== s.code
+                      const isGroupEnd   = i === filteredStoneTypes.length - 1 || filteredStoneTypes[i + 1].code !== s.code
+                      const rowBg = (() => {
+                        // Alternating background per group for readability
+                        let groupIdx = 0
+                        let cur = filteredStoneTypes[0].code
+                        for (let j = 0; j <= i; j++) {
+                          if (filteredStoneTypes[j].code !== cur) { groupIdx++; cur = filteredStoneTypes[j].code }
+                        }
+                        return groupIdx % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-base)'
+                      })()
+                      return (
+                        <tr key={s.gradeId || `${s.code}-${i}`}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = rowBg)}
+                          style={{ background: rowBg, borderTop: isGroupStart ? '1px solid var(--border-base)' : undefined }}>
+                          {/* Group Code — show only on first row of group */}
+                          <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '5px 6px', verticalAlign: isGroupStart ? 'top' : 'middle', borderBottom: isGroupEnd ? '1px solid var(--border-base)' : '1px solid transparent' }}>
+                            {isGroupStart
+                              ? <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{s.code}</span>
+                              : null}
+                          </td>
+                          {/* Full Name — show only on first row of group */}
+                          <td style={{ ...tdStyle, color: 'var(--text-secondary)', fontSize: 'var(--text-xs)', padding: '5px 6px', borderBottom: isGroupEnd ? '1px solid var(--border-base)' : '1px solid transparent' }}>
+                            {isGroupStart ? (stoneTypeNameLang === 'vi' ? s.viName : s.enName) || '—' : null}
+                          </td>
+                          {/* Min size */}
+                          <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '5px 6px', textAlign: 'right', borderBottom: isGroupEnd ? '1px solid var(--border-base)' : '1px solid transparent' }}>
+                            {s.minSize > 0 ? s.minSize.toFixed(3) : '—'}
+                          </td>
+                          {/* Max size */}
+                          <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '5px 6px', textAlign: 'right', borderBottom: isGroupEnd ? '1px solid var(--border-base)' : '1px solid transparent' }}>
+                            {s.maxSize > 0 ? s.maxSize.toFixed(3) : '—'}
+                          </td>
+                          {/* Unit */}
+                          <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '5px 6px', textAlign: 'center', borderBottom: isGroupEnd ? '1px solid var(--border-base)' : '1px solid transparent' }}>
+                            {s.unit || '—'}
+                          </td>
+                          {/* Type input */}
+                          <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '5px 6px', textAlign: 'center', borderBottom: isGroupEnd ? '1px solid var(--border-base)' : '1px solid transparent' }}>
+                            {s.typeInput || '—'}
+                          </td>
+                          {/* Sell price */}
+                          <td style={{ ...tdStyle, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', padding: '5px 6px', textAlign: 'right', color: 'var(--color-teal, #2E8B8B)', borderBottom: isGroupEnd ? '1px solid var(--border-base)' : '1px solid transparent' }}>
+                            {s.sellingPrice > 0 ? '$' + s.sellingPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               )}
