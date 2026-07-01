@@ -33,17 +33,23 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, ...data[0] })
   }
 
-  // Fallback: no size match — still return type_input so the client can show the correct column type
-  const { data: fallback } = await db
+  // Fallback: no size match — return type_input + all available size ranges for hints
+  const { data: allRanges } = await db
     .from('stone_material')
-    .select('type_input')
+    .select('grade_id, min_size, max_size, type_input, unit')
     .eq('group_code', groupCode)
-    .limit(1)
-    .single()
+    .order('min_size')
 
   return NextResponse.json({
     success: false,
-    type_input: fallback?.type_input ?? null,
+    type_input: allRanges?.[0]?.type_input ?? null,
+    suggestions: (allRanges || []).map(r => ({
+      grade_id:   r.grade_id,
+      min_size:   r.min_size,
+      max_size:   r.max_size,
+      type_input: r.type_input,
+      unit:       r.unit,
+    })),
     message: `No grade found for "${groupCode}" size=${mmSize} ctw=${ctw1pc}`,
   })
 }

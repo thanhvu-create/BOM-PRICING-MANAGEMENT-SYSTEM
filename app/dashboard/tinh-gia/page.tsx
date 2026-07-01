@@ -19,7 +19,8 @@ interface Dropdowns {
   storeNames: string[]
 }
 interface GoldRow  { id: number; goldType: string; color: string; weight: string; pricePerGr: number; cost: number }
-interface StoneRow { id: number; groupCode: string; size: string; ctw1pc: string; qty: string; tlHot: number; gradeId: string; giaBan: number; inputType: string; sellingPrice: number; pricingUnit: string; notFound: boolean; note: string }
+interface StoneSuggestion { grade_id: string; min_size: number; max_size: number; type_input: string; unit: string }
+interface StoneRow { id: number; groupCode: string; size: string; ctw1pc: string; qty: string; tlHot: number; gradeId: string; giaBan: number; inputType: string; sellingPrice: number; pricingUnit: string; notFound: boolean; note: string; suggestions: StoneSuggestion[] }
 interface PricingData {
   costGold: number; costStones: number; costLabor: number
   costSubtotal: number; costCif: number; costTotal: number; sellPrice: number
@@ -31,7 +32,11 @@ function nextId() { return ++_rowId }
 function today() { return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }) }
 function fmt$(n: number) { return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
 function newGold(): GoldRow  { return { id: nextId(), goldType: '18K', color: 'Yellow', weight: '', pricePerGr: 0, cost: 0 } }
-function newStone(): StoneRow { return { id: nextId(), groupCode: '', size: '', ctw1pc: '', qty: '', tlHot: 0, gradeId: '', giaBan: 0, inputType: 'mm', sellingPrice: 0, pricingUnit: 'ct', notFound: false, note: '' } }
+function newStone(): StoneRow { return { id: nextId(), groupCode: '', size: '', ctw1pc: '', qty: '', tlHot: 0, gradeId: '', giaBan: 0, inputType: 'mm', sellingPrice: 0, pricingUnit: 'ct', notFound: false, note: '', suggestions: [] } }
+/** Thay thế dấu phẩy bằng dấu chấm khi user nhập số thập phân */
+function sanitizeDecimal(val: string): string { return val.replace(/,/g, '.') }
+/** Kiểm tra giá trị có phải số thực không âm hợp lệ (hoặc rỗng) */
+function isValidDecimal(val: string): boolean { return val === '' || (/^[0-9]*\.?[0-9]*$/.test(val) && parseFloat(val) >= 0) }
 
 /* ── STYLE CONSTANTS ───────────────────────────────────────── */
 const inputUnder: React.CSSProperties = {
@@ -207,7 +212,7 @@ export default function TinhGiaPage() {
             size: String(s.size || ''), ctw1pc: String(ctw || ''),
             qty: String(qty || ''), tlHot,
             gradeId: s.grade_id || '', giaBan, inputType: s.input_type || 'mm',
-            sellingPrice: 0, pricingUnit: 'ct', notFound: false, note: s.note || '',
+            sellingPrice: 0, pricingUnit: 'ct', notFound: false, note: s.note || '', suggestions: [],
           }
         })
         setStoneRows(filledStones)
@@ -284,7 +289,7 @@ export default function TinhGiaPage() {
             size: String(s.size || ''), ctw1pc: String(ctw || ''),
             qty: String(qty || ''), tlHot: s.tl_hot || ctw * qty,
             gradeId: s.grade_id || '', giaBan: s.gia_ban || 0,
-            inputType: s.input_type || 'mm', sellingPrice: 0, pricingUnit: 'ct', notFound: false,
+            inputType: s.input_type || 'mm', sellingPrice: 0, pricingUnit: 'ct', notFound: false, suggestions: [],
           }
         })
         setStoneRows(filledStones)
@@ -465,22 +470,21 @@ export default function TinhGiaPage() {
             pricingUnit:  pu,
             giaBan:       pu === 'pc' ? qty * sp : tlHot * sp,
             notFound:     false,
+            suggestions:  [],
           }
         }))
       } else {
-        // No size match — but the API may still return type_input from a fallback query
+        // No size match — store suggestions for hint display
         setStoneRows(rows => rows.map(row => {
           if (row.id !== rowId) return row
           return {
             ...row,
-            // Update inputType if the API discovered it (even without a size match)
             inputType:    d.type_input || row.inputType,
-            // Clear grade & price since no match
             gradeId:      '',
             sellingPrice: 0,
             giaBan:       0,
-            // Show "not found" warning only when user has entered a size/ctw value
             notFound:     hasSizeCriteria,
+            suggestions:  hasSizeCriteria ? (d.suggestions || []) : [],
           }
         }))
       }
@@ -542,6 +546,7 @@ export default function TinhGiaPage() {
         const sz = field === 'size' ? val : r.size
         updated.giaBan = 0
         updated.notFound = false  // reset warning while re-looking up
+        updated.suggestions = []
         if (field === 'groupCode') {
           // Reset inputType/grade on group change; lookup will refresh them
           updated.gradeId = ''
@@ -965,8 +970,8 @@ export default function TinhGiaPage() {
                       </select>
                     </td>
                     <td style={{ ...tdStyle }}>
-                      <input type="number" style={tdInput} value={r.weight} min="0" step="0.01" placeholder="0.00"
-                        onChange={e => updateGold(r.id, 'weight', e.target.value)} />
+                      <input type="text" inputMode="decimal" style={{ ...tdInput, borderColor: r.weight && !isValidDecimal(r.weight) ? 'var(--color-danger)' : undefined }} value={r.weight} placeholder="0.00"
+                        onChange={e => updateGold(r.id, 'weight', sanitizeDecimal(e.target.value))} />
                     </td>
                     {/* Giá/gr — cost-restricted (Admin/Manager only) */}
                     {canSeeAll && (
@@ -1131,13 +1136,13 @@ export default function TinhGiaPage() {
                         <input type="text" style={tdInput} value={r.size} placeholder="VD: 20mm*14mm"
                           onChange={e => updateStone(r.id, 'size', e.target.value)} />
                       ) : (
-                        <input type="number" style={tdInput} value={r.size} min="0" step="0.01" placeholder="0.00"
-                          onChange={e => updateStone(r.id, 'size', e.target.value)} />
+                        <input type="text" inputMode="decimal" style={{ ...tdInput, borderColor: r.size && !isValidDecimal(r.size) ? 'var(--color-danger)' : undefined }} value={r.size} placeholder="0.00"
+                          onChange={e => updateStone(r.id, 'size', sanitizeDecimal(e.target.value))} />
                       )}
                     </td>
                     <td style={{ ...tdStyle, width: 90 }}>
-                      <input type="number" style={tdInput} value={r.ctw1pc} min="0" step="0.001" placeholder="0.000"
-                        onChange={e => updateStone(r.id, 'ctw1pc', e.target.value)} />
+                      <input type="text" inputMode="decimal" style={{ ...tdInput, borderColor: r.ctw1pc && !isValidDecimal(r.ctw1pc) ? 'var(--color-danger)' : undefined }} value={r.ctw1pc} placeholder="0.000"
+                        onChange={e => updateStone(r.id, 'ctw1pc', sanitizeDecimal(e.target.value))} />
                     </td>
                     <td style={{ ...tdStyle, width: 70 }}>
                       <input type="number" style={tdInput} value={r.qty} min="0" step="1" placeholder="0"
@@ -1163,7 +1168,21 @@ export default function TinhGiaPage() {
                       {r.gradeId
                         ? r.gradeId
                         : r.notFound
-                          ? <span title="Không tìm thấy size phù hợp trong dữ liệu">⚠ Không tìm thấy</span>
+                          ? <span>
+                              <span title="Không tìm thấy size phù hợp">⚠ Không tìm thấy</span>
+                              {r.suggestions.length > 0 && (
+                                <span style={{ display: 'block', fontSize: '0.625rem', color: 'var(--color-warning)', fontFamily: 'var(--font-body)', letterSpacing: 0, marginTop: 2 }}>
+                                  {'Có sẵn: '}
+                                  {r.suggestions.map((s, i) => (
+                                    <span key={s.grade_id}>
+                                      {i > 0 && ' | '}
+                                      {s.min_size.toFixed(3)}–{s.max_size.toFixed(3)}
+                                    </span>
+                                  ))}
+                                  {' (' + (r.suggestions[0]?.type_input || 'ct') + ')'}
+                                </span>
+                              )}
+                            </span>
                           : '—'}
                     </td>
                     {/* Giá bán — cost-restricted */}
