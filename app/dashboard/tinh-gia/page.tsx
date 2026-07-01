@@ -1168,18 +1168,26 @@ export default function TinhGiaPage() {
                       {r.gradeId
                         ? r.gradeId
                         : r.notFound
-                          ? <span>
-                              <span title="Không tìm thấy size phù hợp">⚠ Không tìm thấy</span>
+                          ? <span style={{ fontFamily: 'var(--font-body)' }}>
+                              <span style={{ color: 'var(--color-danger)', fontSize: 'var(--text-xs)' }}>⚠ Không tìm thấy</span>
                               {r.suggestions.length > 0 && (
-                                <span style={{ display: 'block', fontSize: '0.625rem', color: 'var(--color-warning)', fontFamily: 'var(--font-body)', letterSpacing: 0, marginTop: 2 }}>
-                                  {'Có sẵn: '}
-                                  {r.suggestions.map((s, i) => (
-                                    <span key={s.grade_id}>
-                                      {i > 0 && ' | '}
-                                      {s.min_size.toFixed(3)}–{s.max_size.toFixed(3)}
-                                    </span>
-                                  ))}
-                                  {' (' + (r.suggestions[0]?.type_input || 'ct') + ')'}
+                                <span style={{ display: 'block', marginTop: 4 }}>
+                                  <span style={{ display: 'block', fontSize: '0.625rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
+                                    {'Có sẵn (' + (r.suggestions[0]?.type_input || 'ct') + ') — click để điền:'}
+                                  </span>
+                                  <span style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                                    {r.suggestions.map(s => (
+                                      <span key={s.grade_id}
+                                        onClick={() => updateStone(r.id, 'ctw1pc', String(((s.min_size + s.max_size) / 2).toFixed(3)))}
+                                        style={{ cursor: 'pointer', background: 'var(--bg-muted)', border: '1px solid var(--border-base)',
+                                          padding: '1px 5px', fontSize: '0.6rem', fontFamily: 'var(--font-mono)',
+                                          whiteSpace: 'nowrap', color: 'var(--text-primary)', borderRadius: 2 }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-muted)')}>
+                                        {s.min_size.toFixed(3)}–{s.max_size.toFixed(3)}
+                                      </span>
+                                    ))}
+                                  </span>
                                 </span>
                               )}
                             </span>
