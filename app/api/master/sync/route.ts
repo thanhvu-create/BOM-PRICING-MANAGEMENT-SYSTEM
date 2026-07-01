@@ -31,7 +31,7 @@ export async function POST() {
         grade_id:      r.grade_id,
         display_name:  r.display_name || '',
         unit:          r.pricing_unit || 'ct',
-        type_input:    r.measurement_type || 'mm',
+        type_input:    (r.measurement_type || 'mm').toLowerCase(),
         min_size:      Number(r.min_size) || 0,
         max_size:      Number(r.max_size) || 0,
         selling_price: basePrice * (1 + mk),

@@ -443,9 +443,9 @@ BEGIN
   FROM stone_material sm
   WHERE sm.group_code = p_group_code
     AND (
-      (sm.type_input = 'mm' AND p_mm_size  BETWEEN sm.min_size AND sm.max_size)
+      (LOWER(sm.type_input) = 'mm' AND p_mm_size  BETWEEN sm.min_size AND sm.max_size)
       OR
-      (sm.type_input = 'ct' AND p_ctw1pc   BETWEEN sm.min_size AND sm.max_size)
+      (LOWER(sm.type_input) = 'ct' AND p_ctw1pc   BETWEEN sm.min_size AND sm.max_size)
     )
   LIMIT 1;
 END;

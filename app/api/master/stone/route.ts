@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       master_code:      payload.master_code || '',
       grade_id:         payload.grade_id || '',
       pricing_unit:     payload.pricing_unit || 'ct',
-      measurement_type: payload.measurement_type || 'mm',
+      measurement_type: (payload.measurement_type || 'mm').toLowerCase(),
       min_size:         Number(payload.min_size) || 0,
       max_size:         Number(payload.max_size) || 0,
       display_name:     payload.display_name || '',
