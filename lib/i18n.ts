@@ -251,6 +251,15 @@ const dict: Record<string, Record<Lang, string>> = {
   guideOverview:   { vi: 'Tổng Quan',                en: 'Overview' },
   guideSteps:      { vi: 'Các bước thực hiện',       en: 'Steps' },
   guideTip:        { vi: 'Lưu ý',                    en: 'Tip' },
+
+  // Interactive tour
+  tourReplay:      { vi: 'Xem tour trang này',        en: 'Tour this page' },
+  tourNext:        { vi: 'Tiếp',                      en: 'Next' },
+  tourPrev:        { vi: 'Trước',                     en: 'Back' },
+  tourSkip:        { vi: 'Bỏ qua',                    en: 'Skip' },
+  tourFinish:      { vi: 'Hoàn tất',                  en: 'Done' },
+  tourStepOf:      { vi: 'Bước',                      en: 'Step' }, // "Bước 2 / 6" — used as `${tourStepOf} ${i} / ${n}`
+  tourGuideHint:   { vi: 'Bạn có thể mở lại tour bất cứ lúc nào từ đây.', en: 'You can replay the tour anytime from here.' },
 }
 
 export function t(key: string, lang: Lang): string {

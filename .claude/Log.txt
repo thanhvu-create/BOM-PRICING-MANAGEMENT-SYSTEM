@@ -1,0 +1,17 @@
+
+## 2026-07-02 — Feature: Interactive Product Tour + Guide refresh
+- Tạo `lib/tour-content.ts`: nội dung tour song ngữ VI/EN theo từng trang (dashboard, tinh-gia, review, gold, mk, master, users, audit) + các bước topbar dùng chung. Step có target không tồn tại (control ẩn theo role) sẽ tự bỏ qua.
+- Tạo `components/shared/TourContext.tsx`: provider gắn trong DashboardShell — tự chạy tour lần đầu mỗi trang (localStorage `bom_tour_seen_<pageKey>`, cờ tắt `bom_tour_disabled`), API `startTour(pageKey?)`, `pageKeyFromPath()`.
+- Tạo `components/shared/TourOverlay.tsx`: overlay tự viết (không thêm thư viện) — spotlight bằng box-shadow, thẻ tooltip vuông theo design system, định vị theo placement + clamp viewport, reposition khi scroll/resize, Esc/←/→ điều khiển.
+- Cập nhật `lib/i18n.ts`: thêm keys tour (tourReplay, tourNext, tourPrev, tourSkip, tourFinish, tourStepOf, tourGuideHint).
+- Cập nhật `components/shared/DashboardShell.tsx`: bọc `<TourProvider>`, thêm anchor `data-tour` (topbar-nav, topbar-vnd, topbar-guide, topbar-lang).
+- Thêm anchor `data-tour` vào 8 trang dashboard (dash-kpi, dash-recent, tg-steps, tg-save, rv-search, rv-filters, gold-fetch, gold-add, mk-tabs, mk-add, master-toolbar, users-add, users-table, audit-filters).
+- Cập nhật `components/shared/GuideDrawer.tsx`: thêm nút "Xem tour trang này" chạy tour cho trang hiện tại.
+- Cập nhật `lib/guide-content.ts`: rà soát khớp phân quyền nav hiện tại; thêm ghi chú tour vào overview cả 5 role.
+- Build: `npm run build` ✓ (Compiled successfully).
+
+## 2026-06-05 — Feature: User Guide Drawer (VI/EN)
+- Tạo `lib/guide-content.ts`: nội dung hướng dẫn song ngữ VI/EN cho 5 roles (Admin, Manager, Order, Sales Supervisor, Sales)
+- Tạo `components/shared/GuideDrawer.tsx`: drawer từ phải, accordion sections, role selector dropdown
+- Cập nhật `lib/i18n.ts`: thêm 6 keys (guide, guideTitle, guideViewAs, guideOverview, guideSteps, guideTip)
+- Cập nhật `components/shared/DashboardShell.tsx`: thêm nút '?' trong topbar desktop + mobile nav

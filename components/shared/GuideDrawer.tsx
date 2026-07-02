@@ -5,6 +5,7 @@ import { GUIDE_CONTENT, ALL_ROLES, getGuideForRole } from '@/lib/guide-content'
 import type { Role } from '@/types'
 import type { Lang } from '@/lib/i18n'
 import { t } from '@/lib/i18n'
+import { useTour } from './TourContext'
 
 interface Props {
   open: boolean
@@ -16,6 +17,7 @@ interface Props {
 export default function GuideDrawer({ open, onClose, currentRole, lang }: Props) {
   const [selectedRole, setSelectedRole] = useState<Role>(currentRole)
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
+  const { startTour, currentPageKey } = useTour()
 
   const guide = getGuideForRole(selectedRole)
 
@@ -127,6 +129,24 @@ export default function GuideDrawer({ open, onClose, currentRole, lang }: Props)
 
         {/* Scrollable content */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.25rem' }}>
+
+          {/* Interactive tour launcher */}
+          <button
+            onClick={() => { onClose(); startTour(currentPageKey) }}
+            style={{
+              width: '100%', marginBottom: '1rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '0.7rem 1rem', cursor: 'pointer',
+              background: 'var(--btn-dark-bg, var(--text-primary))', color: 'var(--text-inverse)',
+              border: '1px solid var(--btn-dark-bg, var(--text-primary))', borderRadius: 0,
+              fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', fontWeight: 600,
+              letterSpacing: '0.06em', textTransform: 'uppercase',
+            }}
+            title={t('tourGuideHint', lang)}
+          >
+            <i className="fa-solid fa-wand-magic-sparkles" style={{ fontSize: 13 }} />
+            {t('tourReplay', lang)}
+          </button>
 
           {/* Overview card */}
           <div style={{

@@ -281,11 +281,11 @@ export default function GoldPage() {
           <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', letterSpacing: '0.04em', margin: 0 }}>{t('goldSubtitle')}</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <button onClick={handleFetchAmark} disabled={fetching} className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)', opacity: fetching ? 0.6 : 1 }}>
+          <button data-tour="gold-fetch" onClick={handleFetchAmark} disabled={fetching} className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)', opacity: fetching ? 0.6 : 1 }}>
             <i className={`fa-solid ${fetching ? 'fa-circle-notch fa-spin' : 'fa-cloud-arrow-down'}`} style={{ fontSize: 11 }} />
             {fetching ? t('loading') : t('btnFetchAmark')}
           </button>
-          <button onClick={openAdd} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
+          <button data-tour="gold-add" onClick={openAdd} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', fontSize: 'var(--text-xs)' }}>
             <i className="fa-solid fa-plus" style={{ fontSize: 11 }} /> {t('btnAddManual')}
           </button>
           <div style={{ position: 'relative' }}>

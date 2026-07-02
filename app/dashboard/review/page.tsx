@@ -641,7 +641,7 @@ ${showCostTotal ? `<div class="sec">Costs</div>
       </div>
 
       {/* Search bar — full width */}
-      <div style={{ marginBottom: '0.75rem' }}>
+      <div data-tour="rv-search" style={{ marginBottom: '0.75rem' }}>
         <input
           style={{ border: '1px solid var(--border-base)', padding: '8px 12px', fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', background: 'var(--bg-surface)', outline: 'none', width: '100%', borderRadius: 0, color: 'var(--text-primary)', boxSizing: 'border-box' }}
           placeholder={t('searchPlh')}
@@ -651,7 +651,7 @@ ${showCostTotal ? `<div class="sec">Costs</div>
       </div>
 
       {/* Filter bar — date + store + approval filters */}
-      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, padding: '0.75rem 1rem', marginBottom: '1rem' }}>
+      <div data-tour="rv-filters" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, padding: '0.75rem 1rem', marginBottom: '1rem' }}>
         <div className="review-filter-grid">
           <div>
             <span style={{ display: 'block', fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: 4 }}>{t('filterFrom')}</span>

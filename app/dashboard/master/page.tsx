@@ -209,7 +209,7 @@ function StoneMasterTab({ triggerAdd = 0, triggerSync = 0, onSyncingChange, role
 
   return (
     <div>
-      <div style={{ marginBottom: '1rem' }}>
+      <div data-tour="master-toolbar" style={{ marginBottom: '1rem' }}>
         <input
           style={{ border: '1px solid var(--border-base)', borderRadius: 0, padding: '8px 12px', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-body)', outline: 'none', width: '100%', boxSizing: 'border-box', background: 'var(--bg-surface)' }}
           placeholder={t('masterSearchPlh')}

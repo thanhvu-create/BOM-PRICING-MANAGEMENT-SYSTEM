@@ -10,6 +10,7 @@ import { I18nProvider, useLang } from './I18nContext'
 import { useToast } from './ToastContext'
 import DriveAuthButton from './DriveAuthButton'
 import GuideDrawer from './GuideDrawer'
+import { TourProvider } from './TourContext'
 import type { Role } from '@/types'
 
 interface Props {
@@ -162,6 +163,7 @@ function DashboardContent({ user, children }: Props) {
   return (
     <UserProvider value={sessionUser}>
     <ConfigProvider value={{ vndRate, mgrDiscCap }}>
+    <TourProvider>
       <div style={{ minHeight: '100vh', background: 'var(--bg-base)' }}>
 
         {/* ── TOPBAR ─────────────────────────────────────────── */}
@@ -251,7 +253,7 @@ function DashboardContent({ user, children }: Props) {
           <div className="hide-mobile topbar-row2" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'stretch', minWidth: 0 }}>
 
             {/* Nav items */}
-            <nav style={{ display: 'flex', gap: 0, minWidth: 0, overflow: 'hidden' }}>
+            <nav data-tour="topbar-nav" style={{ display: 'flex', gap: 0, minWidth: 0, overflow: 'hidden' }}>
               {visibleNav.map(n => (
                 <Link
                   key={n.key}
@@ -308,7 +310,7 @@ function DashboardContent({ user, children }: Props) {
               )}
 
               {/* USD Rate */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div data-tour="topbar-vnd" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
                   USD RATE
                 </span>
@@ -344,6 +346,7 @@ function DashboardContent({ user, children }: Props) {
 
               {/* Guide button */}
               <button
+                data-tour="topbar-guide"
                 onClick={() => setGuideOpen(true)}
                 title={t('guideTitle')}
                 style={{
@@ -361,7 +364,7 @@ function DashboardContent({ user, children }: Props) {
               </button>
 
               {/* Lang toggle — segmented VI | EN */}
-              <div style={{
+              <div data-tour="topbar-lang" style={{
                 display: 'flex', border: '1px solid var(--border-base)',
                 overflow: 'hidden', borderRadius: 0, flexShrink: 0,
               }}>
@@ -542,6 +545,7 @@ function DashboardContent({ user, children }: Props) {
           }
 `}</style>
       </div>
+    </TourProvider>
     </ConfigProvider>
     </UserProvider>
   )

@@ -121,7 +121,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── KPI Cards ── */}
-      <div className="grid-4col cards-stagger" style={{ marginBottom: '1.5rem' }}>
+      <div data-tour="dash-kpi" className="grid-4col cards-stagger" style={{ marginBottom: '1.5rem' }}>
         {[
           { icon: 'fa-file-invoice-dollar', label: t('dashTotalBoms'),  value: (stats?.totalBOMs ?? 0).toLocaleString(),      sub: showBreakdown ? t('dashApprovedOnly') : t('dashAllTime'), heading: true },
           { icon: 'fa-calendar-day',        label: t('dashTodayBoms'), value: (stats?.todayBOMs ?? 0).toLocaleString(),      sub: showBreakdown ? t('dashApprovedOnly') : t('dashAllTime'), heading: true },
@@ -308,7 +308,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Row 4: Recent Activity */}
-          <div style={card}>
+          <div data-tour="dash-recent" style={card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <p style={eyebrow}>
                 <i className="fa-solid fa-clock-rotate-left" style={{ fontSize: 10 }} />

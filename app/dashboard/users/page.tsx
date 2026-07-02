@@ -174,6 +174,7 @@ export default function UsersPage() {
           </h2>
         </div>
         <button
+          data-tour="users-add"
           onClick={toggleAddForm}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
@@ -271,7 +272,7 @@ export default function UsersPage() {
       )}
 
       {/* Users Table */}
-      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, overflow: 'hidden' }}>
+      <div data-tour="users-table" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-base)', borderRadius: 4, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
           <thead>

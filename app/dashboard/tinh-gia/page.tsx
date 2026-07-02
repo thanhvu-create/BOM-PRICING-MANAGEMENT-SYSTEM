@@ -778,7 +778,7 @@ export default function TinhGiaPage() {
   return (
     <div>
       {/* Step indicator bar + RESET button */}
-      <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, marginBottom: '1.5rem', border: '1px solid var(--border-base)', background: 'var(--bg-base)', overflowX: 'auto' }}>
+      <div data-tour="tg-steps" style={{ display: 'flex', alignItems: 'stretch', gap: 0, marginBottom: '1.5rem', border: '1px solid var(--border-base)', background: 'var(--bg-base)', overflowX: 'auto' }}>
         {steps.map((s, i) => {
           const isActive   = step === i + 1
           const isComplete = i < step - 1
@@ -1516,7 +1516,7 @@ export default function TinhGiaPage() {
                         </label>
                       </div>
                     )}
-                    <button onClick={saveBOM} className="btn-primary"
+                    <button onClick={saveBOM} className="btn-primary" data-tour="tg-save"
                       style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}
                       disabled={saving || fillLoading || !pricing || editLocked}>
                       {saving

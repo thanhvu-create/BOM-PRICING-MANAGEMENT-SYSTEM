@@ -20,8 +20,8 @@ export const GUIDE_CONTENT: Record<Role, RoleGuide> = {
   Admin: {
     roleName: { vi: 'Quản Trị Viên (Admin)', en: 'Administrator (Admin)' },
     overview: {
-      vi: 'Admin có toàn quyền hệ thống: xem tất cả BOM mọi cửa hàng, quản lý người dùng, xóa BOM, xem giá cost và giá bán, chiết khấu, và quản lý toàn bộ dữ liệu danh mục.',
-      en: 'Admin has full system access: view all BOMs across all stores, manage users, delete BOMs, view cost and sell prices, apply discounts, and manage all master data.',
+      vi: 'Admin có toàn quyền hệ thống: xem tất cả BOM mọi cửa hàng, quản lý người dùng, xóa BOM, xem giá cost và giá bán, chiết khấu, và quản lý toàn bộ dữ liệu danh mục. Mẹo: bấm HƯỚNG DẪN → "Xem tour trang này" để chạy tour tương tác giới thiệu từng khu vực.',
+      en: 'Admin has full system access: view all BOMs across all stores, manage users, delete BOMs, view cost and sell prices, apply discounts, and manage all master data. Tip: click GUIDE → "Tour this page" to launch an interactive walkthrough of each area.',
     },
     sections: [
       {
@@ -234,8 +234,8 @@ export const GUIDE_CONTENT: Record<Role, RoleGuide> = {
   Manager: {
     roleName: { vi: 'Quản Lý (Manager)', en: 'Manager' },
     overview: {
-      vi: 'Manager có quyền quản lý tương đương Admin, ngoại trừ: không xóa BOM và không quản lý tài khoản người dùng. Thấy giá cost và giá bán của tất cả stores.',
-      en: 'Manager has similar authority to Admin, except: cannot delete BOMs and cannot manage user accounts. Can see cost and sell prices across all stores.',
+      vi: 'Manager có quyền quản lý tương đương Admin, ngoại trừ: không xóa BOM và không quản lý tài khoản người dùng. Thấy giá cost và giá bán của tất cả stores. Mẹo: bấm HƯỚNG DẪN → "Xem tour trang này" để chạy tour tương tác giới thiệu từng khu vực.',
+      en: 'Manager has similar authority to Admin, except: cannot delete BOMs and cannot manage user accounts. Can see cost and sell prices across all stores. Tip: click GUIDE → "Tour this page" to launch an interactive walkthrough of each area.',
     },
     sections: [
       {
@@ -349,8 +349,8 @@ export const GUIDE_CONTENT: Record<Role, RoleGuide> = {
   Order: {
     roleName: { vi: 'Nhân Viên Order', en: 'Order Staff' },
     overview: {
-      vi: 'Order chuyên tính giá BOM cho cửa hàng được gán. Thấy giá bán (sell price) nhưng không thấy giá cost. Có thể tạo, sửa BOM và quản lý stone data.',
-      en: 'Order staff specializes in BOM pricing for their assigned store. Can see sell price but not cost price. Can create, edit BOMs and manage stone data.',
+      vi: 'Order chuyên tính giá BOM cho cửa hàng được gán. Thấy giá bán (sell price) nhưng không thấy giá cost. Có thể tạo, sửa BOM và quản lý stone data. Mẹo: bấm HƯỚNG DẪN → "Xem tour trang này" để chạy tour tương tác giới thiệu từng khu vực.',
+      en: 'Order staff specializes in BOM pricing for their assigned store. Can see sell price but not cost price. Can create, edit BOMs and manage stone data. Tip: click GUIDE → "Tour this page" to launch an interactive walkthrough of each area.',
     },
     sections: [
       {
@@ -439,8 +439,8 @@ export const GUIDE_CONTENT: Record<Role, RoleGuide> = {
   'Sales Supervisor': {
     roleName: { vi: 'Giám Sát Bán Hàng (Sales Supervisor)', en: 'Sales Supervisor' },
     overview: {
-      vi: 'Sales Supervisor giám sát BOM của cửa hàng mình. Chỉ xem — không tạo hay sửa BOM, không thấy giá cost và giá bán. Có thể in báo giá cho khách.',
-      en: 'Sales Supervisor oversees BOMs for their store. View-only — cannot create or edit BOMs, cannot see cost or sell prices. Can print quotations for customers.',
+      vi: 'Sales Supervisor giám sát BOM của cửa hàng mình. Chỉ xem — không tạo hay sửa BOM, không thấy giá cost và giá bán. Có thể in báo giá cho khách. Mẹo: bấm HƯỚNG DẪN → "Xem tour trang này" để chạy tour tương tác giới thiệu từng khu vực.',
+      en: 'Sales Supervisor oversees BOMs for their store. View-only — cannot create or edit BOMs, cannot see cost or sell prices. Can print quotations for customers. Tip: click GUIDE → "Tour this page" to launch an interactive walkthrough of each area.',
     },
     sections: [
       {
@@ -487,8 +487,8 @@ export const GUIDE_CONTENT: Record<Role, RoleGuide> = {
   Sales: {
     roleName: { vi: 'Nhân Viên Bán Hàng (Sales)', en: 'Sales Staff' },
     overview: {
-      vi: 'Sales xem lịch sử BOM của cửa hàng mình để hỗ trợ tư vấn khách hàng. Chỉ xem — không tạo, sửa hay xóa BOM, không thấy giá cost và giá bán.',
-      en: 'Sales staff view BOM history for their store to support customer consultations. View-only — cannot create, edit or delete BOMs, cannot see cost or sell prices.',
+      vi: 'Sales xem lịch sử BOM của cửa hàng mình để hỗ trợ tư vấn khách hàng. Chỉ xem — không tạo, sửa hay xóa BOM, không thấy giá cost và giá bán. Mẹo: bấm HƯỚNG DẪN → "Xem tour trang này" để chạy tour tương tác giới thiệu từng khu vực.',
+      en: 'Sales staff view BOM history for their store to support customer consultations. View-only — cannot create, edit or delete BOMs, cannot see cost or sell prices. Tip: click GUIDE → "Tour this page" to launch an interactive walkthrough of each area.',
     },
     sections: [
       {

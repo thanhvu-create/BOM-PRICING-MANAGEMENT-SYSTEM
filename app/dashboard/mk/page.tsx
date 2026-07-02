@@ -285,14 +285,14 @@ export default function MKPage() {
           <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', letterSpacing: '0.04em', margin: 0 }}>{t('mkSubtitle')}</p>
         </div>
         {activeKey !== 'process_fee' && (
-          <button onClick={openAdd} className="btn-primary" style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--text-xs)' }}>
+          <button data-tour="mk-add" onClick={openAdd} className="btn-primary" style={{ padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 5, fontSize: 'var(--text-xs)' }}>
             <i className="fa-solid fa-plus" style={{ fontSize: 10 }} />{t('addNew')}
           </button>
         )}
       </div>
 
       {/* Sheet tabs — horizontal scroll */}
-      <div style={{ overflowX: 'auto', borderBottom: '1px solid var(--border-base)', marginBottom: '1.5rem' }}>
+      <div data-tour="mk-tabs" style={{ overflowX: 'auto', borderBottom: '1px solid var(--border-base)', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', gap: 0, minWidth: 'max-content' }}>
           {SHEETS.map(s => (
             <button key={s.key} onClick={() => setActiveKey(s.key)}

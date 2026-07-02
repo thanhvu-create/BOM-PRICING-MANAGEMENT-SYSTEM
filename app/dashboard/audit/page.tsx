@@ -378,7 +378,7 @@ export default function AuditPage() {
       {tab === 'log' && (
         <div style={s.card}>
           {/* Filter row */}
-          <div style={s.filterRow}>
+          <div data-tour="audit-filters" style={s.filterRow}>
             <div style={s.filterGroup}>
               <span style={s.filterLabel}>Actor</span>
               <input
